@@ -37,6 +37,11 @@
    interrupção (guarda: `PedidoDevolucao( suspenso == false )`); o PC-008 é, segundo `02`, "executado independentemente da
    elegibilidade", para que um artigo inseguro seja isolado mesmo numa transação recusada ou suspensa (A-28).
    O `ConvencoesDrlTest` verifica a guarda em todas as outras regras.
+   **EX-002 e EX-003** são também exceções (aprovado pelo utilizador a 2026-10-04): segundo `02`, EX-002 depende apenas
+   de "ter sido emitido um resultado"; o cliente pode contestar precisamente uma recusa terminal (cenário 5). Estas regras
+   não alteram a elegibilidade, só registam a explicação da política e o escalonamento.
+10. **Exceção recusada sem alterar a elegibilidade:** `Decisao.recusarExcecao(regra, modulo, msg)` regista RECUSAR e marca
+    `excecaoRecusada`, mas mantém a elegibilidade (HS-005: a exceção Afterpay é recusada, o reembolso continua; EX-006).
 
 8. **Guarda anti-ciclo.** Qualquer `modify` sobre a `Decisao`/`DecisaoArtigo` reavalia as regras que dependem dela,
    incluindo a própria. As regras que não terminam o fluxo incluem `disparou( "ID" ) == false` no padrão da decisão que

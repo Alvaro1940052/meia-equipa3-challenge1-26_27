@@ -51,8 +51,13 @@
   },
   "indicadoresFraude": [],
   "esperado": {
-    "regrasDisparadas": ["CT-003", "PC-001"],
-    "regrasNaoDisparadas": ["CH-001", "IN-003", "PT-001", "PT-003"],
+    "elegibilidade": "ENCAMINHAR",
+    "tipoVerificacao": "VERIFICADA",
+    "tipoTransacao": "REEMBOLSO",
+    "meioReembolso": "MEIO_ORIGINAL",
+    "processo": "BACKPOCKET",
+    "regrasDisparadas": ["CT-003", "PC-001", "CH-002", "TN-010", "HS-005"],
+    "regrasNaoDisparadas": ["CH-001", "IN-003", "PT-001", "PT-003", "CH-006"],
     "artigos": { "A-1": { "elegibilidade": "PERMITIR", "regrasDisparadas": ["PC-001"] } }
   }
 }

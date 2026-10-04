@@ -25,6 +25,9 @@ public class Decisao extends DecisaoBase {
   private ProcessoObrigatorio processo;
   private Documentacao documentacao = new Documentacao();
 
+  /** O pedido de exceção do cliente foi recusado (HS-005, EX-006), sem alterar a elegibilidade. */
+  private boolean excecaoRecusada;
+
   /** Resultados por artigo, agregados no fim da avaliação (ADR 0002). */
   private List<DecisaoArtigo> resultadosArtigos = new ArrayList<>();
 
@@ -43,6 +46,23 @@ public class Decisao extends DecisaoBase {
     definirElegibilidade(Elegibilidade.REVER);
     aprovacao = NivelAprovacao.DISTRICT_AREA;
     terminar();
+  }
+
+  /**
+   * Recusa o pedido de exceção do cliente (HS-005, EX-006). O registo fica com o resultado RECUSAR,
+   * mas a elegibilidade do pedido não muda: a transação continua pelo processo obrigatório.
+   */
+  public void recusarExcecao(String regra, Modulo modulo, String mensagem) {
+    registar(regra, modulo, Elegibilidade.RECUSAR, mensagem);
+    excecaoRecusada = true;
+  }
+
+  public boolean isExcecaoRecusada() {
+    return excecaoRecusada;
+  }
+
+  public void setExcecaoRecusada(boolean excecaoRecusada) {
+    this.excecaoRecusada = excecaoRecusada;
   }
 
   public String getPedidoId() {

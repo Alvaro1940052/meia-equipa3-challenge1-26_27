@@ -129,6 +129,17 @@ class DecisaoTest {
   }
 
   @Test
+  void recusarExcecaoNaoAlteraAElegibilidade() {
+    decisao.aplicar("CH-002", Modulo.ONLINE, Elegibilidade.ENCAMINHAR, "BackPocket.");
+    decisao.recusarExcecao("HS-005", Modulo.ONLINE, "Exceção Afterpay recusada.");
+
+    assertThat(decisao.getElegibilidade()).isEqualTo(Elegibilidade.ENCAMINHAR);
+    assertThat(decisao.isExcecaoRecusada()).isTrue();
+    assertThat(decisao.isTerminal()).isFalse();
+    assertThat(decisao.getRegistos().getLast().getResultado()).isEqualTo(Elegibilidade.RECUSAR);
+  }
+
+  @Test
   void decisaoArtigoTemOMesmoComportamento() {
     DecisaoArtigo artigo = new DecisaoArtigo("P-1", "A-1");
     artigo.aplicar("HS-003", Modulo.M3, Elegibilidade.RECUSAR, "Embainhado.");
