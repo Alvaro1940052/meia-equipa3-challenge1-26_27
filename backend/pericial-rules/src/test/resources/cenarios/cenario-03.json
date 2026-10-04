@@ -30,5 +30,8 @@
     ]
   },
   "indicadoresFraude": [],
-  "esperado": { "regrasDisparadas": ["CT-003", "IN-003"] }
+  "esperado": {
+    "regrasDisparadas": ["CT-003", "IN-003", "PC-001"],
+    "artigos": { "A-1": { "elegibilidade": "PERMITIR", "regrasDisparadas": ["PC-001"] } }
+  }
 }

@@ -44,5 +44,9 @@
     ]
   },
   "indicadoresFraude": [],
-  "esperado": { "terminal": false, "regrasDisparadas": ["CT-003", "CH-001"] }
+  "esperado": {
+    "terminal": false,
+    "regrasDisparadas": ["CT-003", "CH-001", "PC-002"],
+    "artigos": { "A-1": { "elegibilidade": "REVER", "regrasDisparadas": ["PC-002"] } }
+  }
 }

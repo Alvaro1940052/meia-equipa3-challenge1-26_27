@@ -36,9 +36,10 @@
   },
   "indicadoresFraude": [],
   "esperado": {
-    "regrasDisparadas": ["PC-008", "CT-003", "CH-001"],
+    "regrasDisparadas": ["PC-008", "CT-003", "CH-001", "PC-007"],
+    "regrasNaoDisparadas": ["PC-004", "PC-005"],
     "artigos": {
-      "A-1": { "destino": "RISCO_BIOLOGICO", "regrasDisparadas": ["PC-008"] }
+      "A-1": { "elegibilidade": "PERMITIR", "destino": "RISCO_BIOLOGICO", "regrasDisparadas": ["PC-008", "PC-007"] }
     }
   }
 }

@@ -1,0 +1,414 @@
+package com.levis.devolucoes.regras;
+
+// M3 — Elegibilidade do produto (docs/02, etapa 3; docs/03, módulo 3).
+// Regras por artigo, sobre DecisaoArtigo (ADR 0002). Primeiro as paragens obrigatórias (HS), depois
+// o estado (PC). Precedências: PC-007 > PC-006 > PC-001..PC-005; HS-003 > PC-006.
+// O destino do produto (baixa por dano, saldos, etc.) é decidido em M9.
+
+import com.levis.devolucoes.model.decisao.Decisao;
+import com.levis.devolucoes.model.decisao.DecisaoArtigo;
+import com.levis.devolucoes.model.enums.CategoriaProduto;
+import com.levis.devolucoes.model.enums.CondicaoUso;
+import com.levis.devolucoes.model.enums.Elegibilidade;
+import com.levis.devolucoes.model.enums.EstadoEtiquetas;
+import com.levis.devolucoes.model.enums.Marca;
+import com.levis.devolucoes.model.enums.Modulo;
+import com.levis.devolucoes.model.enums.NivelAprovacao;
+import com.levis.devolucoes.model.enums.ProcessoObrigatorio;
+import com.levis.devolucoes.model.enums.TipoTransacao;
+import com.levis.devolucoes.model.pedido.PedidoDevolucao;
+import com.levis.devolucoes.model.produto.ArtigoDevolvido;
+
+// ---------------------------------------------------------------------------------------------
+// Paragens obrigatórias (G2)
+// ---------------------------------------------------------------------------------------------
+
+rule "HS-001 Produto não reconhecido no POS"
+    @id("HS-001")
+    @modulo("M3")
+    @descricao("Recusar a devolução e a troca: é necessário um SKU de produto válido. Não usar um SKU diferente ou genérico.")
+    @condicoes("skuNaoReconhecido,produtoNaoFranquia")
+    agenda-group "M3"
+    salience 100
+when
+    $d  : Decisao( terminal == false )
+    $a  : ArtigoDevolvido( produto != null, produto.skuReconhecidoPOS == false, produto.produtoFranquia == false )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false )
+then
+    modify( $da ) {
+        setTipoTransacao( TipoTransacao.NENHUMA ),
+        aplicar( "HS-001", Modulo.M3, Elegibilidade.RECUSAR,
+                 "SKU " + $a.getProduto().getSku() + " não reconhecido no POS: recusar a devolução e a troca. "
+                 + "Não usar um SKU diferente ou genérico (HS-004)." )
+    }
+end
+
+rule "HS-004 SKU da franquia do Canadá não reconhecido"
+    @id("HS-004")
+    @modulo("M3")
+    @descricao("Não usar um SKU diferente ou genérico; o produto da franquia do Canadá segue o processo da franquia (CH-007).")
+    @condicoes("skuNaoReconhecido,produtoFranquia")
+    agenda-group "M3"
+    salience 100
+when
+    $d  : Decisao( terminal == false )
+    $a  : ArtigoDevolvido( produto != null, produto.skuReconhecidoPOS == false, produto.produtoFranquia == true )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false )
+then
+    modify( $da ) {
+        setTipoTransacao( TipoTransacao.NENHUMA ),
+        aplicar( "HS-004", Modulo.M3, Elegibilidade.ENCAMINHAR,
+                 "Produto da franquia do Canadá sem SKU reconhecido: não usar um SKU diferente ou genérico; "
+                 + "seguir o processo de devolução da franquia com o SKU da franquia (CH-007)." )
+    }
+    modify( $d ) { setProcesso( ProcessoObrigatorio.FRANQUIA_CANADA ) }
+end
+
+rule "CH-007 Produto da franquia do Canadá apresentado na loja"
+    @id("CH-007")
+    @modulo("M3")
+    @descricao("Produto da franquia do Canadá com SKU reconhecido: encaminhar para o processo da franquia, com o SKU da franquia [a validar: A-07].")
+    @condicoes("skuReconhecido,produtoFranquia")
+    agenda-group "M3"
+    salience 100
+when
+    $d  : Decisao( terminal == false )
+    $a  : ArtigoDevolvido( produto != null, produto.skuReconhecidoPOS == true, produto.produtoFranquia == true )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false )
+then
+    modify( $da ) {
+        setTipoTransacao( TipoTransacao.NENHUMA ),
+        aplicar( "CH-007", Modulo.M3, Elegibilidade.ENCAMINHAR,
+                 "Produto da franquia do Canadá: seguir o processo de devolução da franquia, com o SKU da franquia." )
+    }
+    modify( $d ) { setProcesso( ProcessoObrigatorio.FRANQUIA_CANADA ) }
+end
+
+rule "HS-002 Marca ou produto grossista não aceite na loja"
+    @id("HS-002")
+    @modulo("M3")
+    @descricao("Recusar a devolução e a troca de Dockers, Levi Strauss Signature, Beyond Yoga ou produto grossista não vendido na loja.")
+    @condicoes("skuReconhecido,marcaExcluidaOuGrossistaNaoVendido")
+    agenda-group "M3"
+    salience 90
+when
+    $d  : Decisao( terminal == false )
+    $a  : ArtigoDevolvido( produto != null, produto.skuReconhecidoPOS == true,
+                           produto.marca == Marca.DOCKERS || produto.marca == Marca.LS_SIGNATURE
+                           || produto.marca == Marca.BEYOND_YOGA
+                           || ( produto.grossista == true && produto.vendidoNaLoja == false ) )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false )
+then
+    modify( $da ) {
+        setTipoTransacao( TipoTransacao.NENHUMA ),
+        aplicar( "HS-002", Modulo.M3, Elegibilidade.RECUSAR,
+                 "As lojas de retalho Levi's não aceitam este produto (" + $a.getProduto().getMarca()
+                 + ( $a.getProduto().isGrossista() ? ", grossista não vendido na loja" : "" )
+                 + "): recusar a devolução e a troca." )
+    }
+end
+
+rule "HS-003 Produto personalizado, alterado ou embainhado"
+    @id("HS-003")
+    @modulo("M3")
+    @descricao("Recusar a devolução e a troca de produto personalizado, alterado ou embainhado, mesmo que tenha defeito.")
+    @condicoes("produtoModificado")
+    agenda-group "M3"
+    salience 80
+when
+    $d  : Decisao( terminal == false )
+    $a  : ArtigoDevolvido( estado != null, estado.modificado == true )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false )
+then
+    modify( $da ) {
+        setTipoTransacao( TipoTransacao.NENHUMA ),
+        aplicar( "HS-003", Modulo.M3, Elegibilidade.RECUSAR,
+                 "Produto personalizado, alterado ou embainhado: não pode ser devolvido nem trocado, mesmo com defeito." )
+    }
+end
+
+// ---------------------------------------------------------------------------------------------
+// Estado do produto (G3). Só para artigos sem paragem; o bodywear e o defeito têm precedência.
+// ---------------------------------------------------------------------------------------------
+
+rule "PC-007 Bodywear aceite em qualquer estado"
+    @id("PC-007")
+    @modulo("M3")
+    @descricao("Permitir a devolução de bodywear em qualquer estado; o destino é definido pelas regras BW. Prevalece sobre PC-004 e PC-005.")
+    @condicoes("bodywear")
+    agenda-group "M3"
+    salience 70
+when
+    $d  : Decisao( terminal == false )
+    $a  : ArtigoDevolvido( produto != null, produto.categoria == CategoriaProduto.BODYWEAR )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false, disparou( "PC-007" ) == false )
+then
+    modify( $da ) {
+        aplicar( "PC-007", Modulo.M3, Elegibilidade.PERMITIR,
+                 "Bodywear: a devolução é aceite em qualquer estado; o destino é definido pelas regras BW." )
+    }
+end
+
+rule "PC-006 Defeito de fabrico confirmado"
+    @id("PC-006")
+    @modulo("M3")
+    @descricao("Permitir o reembolso pelo meio permitido ou a substituição por um artigo sem defeito; dar baixa por dano ao artigo devolvido (M9). Só para produto não personalizado nem alterado (HS-003 prevalece).")
+    @condicoes("defeitoFabricoConfirmado,naoBodywear")
+    agenda-group "M3"
+    salience 60
+when
+    $d  : Decisao( terminal == false )
+    $a  : ArtigoDevolvido( produto != null, produto.categoria != CategoriaProduto.BODYWEAR,
+                           estado != null, estado.defeitoFabricoConfirmado == true, estado.modificado == false )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false, disparou( "PC-006" ) == false )
+then
+    modify( $da ) {
+        aplicar( "PC-006", Modulo.M3, Elegibilidade.PERMITIR,
+                 "Defeito de fabrico confirmado: reembolso pelo meio de pagamento permitido ou substituição por um "
+                 + "artigo sem defeito; o artigo devolvido tem baixa por dano." )
+    }
+end
+
+rule "PC-001 Não usado com etiquetas colocadas"
+    @id("PC-001")
+    @modulo("M3")
+    @descricao("Estado elegível padrão: permitir se forem cumpridas as regras de canal, comprovativo e prazo.")
+    @condicoes("naoUsado,etiquetasColocadas,semDefeito,naoBodywear")
+    agenda-group "M3"
+    salience 50
+when
+    $d  : Decisao( terminal == false )
+    $a  : ArtigoDevolvido( produto != null, produto.categoria != CategoriaProduto.BODYWEAR,
+                           estado != null, estado.defeitoFabricoConfirmado == false,
+                           estado.condicaoUso == CondicaoUso.NAO_USADO, estado.etiquetas == EstadoEtiquetas.COLOCADAS )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false, disparou( "PC-001" ) == false )
+then
+    modify( $da ) {
+        aplicar( "PC-001", Modulo.M3, Elegibilidade.PERMITIR,
+                 "Não usado, em estado original, com as etiquetas colocadas: estado elegível, sujeito às regras "
+                 + "de canal, comprovativo e prazo." )
+    }
+end
+
+rule "PC-002 Etiquetas soltas: rever a possibilidade de revenda"
+    @id("PC-002")
+    @modulo("M3")
+    @descricao("Não usado com etiquetas soltas: rever; aprovar só se o artigo puder ser verificado, reetiquetado e revendido (IN-010). Aprovação da gestão [a validar: A-19].")
+    @condicoes("naoUsado,etiquetasSoltas,semDefeito,naoBodywear,revendivelPorAvaliar")
+    agenda-group "M3"
+    salience 50
+when
+    $d  : Decisao( terminal == false )
+    $a  : ArtigoDevolvido( produto != null, produto.categoria != CategoriaProduto.BODYWEAR,
+                           estado != null, estado.defeitoFabricoConfirmado == false,
+                           estado.condicaoUso == CondicaoUso.NAO_USADO, estado.etiquetas == EstadoEtiquetas.SOLTAS,
+                           revendivel == null )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false, disparou( "PC-002" ) == false )
+then
+    modify( $da ) {
+        setAprovacao( NivelAprovacao.RESPONSAVEL_SENIOR ),
+        aplicar( "PC-002", Modulo.M3, Elegibilidade.REVER,
+                 "Etiquetas soltas: a gestão aprova só se o artigo puder ser verificado, corretamente reetiquetado "
+                 + "e revendido. Falta avaliar a possibilidade de revenda (IN-010)." )
+    }
+end
+
+rule "PC-002 Etiquetas soltas: aprovado, artigo revendível"
+    @id("PC-002")
+    @modulo("M3")
+    @descricao("Não usado com etiquetas soltas e revendível (IN-010 = sim): aprovar com a gestão [a validar: A-19].")
+    @condicoes("naoUsado,etiquetasSoltas,semDefeito,naoBodywear,revendivel")
+    agenda-group "M3"
+    salience 50
+when
+    $d  : Decisao( terminal == false )
+    $a  : ArtigoDevolvido( produto != null, produto.categoria != CategoriaProduto.BODYWEAR,
+                           estado != null, estado.defeitoFabricoConfirmado == false,
+                           estado.condicaoUso == CondicaoUso.NAO_USADO, estado.etiquetas == EstadoEtiquetas.SOLTAS,
+                           revendivel == true )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false, disparou( "PC-002" ) == false )
+then
+    modify( $da ) {
+        setAprovacao( NivelAprovacao.RESPONSAVEL_SENIOR ),
+        aplicar( "PC-002", Modulo.M3, Elegibilidade.PERMITIR,
+                 "Etiquetas soltas, artigo verificável, reetiquetável e revendível: aprovado pela gestão." )
+    }
+end
+
+rule "PC-002 Etiquetas soltas: recusado, artigo não revendível"
+    @id("PC-002")
+    @modulo("M3")
+    @descricao("Não usado com etiquetas soltas e não revendível (IN-010 = não): recusar.")
+    @condicoes("naoUsado,etiquetasSoltas,semDefeito,naoBodywear,naoRevendivel")
+    agenda-group "M3"
+    salience 50
+when
+    $d  : Decisao( terminal == false )
+    $a  : ArtigoDevolvido( produto != null, produto.categoria != CategoriaProduto.BODYWEAR,
+                           estado != null, estado.defeitoFabricoConfirmado == false,
+                           estado.condicaoUso == CondicaoUso.NAO_USADO, estado.etiquetas == EstadoEtiquetas.SOLTAS,
+                           revendivel == false )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false, disparou( "PC-002" ) == false )
+then
+    modify( $da ) {
+        setTipoTransacao( TipoTransacao.NENHUMA ),
+        aplicar( "PC-002", Modulo.M3, Elegibilidade.RECUSAR,
+                 "Etiquetas soltas e o artigo não pode ser verificado, reetiquetado e revendido: recusar." )
+    }
+end
+
+rule "PC-003 Sem etiquetas: rever a possibilidade de revenda"
+    @id("PC-003")
+    @modulo("M3")
+    @descricao("Não usado sem etiquetas: rever; aprovar só se o artigo puder ser verificado e preparado para revenda (IN-010). Aprovação da gestão [a validar: A-19].")
+    @condicoes("naoUsado,etiquetasAusentes,semDefeito,naoBodywear,revendivelPorAvaliar")
+    agenda-group "M3"
+    salience 50
+when
+    $d  : Decisao( terminal == false )
+    $a  : ArtigoDevolvido( produto != null, produto.categoria != CategoriaProduto.BODYWEAR,
+                           estado != null, estado.defeitoFabricoConfirmado == false,
+                           estado.condicaoUso == CondicaoUso.NAO_USADO, estado.etiquetas == EstadoEtiquetas.AUSENTES,
+                           revendivel == null )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false, disparou( "PC-003" ) == false )
+then
+    modify( $da ) {
+        setAprovacao( NivelAprovacao.RESPONSAVEL_SENIOR ),
+        aplicar( "PC-003", Modulo.M3, Elegibilidade.REVER,
+                 "Sem etiquetas: a gestão aprova só se o artigo puder ser verificado e preparado para revenda. "
+                 + "Falta avaliar a possibilidade de revenda (IN-010)." )
+    }
+end
+
+rule "PC-003 Sem etiquetas: aprovado, artigo revendível"
+    @id("PC-003")
+    @modulo("M3")
+    @descricao("Não usado sem etiquetas e revendível (IN-010 = sim): aprovar com a gestão [a validar: A-19].")
+    @condicoes("naoUsado,etiquetasAusentes,semDefeito,naoBodywear,revendivel")
+    agenda-group "M3"
+    salience 50
+when
+    $d  : Decisao( terminal == false )
+    $a  : ArtigoDevolvido( produto != null, produto.categoria != CategoriaProduto.BODYWEAR,
+                           estado != null, estado.defeitoFabricoConfirmado == false,
+                           estado.condicaoUso == CondicaoUso.NAO_USADO, estado.etiquetas == EstadoEtiquetas.AUSENTES,
+                           revendivel == true )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false, disparou( "PC-003" ) == false )
+then
+    modify( $da ) {
+        setAprovacao( NivelAprovacao.RESPONSAVEL_SENIOR ),
+        aplicar( "PC-003", Modulo.M3, Elegibilidade.PERMITIR,
+                 "Sem etiquetas, artigo verificável e preparável para revenda: aprovado pela gestão." )
+    }
+end
+
+rule "PC-003 Sem etiquetas: recusado, artigo não revendível"
+    @id("PC-003")
+    @modulo("M3")
+    @descricao("Não usado sem etiquetas e não revendível (IN-010 = não): recusar.")
+    @condicoes("naoUsado,etiquetasAusentes,semDefeito,naoBodywear,naoRevendivel")
+    agenda-group "M3"
+    salience 50
+when
+    $d  : Decisao( terminal == false )
+    $a  : ArtigoDevolvido( produto != null, produto.categoria != CategoriaProduto.BODYWEAR,
+                           estado != null, estado.defeitoFabricoConfirmado == false,
+                           estado.condicaoUso == CondicaoUso.NAO_USADO, estado.etiquetas == EstadoEtiquetas.AUSENTES,
+                           revendivel == false )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false, disparou( "PC-003" ) == false )
+then
+    modify( $da ) {
+        setTipoTransacao( TipoTransacao.NENHUMA ),
+        aplicar( "PC-003", Modulo.M3, Elegibilidade.RECUSAR,
+                 "Sem etiquetas e o artigo não pode ser verificado nem preparado para revenda: recusar." )
+    }
+end
+
+rule "PC-004 Claramente usado: rever troca pelo mesmo artigo"
+    @id("PC-004")
+    @modulo("M3")
+    @descricao("Usado sem defeito confirmado: recusar o reembolso; a gestão pode aprovar apenas uma troca pelo mesmo artigo. Decisão da gestão pendente [a validar: A-18, A-19, A-29].")
+    @condicoes("usado,semDefeito,naoBodywear,aprovacaoGestaoPendente")
+    agenda-group "M3"
+    salience 50
+when
+    $d  : Decisao( terminal == false )
+    $p  : PedidoDevolucao( id == $d.pedidoId, pedidoExcecao == null || pedidoExcecao.aprovada == null )
+    $a  : ArtigoDevolvido( produto != null, produto.categoria != CategoriaProduto.BODYWEAR,
+                           estado != null, estado.defeitoFabricoConfirmado == false,
+                           estado.condicaoUso == CondicaoUso.USADO )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false, disparou( "PC-004" ) == false )
+then
+    modify( $da ) {
+        setAprovacao( NivelAprovacao.RESPONSAVEL_SENIOR ),
+        aplicar( "PC-004", Modulo.M3, Elegibilidade.REVER,
+                 "Artigo claramente usado: o reembolso é recusado. A gestão pode aprovar apenas uma troca pelo mesmo "
+                 + "artigo; não emitir numerário nem crédito de loja sem restrições." )
+    }
+end
+
+rule "PC-004 Claramente usado: troca pelo mesmo artigo aprovada"
+    @id("PC-004")
+    @modulo("M3")
+    @descricao("Usado sem defeito confirmado e a gestão aprovou: só troca pelo mesmo artigo, sem numerário nem crédito de loja [a validar: A-18, A-29].")
+    @condicoes("usado,semDefeito,naoBodywear,aprovadoPelaGestao")
+    agenda-group "M3"
+    salience 50
+when
+    $d  : Decisao( terminal == false )
+    $p  : PedidoDevolucao( id == $d.pedidoId, pedidoExcecao != null, pedidoExcecao.aprovada == true )
+    $a  : ArtigoDevolvido( produto != null, produto.categoria != CategoriaProduto.BODYWEAR,
+                           estado != null, estado.defeitoFabricoConfirmado == false,
+                           estado.condicaoUso == CondicaoUso.USADO )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false, disparou( "PC-004" ) == false )
+then
+    modify( $da ) {
+        setAprovacao( NivelAprovacao.RESPONSAVEL_SENIOR ),
+        setTipoTransacao( TipoTransacao.TROCA_MESMO_ARTIGO ),
+        aplicar( "PC-004", Modulo.M3, Elegibilidade.PERMITIR,
+                 "Artigo usado: a gestão aprovou apenas uma troca pelo mesmo artigo, sem numerário nem crédito de loja." )
+    }
+end
+
+rule "PC-004 Claramente usado: recusado pela gestão"
+    @id("PC-004")
+    @modulo("M3")
+    @descricao("Usado sem defeito confirmado e a gestão não aprovou a troca pelo mesmo artigo: recusar [a validar: A-18, A-29].")
+    @condicoes("usado,semDefeito,naoBodywear,recusadoPelaGestao")
+    agenda-group "M3"
+    salience 50
+when
+    $d  : Decisao( terminal == false )
+    $p  : PedidoDevolucao( id == $d.pedidoId, pedidoExcecao != null, pedidoExcecao.aprovada == false )
+    $a  : ArtigoDevolvido( produto != null, produto.categoria != CategoriaProduto.BODYWEAR,
+                           estado != null, estado.defeitoFabricoConfirmado == false,
+                           estado.condicaoUso == CondicaoUso.USADO )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false, disparou( "PC-004" ) == false )
+then
+    modify( $da ) {
+        setTipoTransacao( TipoTransacao.NENHUMA ),
+        aplicar( "PC-004", Modulo.M3, Elegibilidade.RECUSAR,
+                 "Artigo usado e a gestão não aprovou a troca pelo mesmo artigo: recusar o reembolso." )
+    }
+end
+
+rule "PC-005 Lavado sem defeito de fabrico confirmado"
+    @id("PC-005")
+    @modulo("M3")
+    @descricao("Recusar a devolução e a troca: produto lavado não é vendável.")
+    @condicoes("lavado,semDefeito,naoBodywear")
+    agenda-group "M3"
+    salience 50
+when
+    $d  : Decisao( terminal == false )
+    $a  : ArtigoDevolvido( produto != null, produto.categoria != CategoriaProduto.BODYWEAR,
+                           estado != null, estado.defeitoFabricoConfirmado == false,
+                           estado.condicaoUso == CondicaoUso.LAVADO )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false, disparou( "PC-005" ) == false )
+then
+    modify( $da ) {
+        setTipoTransacao( TipoTransacao.NENHUMA ),
+        aplicar( "PC-005", Modulo.M3, Elegibilidade.RECUSAR,
+                 "Produto lavado sem defeito de fabrico confirmado: não é vendável; recusar a devolução e a troca." )
+    }
+end

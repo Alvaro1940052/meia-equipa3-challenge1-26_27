@@ -107,9 +107,14 @@ class TransversaisTest {
 
       ResultadoAvaliacao resultado = MotorTeste.avaliar(pedido);
 
-      assertThat(resultado.artigo("A-1").getElegibilidade()).isNull();
+      // O registo de PC-008 não tem resultado; a elegibilidade é a do estado (PC-001)
+      assertThat(resultado.artigo("A-1").getRegistos())
+          .filteredOn(r -> r.getCodigoRegra().equals("PC-008"))
+          .singleElement()
+          .satisfies(r -> assertThat(r.getResultado()).isNull());
+      assertThat(resultado.artigo("A-1").getElegibilidade()).isEqualTo(Elegibilidade.PERMITIR);
       assertThat(resultado.artigo("A-1").isTerminal()).isFalse();
-      assertThat(resultado.decisao().getElegibilidade()).isNull();
+      assertThat(resultado.decisao().isTerminal()).isFalse();
     }
 
     @Test
