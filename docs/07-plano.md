@@ -119,7 +119,7 @@ Convenções transversais a todas as fases: cada regra com metadados `@id @modul
 **Aceitação:** ADR revistos pelo utilizador. **Cenários:** nenhum.
 
 ### Fase 1 — Esqueleto Maven
-**Ficheiros:** `pom.xml` (pai: Spring Boot 3.5.x BOM, `drools-bom` 8.44.0.Final, MapStruct, ArchUnit,
+**Ficheiros:** `pom.xml` (pai: Spring Boot 3.5.x BOM, `drools-bom` 8.44.2.Final (última da linha 8), MapStruct, ArchUnit,
 Testcontainers; plugins Spotless, Checkstyle, JaCoCo, Surefire/Failsafe, `kie-maven-plugin`), `.gitignore`,
 `.editorconfig`, `README.md`, `config/checkstyle.xml`, e `backend/pericial-{model,rules,explanation,dto,persistence,service,api}/pom.xml`
 com as dependências de `05` (só numa direção).
