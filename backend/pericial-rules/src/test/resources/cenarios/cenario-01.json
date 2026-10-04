@@ -48,7 +48,9 @@
     "terminal": false,
     "tipoVerificacao": "VERIFICADA",
     "tipoTransacao": "TROCA",
-    "regrasDisparadas": ["CT-003", "CH-001", "PC-002", "PT-001", "PT-003"],
+    "aprovacao": "RESPONSAVEL_SENIOR",
+    "regrasDisparadas": ["CT-003", "CH-001", "PC-002", "PT-001", "PT-003", "EP-001", "EX-001"],
+    "regrasNaoDisparadas": ["EP-002", "EX-002"],
     "artigos": { "A-1": { "elegibilidade": "REVER", "regrasDisparadas": ["PC-002"] } }
   }
 }

@@ -45,7 +45,7 @@
     "tipoVerificacao": "VERIFICADA",
     "tipoTransacao": "REEMBOLSO",
     "meioReembolso": "MEIO_ORIGINAL",
-    "regrasDisparadas": ["CT-003", "CH-001", "PC-001", "PT-001", "PT-003"],
+    "regrasDisparadas": ["CT-003", "CH-001", "PC-001", "PT-001", "PT-003", "EX-002"],
     "artigos": { "A-1": { "elegibilidade": "PERMITIR", "regrasDisparadas": ["PC-001"] } }
   }
 }

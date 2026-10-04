@@ -1,0 +1,243 @@
+package com.levis.devolucoes.regras;
+
+// M6 — Resultado, troca e exceções (docs/02, etapa 6; docs/03, módulo 6).
+// EX-002 e EX-003 não têm a guarda terminal: o cliente pode contestar uma recusa terminal (ADR 0004).
+// Precedência: EX-006 anula qualquer aprovação de EX-004 ou EX-005.
+// As regras EX recomendam; a aprovação final da exceção é humana (PedidoExcecao.aprovada).
+
+import com.levis.devolucoes.model.decisao.Decisao;
+import com.levis.devolucoes.model.decisao.DecisaoArtigo;
+import com.levis.devolucoes.model.decisao.IndicadorFraude;
+import com.levis.devolucoes.model.decisao.RegistoRegra;
+import com.levis.devolucoes.model.enums.Elegibilidade;
+import com.levis.devolucoes.model.enums.Modulo;
+import com.levis.devolucoes.model.enums.NivelAprovacao;
+import com.levis.devolucoes.model.enums.NivelRisco;
+import com.levis.devolucoes.model.enums.TipoTransacao;
+import com.levis.devolucoes.model.enums.TipoVerificacao;
+import com.levis.devolucoes.model.pedido.PedidoDevolucao;
+import com.levis.devolucoes.model.produto.ArtigoDevolvido;
+import com.levis.devolucoes.model.produto.ArtigoTroca;
+
+// ---------------------------------------------------------------------------------------------
+// Trocas
+// ---------------------------------------------------------------------------------------------
+
+rule "EP-001 Troca com recibo que altera apenas o tamanho"
+    @id("EP-001")
+    @modulo("M6")
+    @descricao("Respeitar o preço de venda original ou promocional para o artigo de substituição: a correspondência de promoções limita-se a trocas de tamanho.")
+    @condicoes("trocaPermitida,devolucaoVerificada,apenasMudaTamanho")
+    agenda-group "M6"
+    salience 100
+when
+    $d : Decisao( terminal == false, tipoTransacao == TipoTransacao.TROCA,
+                  tipoVerificacao == TipoVerificacao.VERIFICADA, disparou( "EP-001" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, artigosTroca != null, artigosTroca.size() > 0 )
+    not ArtigoTroca( apenasMudaTamanho == false ) from $p.artigosTroca
+then
+    modify( $d ) {
+        registar( "EP-001", Modulo.M6,
+                  "Troca com recibo que muda apenas o tamanho: o artigo de substituição mantém o preço de venda "
+                  + "original ou promocional pago." )
+    }
+end
+
+rule "EP-002 Troca que altera o modelo ou a cor"
+    @id("EP-002")
+    @modulo("M6")
+    @descricao("Devolver o artigo original pelo seu valor elegível e vender o novo artigo ao preço atual.")
+    @condicoes("trocaPermitida,mudaModeloOuCor")
+    agenda-group "M6"
+    salience 100
+when
+    $d : Decisao( terminal == false, tipoTransacao == TipoTransacao.TROCA, disparou( "EP-002" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId )
+    exists ArtigoTroca( apenasMudaTamanho == false ) from $p.artigosTroca
+then
+    modify( $d ) {
+        registar( "EP-002", Modulo.M6,
+                  "A troca muda o modelo ou a cor: devolver o artigo original pelo seu valor elegível e vender o novo "
+                  + "artigo ao preço atual." )
+    }
+end
+
+// ---------------------------------------------------------------------------------------------
+// Revisão pela gestão
+// ---------------------------------------------------------------------------------------------
+
+rule "EX-001 Uma regra devolveu REVER: critério da gestão"
+    @id("EX-001")
+    @modulo("M6")
+    @descricao("Avaliar a possibilidade de revenda, o comprovativo, o tempo decorrido, o valor da transação, o risco de fraude e as circunstâncias do cliente.")
+    @condicoes("resultadoRever")
+    agenda-group "M6"
+    salience 90
+when
+    $d : Decisao( terminal == false, disparou( "EX-001" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId )
+    exists ( Decisao( this == $d, elegibilidade == Elegibilidade.REVER )
+             or DecisaoArtigo( pedidoId == $d.pedidoId, terminal == false, elegibilidade == Elegibilidade.REVER ) )
+then
+    modify( $d ) {
+        setAprovacao( $d.getAprovacao() == NivelAprovacao.DISTRICT_AREA
+                      ? NivelAprovacao.DISTRICT_AREA : NivelAprovacao.RESPONSAVEL_SENIOR ),
+        registar( "EX-001", Modulo.M6,
+                  "Decisão da gestão: avaliar a possibilidade de revenda (fator formal de qualquer exceção), o "
+                  + "comprovativo, o tempo decorrido, o valor da transação, o risco de fraude e as circunstâncias do cliente." )
+    }
+end
+
+// ---------------------------------------------------------------------------------------------
+// Escalonamento do cliente (sem guarda terminal: ADR 0004)
+// ---------------------------------------------------------------------------------------------
+
+rule "EX-002 O cliente contesta o resultado padrão"
+    @id("EX-002")
+    @modulo("M6")
+    @descricao("Explicar a política e oferecer a melhor alternativa em conformidade com a política, antes de considerar uma exceção. Também depois de uma paragem obrigatória (ADR 0004).")
+    @condicoes("clienteContesta,resultadoEmitido")
+    agenda-group "M6"
+    salience 80
+when
+    $d : Decisao( disparou( "EX-002" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, cliente != null, cliente.contestaResultado == true )
+    exists ( Decisao( this == $d, elegibilidade != null )
+             or DecisaoArtigo( pedidoId == $d.pedidoId, elegibilidade != null ) )
+then
+    modify( $d ) {
+        registar( "EX-002", Modulo.M6,
+                  "O cliente contesta o resultado: explicar a política e oferecer a melhor alternativa em conformidade "
+                  + "com a política, antes de considerar qualquer exceção." )
+    }
+end
+
+rule "EX-003 O cliente fica irritado ou cria perturbação"
+    @id("EX-003")
+    @modulo("M6")
+    @descricao("Escalar para o responsável sénior de serviço. A agitação por si só não cria elegibilidade (ADR 0004).")
+    @condicoes("clienteAgitado,politicaExplicada")
+    agenda-group "M6"
+    salience 70
+when
+    $d : Decisao( disparou( "EX-002" ) == true, disparou( "EX-003" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, cliente != null, cliente.agitado == true )
+then
+    modify( $d ) {
+        setAprovacao( $d.getAprovacao() == NivelAprovacao.DISTRICT_AREA
+                      ? NivelAprovacao.DISTRICT_AREA : NivelAprovacao.RESPONSAVEL_SENIOR ),
+        registar( "EX-003", Modulo.M6,
+                  "Cliente irritado ou a causar perturbação: escalar para o responsável sénior de serviço, que avalia o "
+                  + "apaziguamento e a segurança da loja. A agitação, por si só, não cria elegibilidade." )
+    }
+end
+
+// ---------------------------------------------------------------------------------------------
+// Exceções
+// ---------------------------------------------------------------------------------------------
+
+rule "EX-004 Exceção de apaziguamento: pode ser aprovada"
+    @id("EX-004")
+    @modulo("M6")
+    @descricao("Aprovar apenas quando nenhuma regra de paragem obrigatória se aplique, o artigo possa ser verificado, o risco de fraude seja baixo e o resultado possa ser concluído no sistema [a validar: A-18].")
+    @condicoes("escaladoResponsavelSenior,pedidoExcecao,semParagemHs,devolucaoVerificada,baixoRisco,concluivelNoSistema")
+    agenda-group "M6"
+    salience 60
+when
+    $d : Decisao( terminal == false, tipoVerificacao == TipoVerificacao.VERIFICADA,
+                  disparou( "EX-003" ) == true, disparou( "EX-004" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, pedidoExcecao != null, pedidoExcecao.concluivelNoSistema == true )
+    not RegistoRegra( codigoRegra.startsWith( "HS-" ) ) from $d.registos
+    not ( DecisaoArtigo( pedidoId == $d.pedidoId, $r : registos )
+          and RegistoRegra( codigoRegra.startsWith( "HS-" ) ) from $r )
+    not IndicadorFraude( pedidoId == $p.id, nivelRisco == NivelRisco.SIGNIFICATIVO || nivelRisco == NivelRisco.CONFIRMADO )
+then
+    modify( $d ) {
+        registar( "EX-004", Modulo.M6,
+                  "Exceção de apaziguamento: o responsável sénior pode aprová-la (sem paragens obrigatórias, compra "
+                  + "verificada, risco de fraude baixo e concluível no sistema), salvo os controlos de EX-006." )
+    }
+end
+
+rule "EX-004 Exceção de apaziguamento: não pode ser aprovada"
+    @id("EX-004")
+    @modulo("M6")
+    @descricao("A exceção de apaziguamento não pode contornar controlos absolutos: há uma paragem obrigatória, a compra não é verificável, o risco de fraude não é baixo ou o resultado não pode ser concluído no sistema.")
+    @condicoes("escaladoResponsavelSenior,pedidoExcecao,paragemOuNaoVerificadaOuRiscoOuNaoConcluivel")
+    agenda-group "M6"
+    salience 55
+when
+    $d : Decisao( terminal == false, disparou( "EX-003" ) == true, disparou( "EX-004" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, pedidoExcecao != null )
+then
+    modify( $d ) {
+        recusarExcecao( "EX-004", Modulo.M6,
+                        "A exceção de apaziguamento não pode ser aprovada: as exceções não podem contornar paragens "
+                        + "obrigatórias, exigem uma compra verificável, risco de fraude baixo e um resultado concluível no sistema." )
+    }
+end
+
+rule "EX-006 A exceção exige contornar um controlo obrigatório"
+    @id("EX-006")
+    @modulo("M6")
+    @descricao("Recusar a exceção que exija um meio de pagamento proibido, um SKU incorreto, um produto excluído, ou contornar a Afterpay, o PayPal, o Venmo ou o processamento online, e usar o processo obrigatório. Anula EX-004 e EX-005.")
+    @condicoes("excecaoEmAvaliacao,exigeControloObrigatorio")
+    agenda-group "M6"
+    salience 50
+when
+    $d : Decisao( terminal == false, disparou( "EX-006" ) == false,
+                  disparou( "EX-001" ) == true || disparou( "EX-004" ) == true )
+    $p : PedidoDevolucao( id == $d.pedidoId, pedidoExcecao != null,
+                          pedidoExcecao.exigeMeioProibido == true || pedidoExcecao.exigeSkuIncorreto == true
+                          || pedidoExcecao.envolveProdutoExcluido == true || pedidoExcecao.contornaProcessoObrigatorio == true )
+then
+    modify( $d ) {
+        recusarExcecao( "EX-006", Modulo.M6,
+                        "A exceção pedida exige um meio de pagamento proibido, um SKU incorreto, um produto excluído ou "
+                        + "contornar um processo obrigatório: recusar a exceção e usar o processo obrigatório. Estes "
+                        + "controlos não são discricionários." )
+    }
+end
+
+rule "EX-005 Exceção elegível com artigo vendável: resolução menos abrangente"
+    @id("EX-005")
+    @modulo("M6")
+    @descricao("Preferir a resolução menos abrangente: troca pelo mesmo artigo, depois crédito de loja, depois reembolso no meio de pagamento original quando permitido.")
+    @condicoes("excecaoEmAvaliacao,excecaoNaoRecusada,artigoRevendivel")
+    agenda-group "M6"
+    salience 40
+when
+    $d : Decisao( terminal == false, excecaoRecusada == false, disparou( "EX-005" ) == false,
+                  disparou( "EX-001" ) == true || disparou( "EX-004" ) == true )
+    $p : PedidoDevolucao( id == $d.pedidoId, pedidoExcecao != null )
+    exists DecisaoArtigo( pedidoId == $d.pedidoId, terminal == false, elegibilidade != Elegibilidade.RECUSAR )
+    not ( DecisaoArtigo( pedidoId == $d.pedidoId, terminal == false, elegibilidade != Elegibilidade.RECUSAR, $id : artigoId )
+          and ArtigoDevolvido( id == $id, revendivel != true ) )
+then
+    modify( $d ) {
+        registar( "EX-005", Modulo.M6,
+                  "Exceção elegível e artigo vendável: preferir a resolução menos abrangente — 1) troca pelo mesmo "
+                  + "artigo, 2) crédito de loja, 3) reembolso no meio de pagamento original quando permitido." )
+    }
+end
+
+rule "EX-005 Exceção com artigo não vendável: recusar"
+    @id("EX-005")
+    @modulo("M6")
+    @descricao("A possibilidade de revenda é um fator formal em qualquer exceção: artigo não vendável, recusar a exceção.")
+    @condicoes("excecaoEmAvaliacao,excecaoNaoRecusada,artigoNaoRevendivel")
+    agenda-group "M6"
+    salience 40
+when
+    $d : Decisao( terminal == false, excecaoRecusada == false, disparou( "EX-005" ) == false,
+                  disparou( "EX-001" ) == true || disparou( "EX-004" ) == true )
+    $p : PedidoDevolucao( id == $d.pedidoId, pedidoExcecao != null )
+    exists ( DecisaoArtigo( pedidoId == $d.pedidoId, terminal == false, elegibilidade != Elegibilidade.RECUSAR, $id : artigoId )
+             and ArtigoDevolvido( id == $id, revendivel == false ) )
+then
+    modify( $d ) {
+        recusarExcecao( "EX-005", Modulo.M6,
+                        "O artigo não é vendável: a possibilidade de revenda é um fator formal de qualquer exceção. "
+                        + "Recusar a exceção." )
+    }
+end
