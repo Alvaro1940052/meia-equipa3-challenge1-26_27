@@ -43,6 +43,12 @@
    alteram. Não se usa `lock-on-active`, porque impediria regras do mesmo agenda-group de reagir às alterações umas das
    outras (ex.: PT-006 depende de PT-002, ambas em M4). O `MotorTeste` falha se houver mais de 1000 disparos.
 
+9. **Reatividade por propriedade desligada** (`drools.propertySpecific=ALLOWED` no `kmodule.xml`). Com a reatividade
+   ligada (predefinição), um `modify` que chame um setter e `aplicar()` só notifica a propriedade do setter: a alteração
+   da elegibilidade feita dentro de `aplicar()` ficava invisível para outras regras (detetado na Fase 4.3: PT-003 não via
+   um artigo em REVER). Sem reatividade por propriedade, cada `modify` reavalia todos os padrões do facto. O
+   `pericial-model` continua sem anotações do Drools.
+
 ## Consequências
 
 - O resultado deixa de depender da ordem de disparo entre regras com resultados diferentes.

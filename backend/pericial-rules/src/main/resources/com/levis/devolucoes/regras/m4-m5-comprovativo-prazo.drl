@@ -1,0 +1,302 @@
+package com.levis.devolucoes.regras;
+
+// M4 — Comprovativo e M5 — Prazo (docs/02, etapas 4 e 5; docs/03, módulo 4).
+// Só para compras que não são online (levi.com e levi.ca seguem o caminho ONLINE, A-02).
+// As regras de prazo exigem um artigo elegível (G3): PERMITIR ou em revisão.
+
+import com.levis.devolucoes.model.decisao.Decisao;
+import com.levis.devolucoes.model.decisao.DecisaoArtigo;
+import com.levis.devolucoes.model.decisao.IndicadorFraude;
+import com.levis.devolucoes.model.enums.BaseValor;
+import com.levis.devolucoes.model.enums.CanalCompra;
+import com.levis.devolucoes.model.enums.Elegibilidade;
+import com.levis.devolucoes.model.enums.MeioReembolso;
+import com.levis.devolucoes.model.enums.Modulo;
+import com.levis.devolucoes.model.enums.NivelAprovacao;
+import com.levis.devolucoes.model.enums.NivelRisco;
+import com.levis.devolucoes.model.enums.TipoPedido;
+import com.levis.devolucoes.model.enums.TipoTransacao;
+import com.levis.devolucoes.model.enums.TipoVerificacao;
+import com.levis.devolucoes.model.pedido.PedidoDevolucao;
+import com.levis.devolucoes.model.produto.ArtigoDevolvido;
+
+// ---------------------------------------------------------------------------------------------
+// M4 — Comprovativo
+// ---------------------------------------------------------------------------------------------
+
+rule "PT-001 Comprovativo válido confirma a compra"
+    @id("PT-001")
+    @modulo("M4")
+    @descricao("Tratar como devolução verificada: recibo impresso ou digital, confirmação de encomenda, recibo de oferta, consulta da transação, fotografia do recibo ou consulta de encomenda BackPocket.")
+    @condicoes("compraNaoOnline,comprovativoValido,comprovativoConfirmaCompra")
+    agenda-group "M4"
+    salience 100
+when
+    $d : Decisao( terminal == false, tipoVerificacao == TipoVerificacao.NAO_DETERMINADA )
+    $p : PedidoDevolucao( id == $d.pedidoId, compraOnline == false, comprovativo != null,
+                          comprovativo.valido == true, comprovativo.confirmaCompra == true )
+then
+    modify( $d ) {
+        setTipoVerificacao( TipoVerificacao.VERIFICADA ),
+        registar( "PT-001", Modulo.M4,
+                  "Comprovativo válido (" + $p.getComprovativo().getTipo() + ") confirma a compra: devolução verificada." )
+    }
+end
+
+rule "PT-002 Compra não verificável: devolução às cegas"
+    @id("PT-002")
+    @modulo("M4")
+    @descricao("Não é possível verificar a compra: processar apenas como devolução às cegas, se o produto for elegível por outros motivos.")
+    @condicoes("compraNaoOnline,naoEAjustePreco,semComprovativoValido")
+    agenda-group "M4"
+    salience 90
+when
+    $d : Decisao( terminal == false, tipoVerificacao == TipoVerificacao.NAO_DETERMINADA )
+    $p : PedidoDevolucao( id == $d.pedidoId, compraOnline == false, tipoPedido != TipoPedido.AJUSTE_PRECO,
+                          comprovativo == null || comprovativo.valido == false || comprovativo.confirmaCompra == false )
+then
+    modify( $d ) {
+        setTipoVerificacao( TipoVerificacao.AS_CEGAS ),
+        registar( "PT-002", Modulo.M4,
+                  "Não é possível verificar a compra: devolução às cegas, se o produto for elegível." )
+    }
+end
+
+rule "PT-006 Cliente sem recibo não fornece dados ou há barreira linguística"
+    @id("PT-006")
+    @modulo("M4")
+    @descricao("Selecionar \"Saltar\" e prosseguir com a devolução às cegas elegível; não pressionar o cliente para fornecer informações.")
+    @condicoes("devolucaoAsCegas,clienteNaoForneceDadosOuBarreiraLinguistica")
+    agenda-group "M4"
+    salience 80
+when
+    $d : Decisao( terminal == false, tipoVerificacao == TipoVerificacao.AS_CEGAS, disparou( "PT-006" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, cliente != null,
+                          cliente.forneceDados == false || cliente.barreiraLinguistica == true )
+then
+    modify( $d ) {
+        registar( "PT-006", Modulo.M4,
+                  "Selecionar \"Saltar\" e prosseguir com a devolução às cegas; não pressionar o cliente a dar dados pessoais." )
+    }
+end
+
+// ---------------------------------------------------------------------------------------------
+// M5 — Prazo de devolução
+// ---------------------------------------------------------------------------------------------
+
+rule "PT-003 Devolução verificada até 30 dias"
+    @id("PT-003")
+    @modulo("M5")
+    @descricao("Permitir o reembolso total do valor pago no meio de pagamento original, ou uma troca elegível. Prazo de 30 dias inclusive [a validar: A-22].")
+    @condicoes("devolucaoVerificada,ate30DiasDesdeCompra,naoEAjustePreco,artigoElegivel")
+    agenda-group "M5"
+    salience 100
+when
+    $d : Decisao( terminal == false, tipoVerificacao == TipoVerificacao.VERIFICADA, disparou( "PT-003" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, compraOnline == false, tipoPedido != TipoPedido.AJUSTE_PRECO,
+                          diasDesdeCompra != null, diasDesdeCompra <= 30 )
+    exists DecisaoArtigo( pedidoId == $d.pedidoId, terminal == false,
+                          elegibilidade == Elegibilidade.PERMITIR || elegibilidade == Elegibilidade.REVER )
+then
+    boolean troca = $p.getTipoPedido() == TipoPedido.TROCA;
+    modify( $d ) {
+        setTipoTransacao( troca ? TipoTransacao.TROCA : TipoTransacao.REEMBOLSO ),
+        setMeioReembolso( MeioReembolso.MEIO_ORIGINAL ),
+        setBaseValor( BaseValor.VALOR_PAGO ),
+        aplicar( "PT-003", Modulo.M5, Elegibilidade.PERMITIR,
+                 "Devolução verificada há " + $p.getDiasDesdeCompra() + " dias (até 30): "
+                 + ( troca ? "troca elegível." : "reembolso total do valor pago no meio de pagamento original." ) )
+    }
+end
+
+rule "PT-004 Devolução verificada após 30 dias: rever"
+    @id("PT-004")
+    @modulo("M5")
+    @descricao("Após 30 dias: rever. O crédito de loja pode ser aprovado se o artigo for vendável, verificável e de baixo risco. Falta avaliar a revenda (IN-010) [a validar: A-17, A-19].")
+    @condicoes("devolucaoVerificada,mais30DiasDesdeCompra,naoEAjustePreco,artigoElegivel,revendivelPorAvaliar")
+    agenda-group "M5"
+    salience 100
+when
+    $d : Decisao( terminal == false, tipoVerificacao == TipoVerificacao.VERIFICADA, disparou( "PT-004" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, compraOnline == false, tipoPedido != TipoPedido.AJUSTE_PRECO,
+                          diasDesdeCompra != null, diasDesdeCompra > 30 )
+    exists ( DecisaoArtigo( pedidoId == $d.pedidoId, terminal == false, $id : artigoId,
+                            elegibilidade == Elegibilidade.PERMITIR || elegibilidade == Elegibilidade.REVER )
+             and ArtigoDevolvido( id == $id, revendivel == null ) )
+then
+    modify( $d ) {
+        setAprovacao( NivelAprovacao.RESPONSAVEL_SENIOR ),
+        aplicar( "PT-004", Modulo.M5, Elegibilidade.REVER,
+                 "Devolução verificada há " + $p.getDiasDesdeCompra() + " dias (mais de 30): sem direito automático a "
+                 + "reembolso. A gestão pode aprovar crédito de loja se o artigo for vendável, verificável e de baixo "
+                 + "risco. Falta avaliar a possibilidade de revenda (IN-010)." )
+    }
+end
+
+rule "PT-004 Devolução verificada após 30 dias: crédito de loja aprovado"
+    @id("PT-004")
+    @modulo("M5")
+    @descricao("Após 30 dias, artigo vendável, verificável e de baixo risco: crédito de loja aprovado pela gestão. Baixo risco = sem indício significativo ou confirmado [a validar: A-17, A-19].")
+    @condicoes("devolucaoVerificada,mais30DiasDesdeCompra,naoEAjustePreco,artigoElegivel,revendivel,baixoRisco")
+    agenda-group "M5"
+    salience 100
+when
+    $d : Decisao( terminal == false, tipoVerificacao == TipoVerificacao.VERIFICADA, disparou( "PT-004" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, compraOnline == false, tipoPedido != TipoPedido.AJUSTE_PRECO,
+                          diasDesdeCompra != null, diasDesdeCompra > 30 )
+    exists DecisaoArtigo( pedidoId == $d.pedidoId, terminal == false,
+                          elegibilidade == Elegibilidade.PERMITIR || elegibilidade == Elegibilidade.REVER )
+    not ( DecisaoArtigo( pedidoId == $d.pedidoId, terminal == false, $id : artigoId,
+                         elegibilidade == Elegibilidade.PERMITIR || elegibilidade == Elegibilidade.REVER )
+          and ArtigoDevolvido( id == $id, revendivel != true ) )
+    not IndicadorFraude( pedidoId == $p.id, nivelRisco == NivelRisco.SIGNIFICATIVO || nivelRisco == NivelRisco.CONFIRMADO )
+then
+    modify( $d ) {
+        setTipoTransacao( TipoTransacao.CREDITO_LOJA ),
+        setMeioReembolso( MeioReembolso.CREDITO_LOJA ),
+        setBaseValor( BaseValor.VALOR_PAGO ),
+        setAprovacao( NivelAprovacao.RESPONSAVEL_SENIOR ),
+        aplicar( "PT-004", Modulo.M5, Elegibilidade.PERMITIR,
+                 "Devolução verificada há " + $p.getDiasDesdeCompra() + " dias (mais de 30): artigo vendável, verificável "
+                 + "e de baixo risco; a gestão aprova crédito de loja." )
+    }
+end
+
+rule "PT-004 Devolução verificada após 30 dias: recusada, artigo não vendável"
+    @id("PT-004")
+    @modulo("M5")
+    @descricao("Após 30 dias e o artigo não é vendável (IN-010 = não): recusar.")
+    @condicoes("devolucaoVerificada,mais30DiasDesdeCompra,naoEAjustePreco,artigoNaoRevendivel")
+    agenda-group "M5"
+    salience 100
+when
+    $d : Decisao( terminal == false, tipoVerificacao == TipoVerificacao.VERIFICADA, disparou( "PT-004" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, compraOnline == false, tipoPedido != TipoPedido.AJUSTE_PRECO,
+                          diasDesdeCompra != null, diasDesdeCompra > 30 )
+    exists ( DecisaoArtigo( pedidoId == $d.pedidoId, terminal == false, $id : artigoId,
+                            elegibilidade == Elegibilidade.PERMITIR || elegibilidade == Elegibilidade.REVER )
+             and ArtigoDevolvido( id == $id, revendivel == false ) )
+then
+    modify( $d ) {
+        setTipoTransacao( TipoTransacao.NENHUMA ),
+        aplicar( "PT-004", Modulo.M5, Elegibilidade.RECUSAR,
+                 "Devolução verificada há " + $p.getDiasDesdeCompra() + " dias (mais de 30) e o artigo não é vendável: recusar." )
+    }
+end
+
+rule "PT-005 Devolução às cegas: só troca ou crédito de loja ao preço atual"
+    @id("PT-005")
+    @modulo("M5")
+    @descricao("Artigo sem recibo elegível: permitir apenas troca ou crédito de loja, ao preço de venda atual; sem numerário nem meio original. Sem prazo [a validar: A-13, A-16].")
+    @condicoes("devolucaoAsCegas,naoEAjustePreco,artigoElegivel")
+    agenda-group "M5"
+    salience 100
+when
+    $d : Decisao( terminal == false, tipoVerificacao == TipoVerificacao.AS_CEGAS, disparou( "PT-005" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, compraOnline == false, tipoPedido != TipoPedido.AJUSTE_PRECO )
+    exists DecisaoArtigo( pedidoId == $d.pedidoId, terminal == false,
+                          elegibilidade == Elegibilidade.PERMITIR || elegibilidade == Elegibilidade.REVER )
+then
+    boolean troca = $p.getTipoPedido() == TipoPedido.TROCA;
+    modify( $d ) {
+        setTipoTransacao( troca ? TipoTransacao.TROCA : TipoTransacao.CREDITO_LOJA ),
+        setMeioReembolso( troca ? null : MeioReembolso.CREDITO_LOJA ),
+        setBaseValor( BaseValor.PRECO_ATUAL ),
+        aplicar( "PT-005", Modulo.M5, Elegibilidade.PERMITIR,
+                 "Devolução às cegas: apenas " + ( troca ? "troca" : "crédito de loja" ) + ", ao preço de venda atual. "
+                 + "Não é possível reembolsar em numerário nem no meio de pagamento original sem comprovativo." )
+    }
+end
+
+// ---------------------------------------------------------------------------------------------
+// M5 — Ajuste de preço
+// ---------------------------------------------------------------------------------------------
+
+rule "PT-008 Ajuste de preço após 14 dias ou sem recibo original"
+    @id("PT-008")
+    @modulo("M5")
+    @descricao("Recusar o ajuste de preço: falta o prazo de 14 dias ou o recibo original. A fotografia do recibo não é o recibo original [a validar: A-14].")
+    @condicoes("ajustePreco,mais14DiasOuSemReciboOriginal")
+    agenda-group "M5"
+    salience 100
+when
+    $d : Decisao( terminal == false, disparou( "PT-008" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, tipoPedido == TipoPedido.AJUSTE_PRECO,
+                          comprovativo == null || comprovativo.reciboOriginal == false
+                          || diasDesdeCompra == null || diasDesdeCompra > 14 )
+then
+    String motivo = ( $p.getComprovativo() == null || !$p.getComprovativo().isReciboOriginal() )
+                    ? "sem o recibo original" : "após 14 dias";
+    modify( $d ) {
+        setTipoTransacao( TipoTransacao.NENHUMA ),
+        aplicar( "PT-008", Modulo.M5, Elegibilidade.RECUSAR,
+                 "Ajuste de preço pedido " + motivo + ": recusar o ajuste." )
+    }
+end
+
+rule "PT-007 Ajuste de preço único em compra de loja até 14 dias"
+    @id("PT-007")
+    @modulo("M5")
+    @descricao("Compra em loja, até 14 dias, com recibo original: permitir um ajuste de preço único para o artigo idêntico, pela diferença calculada pelo POS.")
+    @condicoes("ajustePreco,compraEmLoja,ate14DiasDesdeCompra,reciboOriginal,devolucaoVerificada,semAjusteAnterior")
+    agenda-group "M5"
+    salience 90
+when
+    $d : Decisao( terminal == false, tipoVerificacao == TipoVerificacao.VERIFICADA, disparou( "PT-007" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, tipoPedido == TipoPedido.AJUSTE_PRECO, compraOriginal != null,
+                          compraOriginal.canal == CanalCompra.MAINLINE || compraOriginal.canal == CanalCompra.OUTLET,
+                          compraOriginal.ajustePrecoAplicado == false,
+                          comprovativo != null, comprovativo.reciboOriginal == true,
+                          diasDesdeCompra != null, diasDesdeCompra <= 14 )
+then
+    modify( $d ) {
+        setTipoTransacao( TipoTransacao.AJUSTE_PRECO ),
+        setBaseValor( BaseValor.VALOR_POS ),
+        setMeioReembolso( MeioReembolso.MEIO_ORIGINAL ),
+        aplicar( "PT-007", Modulo.M5, Elegibilidade.PERMITIR,
+                 "Compra em loja há " + $p.getDiasDesdeCompra() + " dias com recibo original: ajuste de preço único "
+                 + "para o artigo idêntico, pela diferença calculada pelo POS." )
+    }
+end
+
+rule "PT-007 Ajuste de preço já aplicado nesta compra"
+    @id("PT-007")
+    @modulo("M5")
+    @descricao("O ajuste de preço de 14 dias é único: se já foi aplicado, recusar [a validar: A-14].")
+    @condicoes("ajustePreco,ajusteAnterior")
+    agenda-group "M5"
+    salience 90
+when
+    $d : Decisao( terminal == false, disparou( "PT-007" ) == false, disparou( "PT-008" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, tipoPedido == TipoPedido.AJUSTE_PRECO, compraOriginal != null,
+                          compraOriginal.ajustePrecoAplicado == true )
+then
+    modify( $d ) {
+        setTipoTransacao( TipoTransacao.NENHUMA ),
+        aplicar( "PT-007", Modulo.M5, Elegibilidade.RECUSAR,
+                 "Já foi aplicado um ajuste de preço a esta compra: o ajuste de 14 dias é único." )
+    }
+end
+
+rule "PT-007 Ajuste de preço de compra fora da loja: rever"
+    @id("PT-007")
+    @modulo("M5")
+    @descricao("PT-007 só cobre compras em loja; o ajuste de compras online ou BackPocket não está previsto: rever [a validar: A-14].")
+    @condicoes("ajustePreco,compraForaDaLoja,ate14DiasDesdeCompra,reciboOriginal")
+    agenda-group "M5"
+    salience 90
+when
+    $d : Decisao( terminal == false, disparou( "PT-007" ) == false, disparou( "PT-008" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, tipoPedido == TipoPedido.AJUSTE_PRECO, compraOriginal != null,
+                          compraOriginal.canal != CanalCompra.MAINLINE, compraOriginal.canal != CanalCompra.OUTLET,
+                          compraOriginal.ajustePrecoAplicado == false,
+                          comprovativo != null, comprovativo.reciboOriginal == true,
+                          diasDesdeCompra != null, diasDesdeCompra <= 14 )
+then
+    modify( $d ) {
+        setAprovacao( NivelAprovacao.RESPONSAVEL_SENIOR ),
+        aplicar( "PT-007", Modulo.M5, Elegibilidade.REVER,
+                 "Ajuste de preço de uma compra " + $p.getCompraOriginal().getCanal() + ": a política só prevê o ajuste "
+                 + "de 14 dias para compras em loja. Rever com a gestão." )
+    }
+end

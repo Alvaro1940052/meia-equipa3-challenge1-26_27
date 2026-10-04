@@ -46,7 +46,9 @@
   "indicadoresFraude": [],
   "esperado": {
     "terminal": false,
-    "regrasDisparadas": ["CT-003", "CH-001", "PC-002"],
+    "tipoVerificacao": "VERIFICADA",
+    "tipoTransacao": "TROCA",
+    "regrasDisparadas": ["CT-003", "CH-001", "PC-002", "PT-001", "PT-003"],
     "artigos": { "A-1": { "elegibilidade": "REVER", "regrasDisparadas": ["PC-002"] } }
   }
 }

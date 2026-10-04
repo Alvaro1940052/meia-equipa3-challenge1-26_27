@@ -89,7 +89,7 @@ class AutorizacaoECanalTest {
                 assertThat(r.getMensagem()).contains("POS-C-1");
                 assertThat(r.getResultado()).isNull();
               });
-      assertThat(resultado.decisao().getElegibilidade()).isNull();
+      assertThat(resultado.registo("CT-003").getResultado()).isNull();
     }
 
     @Test
@@ -158,7 +158,7 @@ class AutorizacaoECanalTest {
       ResultadoAvaliacao resultado = MotorTeste.avaliar(umPedido().canal(canal).construir());
 
       assertThat(resultado.disparos()).startsWith("CT-003", "CH-001");
-      assertThat(resultado.decisao().getElegibilidade()).isNull();
+      assertThat(resultado.registo("CH-001").getResultado()).isNull();
       assertThat(resultado.decisao().isTerminal()).isFalse();
     }
 
@@ -183,7 +183,7 @@ class AutorizacaoECanalTest {
           MotorTeste.avaliar(umPedido().canal(CanalCompra.DESCONHECIDO).construir());
 
       assertThat(resultado.disparos()).startsWith("CT-003", "IN-003");
-      assertThat(resultado.decisao().getElegibilidade()).isNull();
+      assertThat(resultado.registo("IN-003").getResultado()).isNull();
       assertThat(resultado.decisao().isTerminal()).isFalse();
     }
   }
