@@ -15,6 +15,10 @@
   <name>pericial-model</name>
   <description>Factos do domínio usados pelas regras Drools (POJO puros, sem Spring nem JPA).</description>
 
+  <properties>
+    <jacoco.cobertura.minima>0.90</jacoco.cobertura.minima>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>com.tngtech.archunit</groupId>

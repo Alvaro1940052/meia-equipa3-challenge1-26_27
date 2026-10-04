@@ -14,6 +14,11 @@
   <property name="fileExtensions" value="java"/>
 
   <module name="SuppressWarningsFilter"/>
+  <!-- Classes de teste com regras ArchUnit só têm campos estáticos: não são classes utilitárias -->
+  <module name="SuppressionSingleFilter">
+    <property name="files" value="Test\.java$"/>
+    <property name="checks" value="HideUtilityClassConstructor"/>
+  </module>
   <module name="FileTabCharacter"/>
   <module name="NewlineAtEndOfFile">
     <property name="lineSeparator" value="lf"/>

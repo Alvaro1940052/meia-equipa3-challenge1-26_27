@@ -28,7 +28,10 @@
    elegibilidade atual for REVER e regista a regra.
 4. **Rasto:** todas as chamadas acrescentam um `RegistoRegra` (código, módulo, resultado, mensagem, instante),
    mesmo quando a severidade não muda. O instante vem de um `Clock` injetável (testes determinísticos).
-5. A mesma semântica aplica-se a `DecisaoArtigo` (ADR 0002).
+5. A mesma semântica aplica-se a `DecisaoArtigo` (ADR 0002), através da classe base `DecisaoBase`.
+6. **Assinatura com módulo:** `aplicar(String regra, Modulo modulo, Elegibilidade r, String msg)`. A assinatura de `04`
+   (sem módulo) não permitia preencher `RegistoRegra.modulo`. Também existem `registar(regra, modulo, msg)` (regra sem
+   resultado, ex.: CT-005), `resolverRevisao(regra, modulo, msg)` e, só em `Decisao`, `suspender(regra, modulo, msg)` (EX-008).
 
 ## Consequências
 
