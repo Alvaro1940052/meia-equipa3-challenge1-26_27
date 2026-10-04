@@ -50,5 +50,5 @@
     }
   },
   "indicadoresFraude": [],
-  "esperado": {}
+  "esperado": { "regrasDisparadas": ["CT-003"], "regrasNaoDisparadas": ["CH-001", "IN-003"] }
 }

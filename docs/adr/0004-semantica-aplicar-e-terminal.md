@@ -38,6 +38,11 @@
    elegibilidade", para que um artigo inseguro seja isolado mesmo numa transação recusada ou suspensa (A-28).
    O `ConvencoesDrlTest` verifica a guarda em todas as outras regras.
 
+8. **Guarda anti-ciclo.** Qualquer `modify` sobre a `Decisao`/`DecisaoArtigo` reavalia as regras que dependem dela,
+   incluindo a própria. As regras que não terminam o fluxo incluem `disparou( "ID" ) == false` no padrão da decisão que
+   alteram. Não se usa `lock-on-active`, porque impediria regras do mesmo agenda-group de reagir às alterações umas das
+   outras (ex.: PT-006 depende de PT-002, ambas em M4). O `MotorTeste` falha se houver mais de 1000 disparos.
+
 ## Consequências
 
 - O resultado deixa de depender da ordem de disparo entre regras com resultados diferentes.

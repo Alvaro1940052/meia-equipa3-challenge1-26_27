@@ -53,6 +53,7 @@
     "aprovacao": "DISTRICT_AREA",
     "terminal": true,
     "regrasDisparadas": ["EX-008", "PC-008"],
+    "regrasNaoDisparadas": ["CT-003", "IN-003"],
     "artigos": {
       "A-3": { "destino": "RISCO_BIOLOGICO", "regrasDisparadas": ["PC-008"] }
     }

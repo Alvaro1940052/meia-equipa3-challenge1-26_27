@@ -39,5 +39,11 @@
     }
   },
   "indicadoresFraude": [],
-  "esperado": {}
+  "esperado": {
+    "elegibilidade": "RECUSAR",
+    "tipoTransacao": "NENHUMA",
+    "terminal": true,
+    "regrasDisparadas": ["CT-003", "CH-008"],
+    "regrasNaoDisparadas": ["HS-002", "PC-001", "PT-001"]
+  }
 }

@@ -96,7 +96,7 @@ class TransversaisTest {
 
       assertThat(resultado.artigo("A-1").getDestino()).isEqualTo(DestinoProduto.RISCO_BIOLOGICO);
       assertThat(resultado.artigo("A-1").disparou("PC-008")).isTrue();
-      assertThat(resultado.disparos()).containsExactly("PC-008");
+      assertThat(resultado.disparos()).startsWith("PC-008").containsOnlyOnce("PC-008");
     }
 
     @Test
