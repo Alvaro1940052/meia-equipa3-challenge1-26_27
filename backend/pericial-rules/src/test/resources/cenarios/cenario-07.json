@@ -1,0 +1,44 @@
+{
+  "id": 7,
+  "titulo": "A substituição do cartão Interac no Canadá",
+  "estado": "a validar",
+  "aValidar": ["A-10", "A-11"],
+  "pressupostos": [
+    "Colaborador Key Holder (docs/06 não indica quem processa).",
+    "O cartão de substituição não é o mesmo cartão físico usado na compra (cartaoFisicoPresente = false).",
+    "O pedido de reembolso para o cartão de substituição ou em numerário é registado como exceção que exige um meio proibido."
+  ],
+  "pedido": {
+    "id": "C07",
+    "dataPedido": "2026-03-31",
+    "tipoPedido": "DEVOLUCAO",
+    "loja": { "codigo": "CA-ML-070", "nome": "Mainline Canadá", "mercado": "CANADA", "tipoLoja": "MAINLINE" },
+    "colaborador": { "id": "C-7", "nome": "Key Holder", "funcao": "KEY_HOLDER", "idCredencialPOS": "POS-C-7" },
+    "cliente": { "forneceDados": true, "contestaResultado": true },
+    "compraOriginal": {
+      "idTransacao": "T-0707",
+      "canal": "MAINLINE",
+      "dataCompra": "2026-03-13",
+      "pagamento": { "meio": "INTERAC", "valorPago": 79.50, "estadoConta": "ATIVA_CARTAO_PERDIDO", "cartaoFisicoPresente": false },
+      "idStylistVenda": "S-77",
+      "quantidadeComprada": 1
+    },
+    "comprovativo": { "tipo": "RECIBO_IMPRESSO", "confirmaCompra": true, "reciboOriginal": true },
+    "artigos": [
+      {
+        "id": "A-1",
+        "produto": { "sku": "CA-541-32", "skuReconhecidoPOS": true, "marca": "LEVIS", "categoria": "VESTUARIO", "vendidoNaLoja": true, "pvpOriginal": 79.50, "precoAtual": 79.50 },
+        "quantidade": 1,
+        "precoPago": 79.50,
+        "estado": { "condicaoUso": "NAO_USADO", "etiquetas": "COLOCADAS" }
+      }
+    ],
+    "pedidoExcecao": {
+      "motivo": "Pede reembolso para o cartão de substituição ou em numerário.",
+      "resolucaoPedida": "REEMBOLSO",
+      "exigeMeioProibido": true
+    }
+  },
+  "indicadoresFraude": [],
+  "esperado": {}
+}

@@ -1,0 +1,48 @@
+{
+  "id": 1,
+  "titulo": "As etiquetas soltas, troca ao 29.º dia",
+  "estado": "a validar",
+  "aValidar": ["A-19", "A-22"],
+  "pressupostos": [
+    "Colaborador Key Holder (docs/06 não indica quem processa).",
+    "Pagamento original com cartão de crédito (docs/06 não indica).",
+    "A possibilidade de revenda (IN-010) ainda não foi avaliada: revendivel = null.",
+    "Preço pago promocional de 69.50 face a um PVP de 98.00."
+  ],
+  "pedido": {
+    "id": "C01",
+    "dataPedido": "2026-03-31",
+    "tipoPedido": "TROCA",
+    "loja": { "codigo": "US-ML-010", "nome": "Mainline EUA", "mercado": "EUA", "tipoLoja": "MAINLINE", "skusSortido": ["501-ORIG-32", "501-ORIG-34"] },
+    "colaborador": { "id": "C-1", "nome": "Key Holder", "funcao": "KEY_HOLDER", "idCredencialPOS": "POS-C-1" },
+    "cliente": { "forneceDados": true },
+    "compraOriginal": {
+      "idTransacao": "T-0101",
+      "canal": "MAINLINE",
+      "dataCompra": "2026-03-02",
+      "pagamento": { "meio": "CREDITO", "valorPago": 69.50, "estadoConta": "ATIVA" },
+      "idStylistVenda": "S-21",
+      "quantidadeComprada": 1
+    },
+    "comprovativo": { "tipo": "RECIBO_DIGITAL", "confirmaCompra": true, "reciboOriginal": true },
+    "artigos": [
+      {
+        "id": "A-1",
+        "produto": { "sku": "501-ORIG-32", "skuReconhecidoPOS": true, "marca": "LEVIS", "categoria": "VESTUARIO", "vendidoNaLoja": true, "pvpOriginal": 98.00, "precoAtual": 98.00 },
+        "quantidade": 1,
+        "precoPago": 69.50,
+        "estado": { "condicaoUso": "NAO_USADO", "etiquetas": "SOLTAS" },
+        "entreCanais": true
+      }
+    ],
+    "artigosTroca": [
+      {
+        "produto": { "sku": "501-ORIG-34", "skuReconhecidoPOS": true, "marca": "LEVIS", "categoria": "VESTUARIO", "vendidoNaLoja": true, "pvpOriginal": 98.00, "precoAtual": 98.00 },
+        "apenasMudaTamanho": true,
+        "precoVenda": 98.00
+      }
+    ]
+  },
+  "indicadoresFraude": [],
+  "esperado": {}
+}

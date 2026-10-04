@@ -1,0 +1,54 @@
+package com.levis.devolucoes.regras;
+
+// Regras transversais (docs/03, "Interrupções transversais"): podem interromper qualquer módulo.
+// Estão no grupo TRANSVERSAL, avaliado antes de M0, e têm auto-focus para o caso de os factos
+// mudarem a meio da avaliação. São as únicas sem a guarda Decisao( terminal == false ) (ADR 0004).
+
+import com.levis.devolucoes.model.decisao.Decisao;
+import com.levis.devolucoes.model.decisao.DecisaoArtigo;
+import com.levis.devolucoes.model.decisao.IndicadorFraude;
+import com.levis.devolucoes.model.enums.DestinoProduto;
+import com.levis.devolucoes.model.enums.NivelRisco;
+import com.levis.devolucoes.model.pedido.PedidoDevolucao;
+import com.levis.devolucoes.model.produto.ArtigoDevolvido;
+
+rule "EX-008 Indícios de fraude ou inconsistências relevantes"
+    @id("EX-008")
+    @modulo("TRANSVERSAL")
+    @descricao("Suspender a transação, envolver a Gestão da Loja e comunicar o risco significativo ou confirmado ao District ou Area Manager e à Global Safety and Security. Só um indício significativo ou confirmado suspende [a validar: A-26].")
+    @condicoes("indicioFraudeRelevante,pedidoNaoSuspenso")
+    agenda-group "TRANSVERSAL"
+    auto-focus true
+    salience 1000
+when
+    $f : IndicadorFraude( nivelRisco == NivelRisco.SIGNIFICATIVO || nivelRisco == NivelRisco.CONFIRMADO )
+    $p : PedidoDevolucao( id == $f.pedidoId, suspenso == false )
+    $d : Decisao( pedidoId == $p.id )
+then
+    modify( $p ) { setSuspenso( true ) }
+    modify( $d ) {
+        suspender( "EX-008", null,
+                   "Transação suspensa por indícios de fraude: " + $f.getDescricao()
+                   + ". Envolver a Gestão da Loja e comunicar ao District ou Area Manager e à Global Safety and Security." )
+    }
+end
+
+rule "PC-008 Artigo sujo, contaminado ou inseguro de manusear"
+    @id("PC-008")
+    @modulo("TRANSVERSAL")
+    @descricao("Minimizar o manuseamento; colocar num saco de risco biológico, etiquetado e datado; guardar na sala de reservas; enviar e-mail ao escritório corporativo; não revender e aguardar instruções de eliminação. Não altera a elegibilidade [a validar: A-15, A-28].")
+    @condicoes("artigoSujoOuInseguro")
+    agenda-group "TRANSVERSAL"
+    auto-focus true
+    salience 900
+when
+    $a  : ArtigoDevolvido( estado!.sujoOuInseguro == true )
+    $da : DecisaoArtigo( artigoId == $a.id, destino != DestinoProduto.RISCO_BIOLOGICO )
+then
+    modify( $da ) {
+        setDestino( DestinoProduto.RISCO_BIOLOGICO ),
+        registar( "PC-008", null,
+                  "Artigo inseguro: minimizar o manuseamento, saco de risco biológico etiquetado e datado, "
+                  + "sala de reservas, e-mail ao escritório corporativo; não revender e aguardar instruções de eliminação." )
+    }
+end

@@ -45,6 +45,9 @@ Quando a operação responder, atualiza-se a coluna **Resposta**, a regra, o tes
 | A-23 | XStore Manager em HS-006 | HS-006 | O XStore Manager é processador autorizado? | Sim | — | |
 | A-24 | Identidade do colaborador | HS-006, CT-001, CT-003 | — (decisão técnica de segurança) | O `Colaborador` vem sempre do token JWT, nunca do corpo do pedido | — | n/a |
 | A-25 | Agregação multi-artigo | — | Um pedido com artigos aceites e recusados processa-se em parte? | Ver ADR 0002: elegibilidade do pedido = a mais severa | 6 | |
+| A-26 | Que indícios suspendem | EX-008, PT-004 | Qualquer indício de fraude suspende a transação, ou só os relevantes? | Só SIGNIFICATIVO ou CONFIRMADO suspendem; um indício BAIXO não suspende e conta para o "baixo risco" de PT-004 | 6 | |
+| A-27 | Comportamento do cliente como indício | EX-008 | Não saber explicar onde e quando comprou os artigos (cenário 6) é um indício de fraude significativo? | O colaborador regista-o como indício SIGNIFICATIVO → EX-008 suspende | 6 | |
+| A-28 | Artigo inseguro em transação recusada ou suspensa | PC-008, M9 | Um artigo sujo/inseguro numa transação recusada ou suspensa é isolado ou devolvido ao cliente? | É isolado (PC-008 é independente da elegibilidade, `02`); destino `RISCO_BIOLOGICO` prevalece sobre `DEVOLUCAO_CLIENTE` | 6, 9 | |
 
 ## Consequências
 

@@ -1,0 +1,55 @@
+{
+  "id": 10,
+  "titulo": "A troca online tardia com PayPal durante uma falha do portal",
+  "estado": "a validar",
+  "aValidar": ["A-04", "A-05", "A-06", "A-22"],
+  "pressupostos": [
+    "Colaborador Key Holder (docs/06 não indica quem processa).",
+    "Data de compra igual à de envio (enviado há 37 dias).",
+    "O pedido de pagamento dividido e de cartão de oferta para o remanescente, sem acesso ao PayPal, é registado como exceção que contorna o processo obrigatório do PayPal.",
+    "O cliente não consegue aceder à aplicação PayPal na loja (ainda sem atributo no modelo; ver A-05)."
+  ],
+  "pedido": {
+    "id": "C10",
+    "dataPedido": "2026-03-31",
+    "tipoPedido": "TROCA",
+    "loja": { "codigo": "US-ML-100", "nome": "Mainline EUA", "mercado": "EUA", "tipoLoja": "MAINLINE" },
+    "colaborador": { "id": "C-10", "nome": "Key Holder", "funcao": "KEY_HOLDER", "idCredencialPOS": "POS-C-10" },
+    "cliente": { "forneceDados": true, "contestaResultado": true },
+    "compraOriginal": {
+      "idTransacao": "LCOM-1010",
+      "canal": "LEVI_COM",
+      "dataCompra": "2026-02-22",
+      "dataEnvio": "2026-02-22",
+      "pagamento": { "meio": "PAYPAL", "valorPago": 69.50 },
+      "quantidadeComprada": 1,
+      "encomendaEncontrada": true
+    },
+    "comprovativo": { "tipo": "CONFIRMACAO_ENCOMENDA", "confirmaCompra": true },
+    "portalOnlineDisponivel": false,
+    "artigos": [
+      {
+        "id": "A-1",
+        "produto": { "sku": "550-RELAX-34", "skuReconhecidoPOS": true, "marca": "LEVIS", "categoria": "VESTUARIO", "vendidoNaLoja": true, "pvpOriginal": 69.50, "precoAtual": 69.50 },
+        "quantidade": 1,
+        "precoPago": 69.50,
+        "estado": { "condicaoUso": "NAO_USADO", "etiquetas": "COLOCADAS" },
+        "entreCanais": true
+      }
+    ],
+    "artigosTroca": [
+      {
+        "produto": { "sku": "501-PREM-34", "skuReconhecidoPOS": true, "marca": "LEVIS", "categoria": "VESTUARIO", "vendidoNaLoja": true, "pvpOriginal": 128.00, "precoAtual": 128.00 },
+        "apenasMudaTamanho": false,
+        "precoVenda": 128.00
+      }
+    ],
+    "pedidoExcecao": {
+      "motivo": "Paga a diferença com cartão de crédito e pede o remanescente num cartão de oferta; não acede ao PayPal na loja.",
+      "resolucaoPedida": "TROCA",
+      "contornaProcessoObrigatorio": true
+    }
+  },
+  "indicadoresFraude": [],
+  "esperado": {}
+}

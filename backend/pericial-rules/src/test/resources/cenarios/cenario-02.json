@@ -1,0 +1,54 @@
+{
+  "id": 2,
+  "titulo": "O cliente irritado com Afterpay",
+  "estado": "a validar",
+  "aValidar": ["A-18", "A-22"],
+  "pressupostos": [
+    "Colaborador Key Holder (docs/06 não indica quem processa).",
+    "\"Entregue há 12 dias\" é tratado como enviado há 12 dias; data de compra igual à de envio.",
+    "O pedido de troca noutra cor é registado como pedido de exceção que contorna o processo obrigatório da Afterpay."
+  ],
+  "pedido": {
+    "id": "C02",
+    "dataPedido": "2026-03-31",
+    "tipoPedido": "TROCA",
+    "loja": { "codigo": "US-ML-020", "nome": "Mainline EUA", "mercado": "EUA", "tipoLoja": "MAINLINE" },
+    "colaborador": { "id": "C-2", "nome": "Key Holder", "funcao": "KEY_HOLDER", "idCredencialPOS": "POS-C-2" },
+    "cliente": { "forneceDados": true, "contestaResultado": true, "agitado": true },
+    "compraOriginal": {
+      "idTransacao": "LCOM-0202",
+      "canal": "LEVI_COM",
+      "dataCompra": "2026-03-19",
+      "dataEnvio": "2026-03-19",
+      "pagamento": { "meio": "AFTERPAY", "valorPago": 128.00 },
+      "quantidadeComprada": 1,
+      "encomendaEncontrada": true
+    },
+    "comprovativo": { "tipo": "CONFIRMACAO_ENCOMENDA", "confirmaCompra": true },
+    "artigos": [
+      {
+        "id": "A-1",
+        "produto": { "sku": "TRUCKER-AZUL-M", "skuReconhecidoPOS": true, "marca": "LEVIS", "categoria": "VESTUARIO", "vendidoNaLoja": true, "pvpOriginal": 128.00, "precoAtual": 128.00 },
+        "quantidade": 1,
+        "precoPago": 128.00,
+        "estado": { "condicaoUso": "NAO_USADO", "etiquetas": "COLOCADAS" },
+        "entreCanais": true
+      }
+    ],
+    "artigosTroca": [
+      {
+        "produto": { "sku": "TRUCKER-PRETO-M", "skuReconhecidoPOS": true, "marca": "LEVIS", "categoria": "VESTUARIO", "vendidoNaLoja": true, "pvpOriginal": 128.00, "precoAtual": 128.00 },
+        "apenasMudaTamanho": false,
+        "precoVenda": 128.00
+      }
+    ],
+    "pedidoExcecao": {
+      "motivo": "Exige troca imediata do casaco por outra cor e recusa o reembolso.",
+      "resolucaoPedida": "TROCA",
+      "contornaProcessoObrigatorio": true,
+      "preocupacaoCliente": "Quer a troca imediata e pede para falar com o responsável mais sénior."
+    }
+  },
+  "indicadoresFraude": [],
+  "esperado": {}
+}

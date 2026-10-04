@@ -1,3 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Kbase e ksessions definidas na Fase 3 (ver docs/07-plano.md). -->
-<kmodule xmlns="http://www.drools.org/xsd/kmodule"/>
+<kmodule xmlns="http://www.drools.org/xsd/kmodule">
+    <!-- Base de conhecimento do sistema pericial: todas as regras de com.levis.devolucoes.regras -->
+    <kbase name="pericial" packages="com.levis.devolucoes.regras" default="true">
+        <!-- Avaliação de um pedido (uma sessão por pedido) -->
+        <ksession name="sessaoPericial" type="stateful" default="true"/>
+        <!-- Simulações "E se" (Fase 5) -->
+        <ksession name="sessaoPericialStateless" type="stateless" default="true"/>
+    </kbase>
+</kmodule>

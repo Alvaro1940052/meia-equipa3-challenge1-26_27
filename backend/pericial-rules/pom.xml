@@ -16,6 +16,10 @@
   <name>pericial-rules</name>
   <description>Base de conhecimento: regras DRL empacotadas como kjar versionado.</description>
 
+  <properties>
+    <jacoco.cobertura.minima>0.85</jacoco.cobertura.minima>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>com.levis.devolucoes</groupId>
@@ -68,6 +72,17 @@
         <groupId>org.kie</groupId>
         <artifactId>kie-maven-plugin</artifactId>
         <extensions>true</extensions>
+      </plugin>
+      <plugin>
+        <!-- Os metadados gerados pelo modelo executável não são regras: ficam fora da cobertura.
+             As classes geradas das regras (Rules*, Lambda*) continuam a ser medidas. -->
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>**/DomainClassesMetadata*</exclude>
+          </excludes>
+        </configuration>
       </plugin>
     </plugins>
   </build>

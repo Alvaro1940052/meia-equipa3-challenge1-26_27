@@ -24,6 +24,12 @@ o exemplo DRL de `04` importa `com.levis.devolucoes.modelo.*`, enquanto `04` e `
    O foco da agenda continua a incluir M1 para manter a ordem de `Modulo`.
 4. **Pacote do modelo:** `com.levis.devolucoes.model` (o import `...modelo` do exemplo de `04` é tratado como gralha).
 5. **Pacote das regras:** `com.levis.devolucoes.regras`.
+6. **Grupo TRANSVERSAL.** EX-008 e PC-008 (`transversais.drl`) ficam no agenda-group `TRANSVERSAL`, com `@modulo("TRANSVERSAL")`
+   e `auto-focus true`. Se ficassem no grupo MAIN (como no exemplo de `04`), só seriam avaliadas depois de M0–M9, porque o
+   MAIN fica no fundo da pilha de foco. O `RegistoRegra.modulo` destas duas regras é nulo (não pertencem a nenhum módulo).
+7. **Ordem da agenda** numa classe Java do kjar, `com.levis.devolucoes.regras.OrdemAgenda`
+   (`TRANSVERSAL, M0, M1, M2, M3, M4, M5, ONLINE, M6, M7, M8, M9`), reutilizada pelos testes e pelo `MotorRegrasService`
+   (substitui a classe `OrdemModulos` prevista em `05` para o serviço).
 
 ## Consequências
 

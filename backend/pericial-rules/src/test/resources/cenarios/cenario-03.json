@@ -1,0 +1,34 @@
+{
+  "id": 3,
+  "titulo": "A devolução de oferta na Outlet sem recibo",
+  "estado": "a validar",
+  "aValidar": ["A-01", "A-13", "A-16", "A-21"],
+  "pressupostos": [
+    "Canal de compra desconhecido (oferta sem qualquer registo).",
+    "Colaborador Lead Cashier aprovado pelo DM, para exercitar CT-002 (docs/06 não indica quem processa).",
+    "Data e meio de pagamento da compra desconhecidos.",
+    "Preço atual promocional de 39.99 face a um PVP de 98.00."
+  ],
+  "pedido": {
+    "id": "C03",
+    "dataPedido": "2026-03-31",
+    "tipoPedido": "DEVOLUCAO_OFERTA",
+    "loja": { "codigo": "US-OUT-030", "nome": "Outlet EUA", "mercado": "EUA", "tipoLoja": "OUTLET", "skusSortido": ["505-REG-30"] },
+    "colaborador": { "id": "C-3", "nome": "Lead Cashier", "funcao": "LEAD_CASHIER", "aprovadoPeloDM": true, "idCredencialPOS": "POS-C-3" },
+    "cliente": { "forneceDados": true },
+    "compraOriginal": {
+      "canal": "DESCONHECIDO",
+      "compraOferta": true
+    },
+    "artigos": [
+      {
+        "id": "A-1",
+        "produto": { "sku": "505-REG-30", "skuReconhecidoPOS": true, "marca": "LEVIS", "categoria": "VESTUARIO", "vendidoNaLoja": true, "pvpOriginal": 98.00, "precoAtual": 39.99 },
+        "quantidade": 1,
+        "estado": { "condicaoUso": "NAO_USADO", "etiquetas": "COLOCADAS" }
+      }
+    ]
+  },
+  "indicadoresFraude": [],
+  "esperado": {}
+}

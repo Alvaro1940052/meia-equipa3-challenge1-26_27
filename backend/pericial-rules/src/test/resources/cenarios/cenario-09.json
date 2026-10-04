@@ -1,0 +1,44 @@
+{
+  "id": 9,
+  "titulo": "O conjunto de bodywear devolvido com um risco de segurança",
+  "estado": "a validar",
+  "aValidar": ["A-20"],
+  "pressupostos": [
+    "Colaborador Key Holder (docs/06 não indica quem processa).",
+    "Compra feita na mesma loja Outlet.",
+    "A unidade experimentada e possivelmente manchada torna o conjunto usado e sujo (sujoOuInseguro)."
+  ],
+  "pedido": {
+    "id": "C09",
+    "dataPedido": "2026-03-31",
+    "tipoPedido": "DEVOLUCAO",
+    "loja": { "codigo": "US-OUT-090", "nome": "Outlet EUA", "mercado": "EUA", "tipoLoja": "OUTLET" },
+    "colaborador": { "id": "C-9", "nome": "Key Holder", "funcao": "KEY_HOLDER", "idCredencialPOS": "POS-C-9" },
+    "cliente": { "forneceDados": true },
+    "compraOriginal": {
+      "idTransacao": "T-0909",
+      "canal": "OUTLET",
+      "dataCompra": "2026-03-10",
+      "pagamento": { "meio": "CREDITO", "valorPago": 29.99, "estadoConta": "ATIVA" },
+      "idStylistVenda": "S-99",
+      "quantidadeComprada": 1
+    },
+    "comprovativo": { "tipo": "RECIBO_IMPRESSO", "confirmaCompra": true, "reciboOriginal": true },
+    "artigos": [
+      {
+        "id": "A-1",
+        "produto": { "sku": "BW-BOXER-3PK-M", "skuReconhecidoPOS": true, "marca": "LEVIS", "categoria": "BODYWEAR", "vendidoNaLoja": true, "pvpOriginal": 29.99, "precoAtual": 29.99 },
+        "quantidade": 1,
+        "precoPago": 29.99,
+        "estado": { "condicaoUso": "USADO", "etiquetas": "AUSENTES", "sujoOuInseguro": true, "embalagemIntacta": false, "conjuntoCompleto": false }
+      }
+    ]
+  },
+  "indicadoresFraude": [],
+  "esperado": {
+    "regrasDisparadas": ["PC-008"],
+    "artigos": {
+      "A-1": { "destino": "RISCO_BIOLOGICO", "regrasDisparadas": ["PC-008"] }
+    }
+  }
+}
