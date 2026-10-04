@@ -48,6 +48,7 @@ Quando a operação responder, atualiza-se a coluna **Resposta**, a regra, o tes
 | A-26 | Que indícios suspendem | EX-008, PT-004 | Qualquer indício de fraude suspende a transação, ou só os relevantes? | Só SIGNIFICATIVO ou CONFIRMADO suspendem; um indício BAIXO não suspende e conta para o "baixo risco" de PT-004 | 6 | |
 | A-27 | Comportamento do cliente como indício | EX-008 | Não saber explicar onde e quando comprou os artigos (cenário 6) é um indício de fraude significativo? | O colaborador regista-o como indício SIGNIFICATIVO → EX-008 suspende | 6 | |
 | A-29 | Usado com dano sem defeito confirmado | PC-004, PC-006 | PC-004 exclui "dano ou defeito confirmado" e nenhuma regra cobre um artigo usado com dano mas sem defeito de fabrico confirmado. Que regra se aplica? | PC-004 (o defeito não está confirmado); sem decisão da gestão fica REVER | — | |
+| A-30 | Promoção por escalões numa devolução às cegas | EP-003 | EP-003 refere-se a uma promoção por escalões ativa, mas sem comprovativo não se conhece a compra. Como se sabe que se aplica? | Usa-se o indicador `promocaoEscaloes` da compra original (registado pelo colaborador); o valor do escalão vem do POS | — | |
 | A-28 | Artigo inseguro em transação recusada ou suspensa | PC-008, M9 | Um artigo sujo/inseguro numa transação recusada ou suspensa é isolado ou devolvido ao cliente? | É isolado (PC-008 é independente da elegibilidade, `02`); destino `RISCO_BIOLOGICO` prevalece sobre `DEVOLUCAO_CLIENTE` | 6, 9 | |
 
 ## Consequências

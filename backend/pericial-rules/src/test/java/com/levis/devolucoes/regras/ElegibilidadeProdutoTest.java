@@ -9,6 +9,7 @@ import com.levis.devolucoes.model.enums.CondicaoUso;
 import com.levis.devolucoes.model.enums.Elegibilidade;
 import com.levis.devolucoes.model.enums.EstadoEtiquetas;
 import com.levis.devolucoes.model.enums.Marca;
+import com.levis.devolucoes.model.enums.Modulo;
 import com.levis.devolucoes.model.enums.NivelAprovacao;
 import com.levis.devolucoes.model.enums.ProcessoObrigatorio;
 import com.levis.devolucoes.model.enums.TipoTransacao;
@@ -206,7 +207,7 @@ class ElegibilidadeProdutoTest {
       DecisaoArtigo artigo = resultado.artigo("A-1");
       assertThat(artigo.getElegibilidade()).isEqualTo(Elegibilidade.REVER);
       assertThat(artigo.getAprovacao()).isEqualTo(NivelAprovacao.RESPONSAVEL_SENIOR);
-      assertThat(artigo.getRegistos().getLast().getMensagem()).contains("IN-010");
+      assertThat(resultado.registo("PC-002").getMensagem()).contains("IN-010");
     }
 
     @Test
@@ -277,7 +278,7 @@ class ElegibilidadeProdutoTest {
       DecisaoArtigo artigo = resultado.artigo("A-1");
       assertThat(artigo.getElegibilidade()).isEqualTo(Elegibilidade.REVER);
       assertThat(artigo.getAprovacao()).isEqualTo(NivelAprovacao.RESPONSAVEL_SENIOR);
-      assertThat(artigo.getRegistos().getLast().getMensagem()).contains("mesmo artigo");
+      assertThat(resultado.registo("PC-004").getMensagem()).contains("mesmo artigo");
     }
 
     @Test
@@ -362,6 +363,7 @@ class ElegibilidadeProdutoTest {
 
       assertThat(resultado.artigo("A-1").getElegibilidade()).isEqualTo(Elegibilidade.PERMITIR);
       assertThat(resultado.artigo("A-1").getRegistos())
+          .filteredOn(r -> r.getModulo() != Modulo.M7)
           .extracting(r -> r.getCodigoRegra())
           .containsExactly("PC-007");
     }
@@ -399,12 +401,15 @@ class ElegibilidadeProdutoTest {
                           .andThen(a -> a.getEstado().setSujoOuInseguro(true))));
 
       assertThat(resultado.artigo("A-1").getRegistos())
+          .filteredOn(r -> r.getModulo() != Modulo.M7)
           .extracting(r -> r.getCodigoRegra())
           .containsExactly("PC-003");
       assertThat(resultado.artigo("A-2").getRegistos())
+          .filteredOn(r -> r.getModulo() != Modulo.M7)
           .extracting(r -> r.getCodigoRegra())
           .containsExactly("PC-004");
       assertThat(resultado.artigo("A-3").getRegistos())
+          .filteredOn(r -> r.getModulo() != Modulo.M7)
           .extracting(r -> r.getCodigoRegra())
           .containsExactly("PC-008", "PC-004");
     }

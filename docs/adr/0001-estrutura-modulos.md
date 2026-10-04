@@ -31,6 +31,11 @@ o exemplo DRL de `04` importa `com.levis.devolucoes.modelo.*`, enquanto `04` e `
    (`TRANSVERSAL, M0, M1, M2, M3, M4, M5, ONLINE, M6, M7, M8, M9`), reutilizada pelos testes e pelo `MotorRegrasService`
    (substitui a classe `OrdemModulos` prevista em `05` para o serviço).
 
+8. **IDs de saída e de dados nas regras de suporte.** Quando uma regra não corresponde a uma regra de negócio, mas só
+   regista um dado ou calcula um campo de saída, usa o ID da linha de `docs/01` que define esse dado ou campo:
+   `IN-003` (canal desconhecido, M2) e `OUT-003` (valor de cada artigo e total, M7). Assim, o rasto não mostra uma regra de
+   negócio que não foi aplicada (ex.: PT-003 numa compra online).
+
 ## Consequências
 
 - O mapeamento regra → módulo usado pelas explicações vem do metadado `@modulo`, não do nome do ficheiro.

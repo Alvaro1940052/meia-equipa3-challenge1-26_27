@@ -38,6 +38,7 @@
   "esperado": {
     "tipoVerificacao": "VERIFICADA",
     "tipoTransacao": "REEMBOLSO",
+    "valorDevolucao": 29.99,
     "regrasDisparadas": ["PC-008", "CT-003", "CH-001", "PC-007", "PT-001", "PT-003"],
     "regrasNaoDisparadas": ["PC-004", "PC-005"],
     "artigos": {

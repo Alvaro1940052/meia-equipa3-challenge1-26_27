@@ -33,8 +33,9 @@
   "esperado": {
     "tipoVerificacao": "AS_CEGAS",
     "tipoTransacao": "CREDITO_LOJA",
+    "valorDevolucao": 39.99,
     "meioReembolso": "CREDITO_LOJA",
-    "baseValor": "PRECO_ATUAL",
+    "baseValor": "VALOR_PROMOCIONAL",
     "regrasDisparadas": ["CT-003", "IN-003", "PC-001", "PT-002", "PT-005"],
     "regrasNaoDisparadas": ["PT-006", "PT-001"],
     "artigos": { "A-1": { "elegibilidade": "PERMITIR", "regrasDisparadas": ["PC-001"] } }

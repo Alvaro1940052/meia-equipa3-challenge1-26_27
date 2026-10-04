@@ -54,6 +54,7 @@
     "elegibilidade": "ENCAMINHAR",
     "tipoVerificacao": "VERIFICADA",
     "tipoTransacao": "REEMBOLSO",
+    "valorDevolucao": 128.00,
     "meioReembolso": "MEIO_ORIGINAL",
     "processo": "BACKPOCKET",
     "aprovacao": "RESPONSAVEL_SENIOR",
