@@ -5,6 +5,7 @@ package com.levis.devolucoes.regras;
 // defeito PC-006 (85); inspeção CT-008 (80); entre canais EP-007 > EP-005/EP-006 (70-60);
 // agregação OUT-001 (1). O risco biológico (PC-008) já foi definido no grupo TRANSVERSAL.
 // OUT-007 e OUT-001 correm também depois de uma recusa terminal, mas não com o pedido suspenso (ADR 0004).
+// Num ajuste de preço o artigo não é entregue: as regras de destino não se aplicam (A-14).
 
 import com.levis.devolucoes.model.decisao.Decisao;
 import com.levis.devolucoes.model.decisao.DecisaoArtigo;
@@ -13,6 +14,7 @@ import com.levis.devolucoes.model.enums.CondicaoUso;
 import com.levis.devolucoes.model.enums.DestinoProduto;
 import com.levis.devolucoes.model.enums.Elegibilidade;
 import com.levis.devolucoes.model.enums.Modulo;
+import com.levis.devolucoes.model.enums.TipoPedido;
 import com.levis.devolucoes.model.pedido.PedidoDevolucao;
 import com.levis.devolucoes.model.produto.ArtigoDevolvido;
 import java.util.List;
@@ -30,6 +32,7 @@ rule "OUT-007 Artigo recusado: devolução ao cliente"
     salience 100
 when
     $d  : Decisao( )
+    PedidoDevolucao( id == $d.pedidoId, tipoPedido != TipoPedido.AJUSTE_PRECO )
     $p  : PedidoDevolucao( id == $d.pedidoId, suspenso == false )
     $da : DecisaoArtigo( pedidoId == $d.pedidoId, destino == null, disparou( "OUT-007" ) == false )
     eval( $da.getElegibilidade() == Elegibilidade.RECUSAR || $d.getElegibilidade() == Elegibilidade.RECUSAR )
@@ -53,6 +56,7 @@ rule "BW-004 Bodywear usado e sujo ou inseguro"
     salience 95
 when
     $d  : Decisao( terminal == false, elegibilidade != Elegibilidade.RECUSAR )
+    PedidoDevolucao( id == $d.pedidoId, tipoPedido != TipoPedido.AJUSTE_PRECO )
     $a  : ArtigoDevolvido( produto != null, produto.categoria == CategoriaProduto.BODYWEAR, estado != null,
                            estado.condicaoUso == CondicaoUso.USADO, estado.sujoOuInseguro == true )
     $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false,
@@ -76,6 +80,7 @@ rule "BW-003 Bodywear com unidades em falta ou usado"
     salience 90
 when
     $d  : Decisao( terminal == false, elegibilidade != Elegibilidade.RECUSAR )
+    PedidoDevolucao( id == $d.pedidoId, tipoPedido != TipoPedido.AJUSTE_PRECO )
     $a  : ArtigoDevolvido( produto != null, produto.categoria == CategoriaProduto.BODYWEAR, estado != null,
                            estado.conjuntoCompleto == false || estado.condicaoUso == CondicaoUso.USADO )
     $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false, destino == null,
@@ -98,6 +103,7 @@ rule "BW-001 Bodywear com embalagem intacta: inspeção confirma revenda"
     salience 85
 when
     $d  : Decisao( terminal == false, elegibilidade != Elegibilidade.RECUSAR )
+    PedidoDevolucao( id == $d.pedidoId, tipoPedido != TipoPedido.AJUSTE_PRECO )
     $a  : ArtigoDevolvido( produto != null, produto.categoria == CategoriaProduto.BODYWEAR, estado != null,
                            estado.embalagemIntacta == true, estado.conjuntoCompleto == true,
                            estado.condicaoUso == CondicaoUso.NAO_USADO, revendivel == true )
@@ -120,6 +126,7 @@ rule "BW-001 Bodywear com embalagem intacta: inspeção não confirma revenda"
     salience 85
 when
     $d  : Decisao( terminal == false, elegibilidade != Elegibilidade.RECUSAR )
+    PedidoDevolucao( id == $d.pedidoId, tipoPedido != TipoPedido.AJUSTE_PRECO )
     $a  : ArtigoDevolvido( produto != null, produto.categoria == CategoriaProduto.BODYWEAR, estado != null,
                            estado.embalagemIntacta == true, estado.conjuntoCompleto == true,
                            estado.condicaoUso == CondicaoUso.NAO_USADO, revendivel == false )
@@ -142,6 +149,7 @@ rule "BW-001 Bodywear com embalagem intacta: inspecionar"
     salience 85
 when
     $d  : Decisao( terminal == false, elegibilidade != Elegibilidade.RECUSAR )
+    PedidoDevolucao( id == $d.pedidoId, tipoPedido != TipoPedido.AJUSTE_PRECO )
     $a  : ArtigoDevolvido( produto != null, produto.categoria == CategoriaProduto.BODYWEAR, estado != null,
                            estado.embalagemIntacta == true, estado.conjuntoCompleto == true,
                            estado.condicaoUso == CondicaoUso.NAO_USADO, revendivel == null )
@@ -164,6 +172,7 @@ rule "BW-002 Bodywear sem embalagem, não usado e completo"
     salience 85
 when
     $d  : Decisao( terminal == false, elegibilidade != Elegibilidade.RECUSAR )
+    PedidoDevolucao( id == $d.pedidoId, tipoPedido != TipoPedido.AJUSTE_PRECO )
     $a  : ArtigoDevolvido( produto != null, produto.categoria == CategoriaProduto.BODYWEAR, estado != null,
                            estado.embalagemIntacta == false, estado.conjuntoCompleto == true,
                            estado.condicaoUso == CondicaoUso.NAO_USADO )
@@ -192,6 +201,7 @@ rule "PC-006 Baixa por dano do artigo com defeito de fabrico"
     salience 85
 when
     $d  : Decisao( terminal == false, elegibilidade != Elegibilidade.RECUSAR )
+    PedidoDevolucao( id == $d.pedidoId, tipoPedido != TipoPedido.AJUSTE_PRECO )
     $a  : ArtigoDevolvido( produto != null, produto.categoria != CategoriaProduto.BODYWEAR,
                            estado != null, estado.defeitoFabricoConfirmado == true )
     $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false, destino == null,
@@ -212,6 +222,7 @@ rule "CT-008 Inspeção antes de devolver à área de vendas"
     salience 80
 when
     $d  : Decisao( terminal == false, elegibilidade != Elegibilidade.RECUSAR )
+    PedidoDevolucao( id == $d.pedidoId, tipoPedido != TipoPedido.AJUSTE_PRECO )
     $a  : ArtigoDevolvido( produto != null, produto.categoria != CategoriaProduto.BODYWEAR,
                            estado != null, estado.defeitoFabricoConfirmado == false )
     $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false, destino == null,
@@ -255,6 +266,7 @@ rule "EP-007 Artigo entre canais já em saldo"
     salience 70
 when
     $d  : Decisao( terminal == false, elegibilidade != Elegibilidade.RECUSAR )
+    PedidoDevolucao( id == $d.pedidoId, tipoPedido != TipoPedido.AJUSTE_PRECO )
     $a  : ArtigoDevolvido( entreCanais == true, produto != null, produto.emSaldo == true )
     $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false, destino == null,
                          disparou( "CT-008" ) == true, disparou( "EP-007" ) == false )
@@ -275,6 +287,7 @@ rule "EP-005 Artigo entre canais no sortido da loja recetora"
     salience 60
 when
     $d  : Decisao( terminal == false, elegibilidade != Elegibilidade.RECUSAR )
+    PedidoDevolucao( id == $d.pedidoId, tipoPedido != TipoPedido.AJUSTE_PRECO )
     $p  : PedidoDevolucao( id == $d.pedidoId, loja != null )
     $a  : ArtigoDevolvido( entreCanais == true, produto != null, produto.emSaldo == false, revendivel != false )
     eval( $p.getLoja().estaNoSortido( $a.getProduto().getSku() ) )
@@ -298,6 +311,7 @@ rule "EP-006 Artigo entre canais fora do sortido da loja recetora"
     salience 60
 when
     $d  : Decisao( terminal == false, elegibilidade != Elegibilidade.RECUSAR )
+    PedidoDevolucao( id == $d.pedidoId, tipoPedido != TipoPedido.AJUSTE_PRECO )
     $p  : PedidoDevolucao( id == $d.pedidoId, loja != null )
     $a  : ArtigoDevolvido( entreCanais == true, produto != null, produto.emSaldo == false )
     eval( !$p.getLoja().estaNoSortido( $a.getProduto().getSku() ) )

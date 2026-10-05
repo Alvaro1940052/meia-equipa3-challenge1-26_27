@@ -9,6 +9,13 @@
     "A fotografia do recibo não é o recibo original (reciboOriginal = false).",
     "O preço atual do produto (99.00) é o preço anunciado online; o preço pago com a promoção anterior foi 119.00."
   ],
+  "justificacao": [
+    "M4: a fotografia do recibo confirma a compra (PT-001), mas não é o recibo original (A-14).",
+    "M5: ajuste de preço sem recibo original → PT-008 RECUSAR (os 13 dias não chegam); PT-007 não se aplica.",
+    "M6: o cliente contesta → EX-002 explicar a política; o pedido de cartão de oferta para a diferença não chega a ser avaliado.",
+    "M9: num ajuste de preço o artigo não é entregue: sem destino.",
+    "Resultado: RECUSAR o ajuste."
+  ],
   "pedido": {
     "id": "C08",
     "dataPedido": "2026-03-31",
@@ -44,8 +51,11 @@
     "elegibilidade": "RECUSAR",
     "tipoVerificacao": "VERIFICADA",
     "tipoTransacao": "NENHUMA",
-    "regrasDisparadas": ["CT-003", "CH-001", "PC-001", "PT-001", "PT-008", "EX-002"],
-    "regrasNaoDisparadas": ["PT-007", "PT-002", "PT-003", "CT-005"],
-    "artigos": { "A-1": { "elegibilidade": "PERMITIR", "regrasDisparadas": ["PC-001"] } }
+    "terminal": false,
+    "regrasDisparadas": ["CT-003", "CH-001", "PC-001", "PT-001", "PT-008", "EX-002", "OUT-001"],
+    "regrasNaoDisparadas": ["PT-007", "PT-002", "PT-003", "CT-005", "CT-008", "OUT-007"],
+    "artigos": {
+      "A-1": { "elegibilidade": "PERMITIR" }
+    }
   }
 }

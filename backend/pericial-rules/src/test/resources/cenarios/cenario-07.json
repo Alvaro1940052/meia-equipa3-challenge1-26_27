@@ -8,6 +8,14 @@
     "O cartão de substituição não é o mesmo cartão físico usado na compra (cartaoFisicoPresente = false).",
     "O pedido de reembolso para o cartão de substituição ou em numerário é registado como exceção que exige um meio proibido."
   ],
+  "justificacao": [
+    "M3/M4/M5: artigo elegível (PC-001), recibo original (PT-001), 18 dias → PT-003 reembolso no meio original.",
+    "M6: o cliente contesta a exigência do cartão → EX-002 explicar a política.",
+    "M7: Interac no Canadá → TN-011 exige o mesmo cartão físico; o cartão de substituição não é o mesmo (A-10) → REVER, sem reembolso Interac, sem numerário nem outro cartão. O Interac não segue TN-001/TN-004 (A-11).",
+    "M8: documentação preparada (CT-001, CT-004, CT-005, CT-006 recibo agrafado, CT-007).",
+    "M9: inspeção conforme → área de vendas.",
+    "Resultado: REVER com o responsável sénior; o reembolso de 79.50 fica sem meio definido."
+  ],
   "pedido": {
     "id": "C07",
     "dataPedido": "2026-03-31",
@@ -42,12 +50,17 @@
   "indicadoresFraude": [],
   "esperado": {
     "elegibilidade": "REVER",
-    "aprovacao": "RESPONSAVEL_SENIOR",
     "tipoVerificacao": "VERIFICADA",
     "tipoTransacao": "REEMBOLSO",
-    "valorDevolucao": 79.50,
-    "regrasDisparadas": ["CT-003", "CH-001", "PC-001", "PT-001", "PT-003", "EX-002", "TN-011", "CT-001", "CT-004", "CT-005", "CT-006", "CT-007"],
-    "regrasNaoDisparadas": ["TN-001", "TN-004", "TN-012"],
-    "artigos": { "A-1": { "elegibilidade": "PERMITIR", "regrasDisparadas": ["PC-001"] } }
+    "valorDevolucao": 79.5,
+    "baseValor": "VALOR_PAGO",
+    "aprovacao": "RESPONSAVEL_SENIOR",
+    "terminal": false,
+    "documentacao": { "idStylistAtribuido": "S-77", "reciboAgrafado": true, "retencaoAte": "2026-06-29" },
+    "regrasDisparadas": ["CT-003", "CH-001", "PC-001", "PT-001", "PT-003", "EX-002", "TN-011", "CT-001", "CT-004", "CT-005", "CT-006", "CT-007", "CT-008", "OUT-001"],
+    "regrasNaoDisparadas": ["TN-001", "TN-004", "TN-012", "EX-003"],
+    "artigos": {
+      "A-1": { "elegibilidade": "PERMITIR", "valorDevolucao": 79.5, "destino": "AREA_VENDAS" }
+    }
   }
 }

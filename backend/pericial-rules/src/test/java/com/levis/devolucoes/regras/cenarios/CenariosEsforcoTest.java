@@ -63,9 +63,11 @@ class CenariosEsforcoTest {
             cenario.indicadoresFraude() == null ? List.of() : cenario.indicadoresFraude());
 
     Esperado esperado = cenario.esperado();
-    if (esperado == null) {
-      return;
-    }
+    // Fase 4.10: todos os cenários têm a elegibilidade (OUT-001) e as regras que a justificam
+    assertThat(esperado).as("esperado").isNotNull();
+    assertThat(esperado.elegibilidade()).as("elegibilidade esperada").isNotNull();
+    assertThat(esperado.regrasDisparadas()).as("regras esperadas").isNotEmpty();
+
     SoftAssertions verificacao = new SoftAssertions();
     var d = resultado.decisao();
     comparar(verificacao, "elegibilidade", esperado.elegibilidade(), d.getElegibilidade());
@@ -76,6 +78,20 @@ class CenariosEsforcoTest {
     comparar(verificacao, "aprovacao", esperado.aprovacao(), d.getAprovacao());
     comparar(verificacao, "processo", esperado.processo(), d.getProcesso());
     comparar(verificacao, "terminal", esperado.terminal(), d.isTerminal());
+    comparar(verificacao, "excecaoRecusada", esperado.excecaoRecusada(), d.isExcecaoRecusada());
+    if (esperado.documentacao() != null) {
+      var doc = esperado.documentacao();
+      var obtida = d.getDocumentacao();
+      comparar(
+          verificacao, "doc.idStylist", doc.idStylistAtribuido(), obtida.getIdStylistAtribuido());
+      comparar(verificacao, "doc.reciboAgrafado", doc.reciboAgrafado(), obtida.isReciboAgrafado());
+      comparar(
+          verificacao,
+          "doc.testemunha",
+          doc.assinaturaTestemunha(),
+          obtida.getAssinaturaTestemunha());
+      comparar(verificacao, "doc.retencaoAte", doc.retencaoAte(), obtida.getRetencaoAte());
+    }
     if (esperado.valorDevolucao() != null) {
       verificacao
           .assertThat(d.getValorDevolucao())
@@ -113,6 +129,14 @@ class CenariosEsforcoTest {
     comparar(
         verificacao, id + ".tipoTransacao", esperado.tipoTransacao(), artigo.getTipoTransacao());
     comparar(verificacao, id + ".destino", esperado.destino(), artigo.getDestino());
+    comparar(
+        verificacao, id + ".descontoSaldo", esperado.descontoSaldo(), artigo.getDescontoSaldo());
+    if (esperado.valorDevolucao() != null) {
+      verificacao
+          .assertThat(artigo.getValorDevolucao())
+          .as(id + ".valorDevolucao")
+          .isEqualByComparingTo(esperado.valorDevolucao());
+    }
     if (esperado.regrasDisparadas() != null) {
       verificacao
           .assertThat(artigo.getRegistos())

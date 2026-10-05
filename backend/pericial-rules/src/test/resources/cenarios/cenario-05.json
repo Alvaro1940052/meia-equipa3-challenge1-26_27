@@ -8,6 +8,12 @@
     "Compra há 15 dias, paga com cartão de crédito no retalhista grossista.",
     "O SKU do produto grossista não é reconhecido como vendido na loja."
   ],
+  "justificacao": [
+    "M2: comprado num retalhista grossista → CH-008 RECUSAR e encaminhar o cliente para o retalhista (paragem obrigatória; HS-002 já não é avaliada, A-08).",
+    "M6: o cliente contesta → EX-002 explicar a política (mesmo após a paragem, ADR 0004); não fica agitado (EX-003 não se aplica).",
+    "O pedido de troca ou crédito de loja não pode contornar a paragem obrigatória.",
+    "M9: o artigo volta ao cliente (OUT-007)."
+  ],
   "pedido": {
     "id": "C05",
     "dataPedido": "2026-03-31",
@@ -41,9 +47,13 @@
   "indicadoresFraude": [],
   "esperado": {
     "elegibilidade": "RECUSAR",
+    "tipoVerificacao": "NAO_DETERMINADA",
     "tipoTransacao": "NENHUMA",
     "terminal": true,
-    "regrasDisparadas": ["CT-003", "CH-008", "EX-002"],
-    "regrasNaoDisparadas": ["HS-002", "PC-001", "PT-001", "EX-003", "EX-006"]
+    "regrasDisparadas": ["CT-003", "CH-008", "EX-002", "OUT-007", "OUT-001"],
+    "regrasNaoDisparadas": ["HS-002", "PC-001", "PT-001", "EX-003", "EX-006", "CT-005"],
+    "artigos": {
+      "A-1": { "destino": "DEVOLUCAO_CLIENTE", "regrasDisparadas": ["OUT-007"] }
+    }
   }
 }

@@ -6,7 +6,18 @@
   "pressupostos": [
     "Colaborador Key Holder (docs/06 não indica quem processa).",
     "\"Entregue há 12 dias\" é tratado como enviado há 12 dias; data de compra igual à de envio.",
-    "O pedido de troca noutra cor é registado como pedido de exceção que contorna o processo obrigatório da Afterpay."
+    "O pedido de troca noutra cor é registado como pedido de exceção que contorna o processo obrigatório da Afterpay.",
+    "O casaco não está no sortido da loja recetora."
+  ],
+  "justificacao": [
+    "M3: não usado com etiquetas (PC-001).",
+    "Online: encomenda levi.com encontrada → CH-002 ENCAMINHAR para a BackPocket; Afterpay → TN-010 reembolso à Afterpay.",
+    "A troca noutra cor é uma exceção ao meio Afterpay → HS-005 recusa a exceção (a devolução continua).",
+    "M6: o cliente contesta (EX-002) e fica agitado → EX-003 escala para o responsável sénior; EX-004 não pode aprovar (disparou HS-005) e EX-006 recusa a exceção que contorna o processo obrigatório.",
+    "M7: valor pago 128.00 no meio original (Afterpay, pela BackPocket).",
+    "M8: CT-001, CT-005, CT-007 (arquivar com os suportes diários); sem Stylist da venda (CT-004 não se aplica).",
+    "M9: inspeção conforme (CT-008); entre canais fora do sortido → EP-006 saldos a 20%.",
+    "Resultado: ENCAMINHAR para a BackPocket, reembolso à Afterpay; a troca é recusada."
   ],
   "pedido": {
     "id": "C02",
@@ -54,12 +65,18 @@
     "elegibilidade": "ENCAMINHAR",
     "tipoVerificacao": "VERIFICADA",
     "tipoTransacao": "REEMBOLSO",
-    "valorDevolucao": 128.00,
+    "valorDevolucao": 128,
+    "baseValor": "VALOR_PAGO",
     "meioReembolso": "MEIO_ORIGINAL",
-    "processo": "BACKPOCKET",
     "aprovacao": "RESPONSAVEL_SENIOR",
-    "regrasDisparadas": ["CT-003", "PC-001", "CH-002", "TN-010", "HS-005", "EX-002", "EX-003", "EX-004", "EX-006", "CT-001", "CT-005", "CT-007"],
-    "regrasNaoDisparadas": ["CH-001", "IN-003", "PT-001", "PT-003", "CH-006", "EP-002", "EX-005", "CT-004"],
-    "artigos": { "A-1": { "elegibilidade": "PERMITIR", "regrasDisparadas": ["PC-001"] } }
+    "processo": "BACKPOCKET",
+    "terminal": false,
+    "excecaoRecusada": true,
+    "documentacao": { "assinaturaTestemunha": "Assinatura da testemunha", "retencaoAte": "2026-06-29" },
+    "regrasDisparadas": ["CT-003", "PC-001", "CH-002", "TN-010", "HS-005", "EX-002", "EX-003", "EX-004", "EX-006", "CT-001", "CT-005", "CT-007", "CT-008", "EP-006", "OUT-001"],
+    "regrasNaoDisparadas": ["CH-001", "IN-003", "PT-001", "PT-003", "CH-006", "EP-002", "EX-005", "EX-007", "CT-004", "TN-009"],
+    "artigos": {
+      "A-1": { "elegibilidade": "PERMITIR", "valorDevolucao": 128, "destino": "SALDOS", "descontoSaldo": 20, "regrasDisparadas": ["PC-001", "CT-008", "EP-006"] }
+    }
   }
 }

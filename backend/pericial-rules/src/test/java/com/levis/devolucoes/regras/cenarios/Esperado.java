@@ -9,12 +9,13 @@ import com.levis.devolucoes.model.enums.ProcessoObrigatorio;
 import com.levis.devolucoes.model.enums.TipoTransacao;
 import com.levis.devolucoes.model.enums.TipoVerificacao;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Resultado esperado de um cenário. Todos os campos são opcionais: os nulos não são verificados, o
- * que permite preencher o esperado módulo a módulo (Fase 4).
+ * Resultado esperado de um cenário (OUT-001 a OUT-008). Os campos nulos não são verificados; a
+ * elegibilidade e as regras disparadas são obrigatórias (Fase 4.10).
  */
 public record Esperado(
     Elegibilidade elegibilidade,
@@ -26,14 +27,25 @@ public record Esperado(
     NivelAprovacao aprovacao,
     ProcessoObrigatorio processo,
     Boolean terminal,
+    Boolean excecaoRecusada,
+    Documentacao documentacao,
     List<String> regrasDisparadas,
     List<String> regrasNaoDisparadas,
     Map<String, Artigo> artigos) {
 
-  /** Resultado esperado de um artigo. */
+  /** Documentação esperada (OUT-008). */
+  public record Documentacao(
+      String idStylistAtribuido,
+      Boolean reciboAgrafado,
+      String assinaturaTestemunha,
+      LocalDate retencaoAte) {}
+
+  /** Resultado esperado de um artigo (inclui OUT-007, destino). */
   public record Artigo(
       Elegibilidade elegibilidade,
       TipoTransacao tipoTransacao,
+      BigDecimal valorDevolucao,
       DestinoProduto destino,
+      Integer descontoSaldo,
       List<String> regrasDisparadas) {}
 }

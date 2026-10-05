@@ -12,6 +12,7 @@ import com.levis.devolucoes.model.enums.DestinoProduto;
 import com.levis.devolucoes.model.enums.Elegibilidade;
 import com.levis.devolucoes.model.enums.EstadoEtiquetas;
 import com.levis.devolucoes.model.enums.NivelRisco;
+import com.levis.devolucoes.model.enums.TipoPedido;
 import com.levis.devolucoes.model.enums.TipoTransacao;
 import com.levis.devolucoes.model.produto.ArtigoDevolvido;
 import com.levis.devolucoes.model.teste.PedidoBuilder;
@@ -84,6 +85,20 @@ class DestinoProdutoTest {
               });
 
       assertThat(artigo.getDestino()).isEqualTo(DestinoProduto.RISCO_BIOLOGICO);
+    }
+
+    @Test
+    @Regra({"OUT-007", "CT-008", "PT-007", "PT-008"})
+    @DisplayName("Num ajuste de preço o artigo não é entregue: sem destino (a validar A-14)")
+    void ajusteDePrecoNaoTemDestino() {
+      ResultadoAvaliacao permitido =
+          avaliar(umPedido().tipo(TipoPedido.AJUSTE_PRECO).diasDesdeCompra(5));
+      ResultadoAvaliacao recusado =
+          avaliar(umPedido().tipo(TipoPedido.AJUSTE_PRECO).diasDesdeCompra(20));
+
+      assertThat(permitido.artigo("A-1").getDestino()).isNull();
+      assertThat(recusado.artigo("A-1").getDestino()).isNull();
+      assertThat(permitido.disparos()).doesNotContain("CT-008", "OUT-007");
     }
 
     @Test

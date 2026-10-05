@@ -12,6 +12,7 @@ import java.util.List;
  * @param estado "a validar" até a operação confirmar o resultado esperado, depois "validado"
  * @param aValidar ambiguidades do ADR 0003 que afetam o resultado esperado
  * @param pressupostos dados que docs/06 não indica e que foram fixados para o teste
+ * @param justificacao raciocínio do resultado esperado a partir de docs/02, com as regras
  * @param pedido dados de entrada
  * @param indicadoresFraude indícios de fraude registados pelo colaborador
  * @param esperado resultado esperado, derivado de docs/02; só os campos presentes são verificados
@@ -22,6 +23,7 @@ public record Cenario(
     String estado,
     List<String> aValidar,
     List<String> pressupostos,
+    List<String> justificacao,
     PedidoDevolucao pedido,
     List<IndicadorFraude> indicadoresFraude,
     Esperado esperado) {

@@ -11,6 +11,12 @@
     "O colaborador regista a incapacidade de explicar onde e quando os artigos foram comprados como indício de fraude de nível significativo (A-27).",
     "O pedido de reembolso em numerário numa devolução às cegas é registado como exceção que exige um meio proibido."
   ],
+  "justificacao": [
+    "Transversal: indício de fraude significativo (A-27) → EX-008 suspende a transação e escala para District/Area e Global Safety and Security; nenhum módulo seguinte é avaliado.",
+    "Transversal: o par com mancha é sujo/inseguro → PC-008 isolamento por risco biológico, mesmo com a transação suspensa (A-28).",
+    "Sem a suspensão, os resultados por artigo seriam PC-003 (rever), PC-004 (rever) e PC-004 (rever) às cegas (ver ElegibilidadeProdutoTest).",
+    "Resultado: REVER, suspenso, com escalonamento para District/Area; o pedido de numerário não é avaliado."
+  ],
   "pedido": {
     "id": "C06",
     "dataPedido": "2026-03-31",
@@ -53,7 +59,7 @@
     "aprovacao": "DISTRICT_AREA",
     "terminal": true,
     "regrasDisparadas": ["EX-008", "PC-008"],
-    "regrasNaoDisparadas": ["CT-003", "IN-003"],
+    "regrasNaoDisparadas": ["CT-003", "IN-003", "PT-002", "PT-005", "OUT-007", "OUT-001"],
     "artigos": {
       "A-3": { "destino": "RISCO_BIOLOGICO", "regrasDisparadas": ["PC-008"] }
     }

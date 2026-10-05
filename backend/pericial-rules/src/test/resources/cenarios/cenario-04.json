@@ -8,6 +8,12 @@
     "Pagamento original com cartão de crédito (docs/06 não indica).",
     "O colaborador confirma o defeito de fabrico na costura, para verificar que HS-003 prevalece sobre PC-006."
   ],
+  "justificacao": [
+    "M3: calças embainhadas → HS-003 RECUSAR, mesmo com o defeito confirmado (HS-003 prevalece sobre PC-006).",
+    "M4: o recibo original confirma a compra (PT-001), mas sem artigo elegível não há prazo a aplicar (PT-003).",
+    "M9: artigo recusado → devolução ao cliente (OUT-007); o pedido fica RECUSAR sem transação (OUT-001).",
+    "A pressão da viagem não altera a elegibilidade; o cliente não contesta formalmente (EX-002 não se aplica)."
+  ],
   "pedido": {
     "id": "C04",
     "dataPedido": "2026-03-31",
@@ -36,9 +42,14 @@
   },
   "indicadoresFraude": [],
   "esperado": {
+    "elegibilidade": "RECUSAR",
     "tipoVerificacao": "VERIFICADA",
-    "regrasDisparadas": ["CT-003", "CH-001", "HS-003", "PT-001"],
-    "regrasNaoDisparadas": ["PC-006", "PC-004", "PT-003", "CT-005"],
-    "artigos": { "A-1": { "elegibilidade": "RECUSAR", "tipoTransacao": "NENHUMA", "regrasDisparadas": ["HS-003"] } }
+    "tipoTransacao": "NENHUMA",
+    "terminal": false,
+    "regrasDisparadas": ["CT-003", "CH-001", "HS-003", "PT-001", "OUT-007", "OUT-001"],
+    "regrasNaoDisparadas": ["PC-006", "PC-004", "PT-003", "CT-005", "EX-002"],
+    "artigos": {
+      "A-1": { "elegibilidade": "RECUSAR", "tipoTransacao": "NENHUMA", "destino": "DEVOLUCAO_CLIENTE", "regrasDisparadas": ["HS-003", "OUT-007"] }
+    }
   }
 }
