@@ -1,0 +1,45 @@
+spring:
+  application:
+    name: pericial-api
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  jackson:
+    deserialization:
+      # Campos desconhecidos são recusados (ex.: o colaborador vem do token, não do corpo)
+      fail-on-unknown-properties: true
+  mvc:
+    problemdetails:
+      enabled: true
+  web:
+    # Idioma das explicações por omissão; o cabeçalho Accept-Language prevalece
+    locale: pt_PT
+
+server:
+  error:
+    include-stacktrace: never
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  pattern:
+    correlation: "[%X{correlationId:-}] "
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  default-produces-media-type: application/json
+
+pericial:
+  seguranca:
+    validade-token: 8h

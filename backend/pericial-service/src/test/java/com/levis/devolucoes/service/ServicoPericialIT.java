@@ -3,12 +3,9 @@ package com.levis.devolucoes.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.levis.devolucoes.dto.comum.PaginaDto;
 import com.levis.devolucoes.dto.decisao.AvaliacaoResumoResponse;
 import com.levis.devolucoes.dto.decisao.DecisaoResponse;
-import com.levis.devolucoes.dto.decisao.RegistoRegraResponse;
-import com.levis.devolucoes.dto.decisao.ResultadoArtigoResponse;
 import com.levis.devolucoes.dto.explicacao.CausaNaoDisparo;
 import com.levis.devolucoes.dto.explicacao.DadosEmFaltaResponse;
 import com.levis.devolucoes.dto.explicacao.ExplicacaoComoResponse;
@@ -28,14 +25,11 @@ import com.levis.devolucoes.service.excecao.VersaoBaseConhecimentoDiferenteExcep
 import com.levis.devolucoes.service.explicacao.ExplicacaoService;
 import com.levis.devolucoes.service.regra.CatalogoRegrasService;
 import com.levis.devolucoes.service.simulacao.SimulacaoService;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import org.assertj.core.api.SoftAssertions;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -83,70 +77,10 @@ class ServicoPericialIT {
   @MethodSource("cenarios")
   void osCenariosPeloServicoDaoOResultadoEsperado(CenarioDto cenario) {
     DecisaoResponse decisao = avaliacoes.avaliar(cenario.pedido(), cenario.colaborador());
-    JsonNode e = cenario.esperado();
-
-    SoftAssertions verificacao = new SoftAssertions();
-    comparar(verificacao, e, "elegibilidade", decisao.elegibilidade());
-    comparar(verificacao, e, "tipoVerificacao", decisao.tipoVerificacao());
-    comparar(verificacao, e, "tipoTransacao", decisao.tipoTransacao());
-    comparar(verificacao, e, "meioReembolso", decisao.meioReembolso());
-    comparar(verificacao, e, "aprovacao", decisao.aprovacao());
-    comparar(verificacao, e, "processo", decisao.processo());
-    comparar(verificacao, e, "terminal", decisao.terminal());
-    comparar(verificacao, e, "excecaoRecusada", decisao.excecaoRecusada());
-    if (e.has("valorDevolucao")) {
-      verificacao
-          .assertThat(decisao.valorDevolucao())
-          .as("valor")
-          .isEqualByComparingTo(e.get("valorDevolucao").decimalValue());
-    }
-    List<String> regras = decisao.regras().stream().map(RegistoRegraResponse::codigoRegra).toList();
-    verificacao
-        .assertThat(regras)
-        .as("regras disparadas")
-        .containsAll(textos(e.get("regrasDisparadas")));
-    if (e.has("regrasNaoDisparadas")) {
-      verificacao
-          .assertThat(regras)
-          .as("regras não disparadas")
-          .doesNotContainAnyElementsOf(textos(e.get("regrasNaoDisparadas")));
-    }
-    if (e.has("artigos")) {
-      e.get("artigos")
-          .properties()
-          .forEach(
-              artigo -> {
-                ResultadoArtigoResponse obtido =
-                    decisao.artigos().stream()
-                        .filter(a -> a.artigoId().equals(artigo.getKey()))
-                        .findFirst()
-                        .orElseThrow();
-                comparar(verificacao, artigo.getValue(), "elegibilidade", obtido.elegibilidade());
-                comparar(verificacao, artigo.getValue(), "destino", obtido.destino());
-              });
-    }
-    verificacao.assertAll();
+    VerificadorCenario.verificar(cenario.esperado(), decisao);
 
     assertThat(decisao.avaliacaoId()).isNotNull();
     assertThat(decisao.versaoBaseConhecimento()).startsWith("com.levis.devolucoes:pericial-rules:");
-  }
-
-  private static void comparar(
-      SoftAssertions verificacao, JsonNode esperado, String campo, Object obtido) {
-    if (esperado.has(campo)) {
-      verificacao
-          .assertThat(String.valueOf(obtido))
-          .as(campo)
-          .isEqualTo(esperado.get(campo).asText());
-    }
-  }
-
-  private static List<String> textos(JsonNode lista) {
-    List<String> textos = new ArrayList<>();
-    if (lista != null) {
-      lista.forEach(n -> textos.add(n.asText()));
-    }
-    return textos;
   }
 
   @Nested

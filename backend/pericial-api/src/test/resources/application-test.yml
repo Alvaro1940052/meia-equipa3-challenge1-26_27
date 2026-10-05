@@ -1,0 +1,4 @@
+pericial:
+  seguranca:
+    chave-hmac: chave-de-testes-com-pelo-menos-trinta-e-dois-bytes
+    origens-cors: http://localhost:4200

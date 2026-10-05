@@ -94,6 +94,12 @@
         <artifactId>pericial-service</artifactId>
         <version>${project.version}</version>
       </dependency>
+      <dependency>
+        <groupId>com.levis.devolucoes</groupId>
+        <artifactId>pericial-service</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+      </dependency>
 
       <!-- BOM externos: o Drools antes do Spring Boot, para fixar as versões do motor -->
       <dependency>

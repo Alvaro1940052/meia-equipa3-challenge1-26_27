@@ -18,10 +18,22 @@ devoluções, trocas e ajustes de preço, e para explicar cada decisão (Como, P
 ## Comandos
 
 ```bash
-mvn clean verify                       # build, testes, Spotless, Checkstyle, JaCoCo
+mvn clean verify                       # build, testes, Spotless, Checkstyle, JaCoCo, ArchUnit
 mvn spotless:apply                     # formatar o código Java
-mvn -pl backend/pericial-api spring-boot:run -Dspring-boot.run.profiles=dev
+docker compose up --build              # PostgreSQL + API (perfil dev) em http://localhost:8080
 ```
+
+Para correr a API fora do Docker: `docker compose up -d postgres`, `mvn install -DskipTests` e
+`mvn -pl backend/pericial-api spring-boot:run -Dspring-boot.run.profiles=dev`.
+
+## API
+
+- Swagger UI (dev): http://localhost:8080/swagger-ui.html; documento OpenAPI em `/v3/api-docs`, exportado
+  pelos testes para `backend/pericial-api/target/openapi.json`.
+- Autenticação por token JWT (`Authorization: Bearer ...`). Em dev, `GET /api/v1/dev/colaboradores` lista
+  colaboradores de exemplo e `POST /api/v1/dev/tokens` emite um token para um deles. Em produção, os tokens vêm
+  do fornecedor OIDC (ver `docs/adr/0008-api-e-seguranca.md`).
+- O idioma das explicações segue o cabeçalho `Accept-Language` (pt-PT por omissão, ou en).
 
 ## Módulos
 

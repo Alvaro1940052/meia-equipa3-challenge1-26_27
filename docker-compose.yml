@@ -1,0 +1,41 @@
+# Ambiente local completo: PostgreSQL + API (perfil dev).
+#   docker compose up --build
+# API em http://localhost:8080 (Swagger UI em /swagger-ui.html); tokens de exemplo em
+# POST /api/v1/dev/tokens. Só para desenvolvimento: a chave JWT e as credenciais não são segredos.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: pericial
+      POSTGRES_USER: pericial
+      POSTGRES_PASSWORD: pericial
+    ports:
+      - "5432:5432"
+    volumes:
+      - dados-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pericial -d pericial"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/pericial-api/Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      PERICIAL_DB_URL: jdbc:postgresql://postgres:5432/pericial
+      PERICIAL_DB_UTILIZADOR: pericial
+      PERICIAL_DB_PALAVRA_PASSE: pericial
+      PERICIAL_JWT_CHAVE: ${PERICIAL_JWT_CHAVE:-chave-local-de-desenvolvimento-nao-usar-em-producao}
+      PERICIAL_CORS_ORIGENS: ${PERICIAL_CORS_ORIGENS:-http://localhost:4200}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  dados-postgres:
