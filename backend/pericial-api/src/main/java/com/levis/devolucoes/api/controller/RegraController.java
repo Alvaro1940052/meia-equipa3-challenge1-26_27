@@ -24,13 +24,15 @@ public class RegraController {
   }
 
   @GetMapping
-  @Operation(summary = "Regras da base de conhecimento")
+  @Operation(operationId = "listarRegras", summary = "Regras da base de conhecimento")
   public List<RegraResumoDto> listar() {
     return catalogo.listar();
   }
 
   @GetMapping("/{codigo}")
-  @Operation(summary = "Detalhe de uma regra (condições, conclusões e variantes)")
+  @Operation(
+      operationId = "detalheRegra",
+      summary = "Detalhe de uma regra (condições, conclusões e variantes)")
   public RegraDetalheDto detalhe(@PathVariable String codigo) {
     return catalogo.detalhe(codigo);
   }

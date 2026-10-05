@@ -1,0 +1,44 @@
+<h2 i18n="@@emFalta.titulo">O que falta?</h2>
+@if (store.erroEmFalta(); as e) {
+  <p class="erro">{{ e.titulo }}</p>
+} @else if (store.emFalta(); as emFalta) {
+  <p data-teste="em-falta-resumo">{{ emFalta.resumo }}</p>
+  @if (obrigatorios().length) {
+    <h3 i18n="@@emFalta.obrigatorios">Obrigatórios para decidir</h3>
+    <ul>
+      @for (dado of obrigatorios(); track chave(dado)) {
+        <li>
+          <button type="button" class="ligacao" (click)="store.irParaDado(dado)">
+            <strong>{{ dado.codigo }}</strong> {{ descricao(dado) }}
+          </button>
+          @if (dado.porque?.resumo) {
+            <details>
+              <summary i18n="@@grupo.porque">Porquê?</summary>
+              <p>{{ dado.porque!.resumo }}</p>
+            </details>
+          }
+        </li>
+      }
+    </ul>
+  }
+  @if (opcionais().length) {
+    <h3 i18n="@@emFalta.uteis">Úteis para completar a decisão</h3>
+    <ul>
+      @for (dado of opcionais(); track chave(dado)) {
+        <li>
+          <button type="button" class="ligacao" (click)="store.irParaDado(dado)">
+            <strong>{{ dado.codigo }}</strong> {{ descricao(dado) }}
+          </button>
+          @if (dado.porque?.resumo) {
+            <details>
+              <summary i18n="@@grupo.porque">Porquê?</summary>
+              <p>{{ dado.porque!.resumo }}</p>
+            </details>
+          }
+        </li>
+      }
+    </ul>
+  }
+} @else {
+  <p i18n="@@comum.aCarregar">A carregar…</p>
+}

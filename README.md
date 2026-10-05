@@ -13,18 +13,32 @@ devoluções, trocas e ajustes de preço, e para explicar cada decisão (Como, P
 
 - JDK 21 ou superior (o código é compilado com `release 21`).
 - Maven 3.9 ou superior.
-- Node 22 (frontend) e Docker (ambiente local e testes de integração com Testcontainers).
+- Node 24 LTS (frontend; o Angular 22 exige pelo menos 22.22.3) e Docker (ambiente local e testes de integração
+  com Testcontainers).
 
 ## Comandos
 
 ```bash
 mvn clean verify                       # build, testes, Spotless, Checkstyle, JaCoCo, ArchUnit
 mvn spotless:apply                     # formatar o código Java
-docker compose up --build              # PostgreSQL + API (perfil dev) em http://localhost:8080
+docker compose up --build              # PostgreSQL + API (perfil dev, :8080) + frontend (:8081)
 ```
 
 Para correr a API fora do Docker: `docker compose up -d postgres`, `mvn install -DskipTests` e
 `mvn -pl backend/pericial-api spring-boot:run -Dspring-boot.run.profiles=dev`.
+
+## Frontend
+
+```bash
+cd frontend && npm ci
+npm start                 # http://localhost:4200, com proxy de /api para localhost:8080
+npm run start:en          # a versão inglesa
+npm test                  # testes unitários (Vitest)
+npx playwright test       # E2E: os 10 cenários e as explicações (arranca a API com docker compose se preciso)
+npm run api:atualizar     # copia o OpenAPI exportado pelos testes da API e regenera src/app/api
+npm run i18n:extrair      # extrai as mensagens (pt-PT); traduzir em src/locale/messages.en.xlf
+npm run verificar         # formatação (Prettier) e traduções completas
+```
 
 ## API
 

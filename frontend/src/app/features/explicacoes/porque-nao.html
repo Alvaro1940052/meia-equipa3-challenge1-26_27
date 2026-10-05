@@ -1,0 +1,99 @@
+<form class="formulario-grelha" (ngSubmit)="perguntar()">
+  <fieldset class="escolha-modo">
+    <label class="caixa">
+      <input type="radio" name="modo" value="conclusao" [ngModel]="modo()" (ngModelChange)="modo.set($event)" />
+      <span i18n="@@porqueNao.modoConclusao">Porque não esta conclusão?</span>
+    </label>
+    <label class="caixa">
+      <input type="radio" name="modo" value="regra" [ngModel]="modo()" (ngModelChange)="modo.set($event)" />
+      <span i18n="@@porqueNao.modoRegra">Porque não disparou esta regra?</span>
+    </label>
+  </fieldset>
+
+  @if (modo() === 'conclusao') {
+    <label>
+      <span i18n="@@porqueNao.conclusao">Conclusão</span>
+      <select name="conclusao" [ngModel]="conclusao()" (ngModelChange)="escolherConclusao($event)" data-teste="porque-nao-conclusao">
+        @for (s of saidas; track s.codigo) {
+          <option [value]="s.codigo">{{ s.codigo }} · {{ s.rotulo }}</option>
+        }
+      </select>
+    </label>
+    <label>
+      <span i18n="@@porqueNao.valor">Valor esperado</span>
+      <select name="valor" [ngModel]="valor()" (ngModelChange)="valor.set($event)" data-teste="porque-nao-valor">
+        @for (v of valores(); track v[0]) {
+          <option [value]="v[0]">{{ v[1] }}</option>
+        }
+      </select>
+    </label>
+  } @else {
+    <label>
+      <span i18n="@@porqueNao.regra">Regra (ex.: PT-003)</span>
+      <input name="regra" required [ngModel]="regra()" (ngModelChange)="regra.set($event)" data-teste="porque-nao-regra" />
+    </label>
+  }
+  @if (artigos().length) {
+    <label>
+      <span i18n="@@porqueNao.artigo">Artigo</span>
+      <select name="artigo" [ngModel]="artigo()" (ngModelChange)="artigo.set($event)">
+        @if (!porArtigo() || modo() === 'regra') {
+          <option value="" i18n="@@porqueNao.pedido">— o pedido —</option>
+        }
+        @for (a of artigos(); track a) {
+          <option [value]="a">{{ a }}</option>
+        }
+      </select>
+    </label>
+  }
+  <div class="acoes">
+    <button type="submit" class="primario" [disabled]="aCarregar()" data-teste="porque-nao-perguntar" i18n="@@porqueNao.perguntar">
+      Perguntar
+    </button>
+  </div>
+</form>
+
+@if (erro(); as e) {
+  <p class="erro" role="alert">{{ e.titulo }}{{ e.detalhe ? ': ' + e.detalhe : '' }}</p>
+}
+@if (respostaConclusao(); as x) {
+  <div class="explicacao porque-nao" data-teste="porque-nao-resposta">
+    <p>{{ x.resumo }}</p>
+    @for (r of x.regras; track $index) {
+      <div class="regra-nao">
+        <strong>{{ r.codigoRegra }}</strong>
+        @if (r.variante) {
+          <span class="nota">{{ r.variante }}</span>
+        }
+        <span class="etiqueta">{{ causa(r.causa) }}</span>
+        @if (r.regraResponsavel) {
+          <span class="nota">({{ r.regraResponsavel }})</span>
+        }
+        <p>{{ r.resumo }}</p>
+      </div>
+    }
+  </div>
+}
+@if (respostaRegra(); as r) {
+  <div class="explicacao porque-nao" data-teste="porque-nao-resposta">
+    <p>
+      <strong>{{ r.codigoRegra }}</strong> <span class="etiqueta">{{ causa(r.causa) }}</span>
+      @if (r.regraResponsavel) {
+        <span class="nota">({{ r.regraResponsavel }})</span>
+      }
+    </p>
+    <p>{{ r.resumo }}</p>
+    @if (r.condicoes?.length) {
+      <ul class="condicoes">
+        @for (c of r.condicoes; track $index) {
+          <li [class.cumprida]="c.cumprida === true" [class.falhada]="c.cumprida === false">
+            {{ c.descricao }}
+            @if (c.artigoId) {
+              <span class="etiqueta">{{ c.artigoId }}</span>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </div>
+}

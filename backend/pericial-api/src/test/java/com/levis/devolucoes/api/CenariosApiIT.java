@@ -133,6 +133,16 @@ class CenariosApiIT {
     assertThat(dados.get("completo").asBoolean()).isFalse();
     assertThat(dados.get("dados")).isNotEmpty();
 
+    // Como o assistente envia: artigo ainda sem SKU e artigo de troca por completar
+    String emCurso =
+        """
+        {"artigos": [{"id": "A-1", "produto": {"sku": null}}],
+         "artigosTroca": [{"produto": {"sku": "501-ORIG-34"}}]}
+        """;
+    ResponseEntity<String> parcial =
+        pedir(HttpMethod.POST, "/api/v1/avaliacoes/dados-em-falta", json.readTree(emCurso), token);
+    assertThat(parcial.getStatusCode()).as(parcial.getBody()).isEqualTo(HttpStatus.OK);
+
     ResponseEntity<String> porque =
         pedir(HttpMethod.POST, "/api/v1/avaliacoes/porque?dado=IN-010", json.readTree("{}"), token);
     assertThat(porque.getStatusCode()).as(porque.getBody()).isEqualTo(HttpStatus.OK);

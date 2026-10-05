@@ -1,0 +1,36 @@
+<header>
+  <strong>
+    <span i18n="@@como.titulo">Como?</span> {{ conclusao() }}{{ artigo() ? ' · ' + artigo() : '' }}
+  </strong>
+  <button type="button" class="ligacao" (click)="fechar.emit()" i18n="@@porque.fechar">Fechar</button>
+</header>
+@if (erro(); as e) {
+  <p class="erro">{{ e.titulo }}{{ e.detalhe ? ': ' + e.detalhe : '' }}</p>
+} @else if (explicacao(); as x) {
+  <p data-teste="como-resumo">{{ x.resumo }}</p>
+  @if (x.regra) {
+    <p>
+      <span i18n="@@como.definidaPor">Definida por</span>&ngsp;<strong>{{ x.regra }}</strong>
+      @if (x.mensagem) {
+        — {{ x.mensagem }}
+      }
+    </p>
+  }
+  @if (x.condicoes?.length) {
+    <ul class="condicoes">
+      @for (c of x.condicoes; track $index) {
+        <li [class.cumprida]="c.cumprida === true" [class.falhada]="c.cumprida === false">
+          {{ c.descricao }}
+          @if (c.valor) {
+            <span class="nota">({{ c.valor }})</span>
+          }
+        </li>
+      }
+    </ul>
+  }
+  @if (x.caminho?.length) {
+    <p class="nota"><span i18n="@@como.caminho">Caminho:</span> {{ x.caminho!.join(' → ') }}</p>
+  }
+} @else {
+  <p i18n="@@comum.aCarregar">A carregar…</p>
+}

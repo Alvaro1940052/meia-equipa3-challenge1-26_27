@@ -1,0 +1,42 @@
+{
+  "name": "levis-devolucoes-frontend",
+  "version": "0.0.0",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "start:en": "ng serve --configuration development-en",
+    "build": "ng build",
+    "test": "ng test --watch=false",
+    "e2e": "playwright test",
+    "api:gerar": "ng-openapi-gen -c ng-openapi-gen.json",
+    "api:atualizar": "node scripts/atualizar-openapi.mjs && npm run api:gerar",
+    "i18n:extrair": "ng extract-i18n",
+    "i18n:verificar": "node scripts/verificar-traducoes.mjs",
+    "formatar": "prettier --write \"src/**/*.{ts,scss}\" \"e2e/**/*.ts\" \"scripts/*.mjs\" playwright.config.ts",
+    "verificar": "prettier --check \"src/**/*.{ts,scss}\" \"e2e/**/*.ts\" \"scripts/*.mjs\" playwright.config.ts && npm run i18n:verificar"
+  },
+  "private": true,
+  "packageManager": "npm@11.17.0",
+  "dependencies": {
+    "@angular/common": "^22.2.0",
+    "@angular/compiler": "^22.2.0",
+    "@angular/core": "^22.2.0",
+    "@angular/forms": "^22.2.0",
+    "@angular/platform-browser": "^22.2.0",
+    "@angular/router": "^22.2.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@angular/build": "^22.2.1",
+    "@angular/cli": "^22.2.1",
+    "@angular/compiler-cli": "^22.2.0",
+    "@angular/localize": "^22.2.1",
+    "@playwright/test": "^1.63.0",
+    "jsdom": "^30.0.0",
+    "ng-openapi-gen": "^1.1.0",
+    "prettier": "^3.8.1",
+    "typescript": "~6.0.2",
+    "vitest": "^5.0.0"
+  }
+}

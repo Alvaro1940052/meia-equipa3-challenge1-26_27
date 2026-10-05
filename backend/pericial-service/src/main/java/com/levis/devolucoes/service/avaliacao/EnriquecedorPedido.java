@@ -86,11 +86,12 @@ public class EnriquecedorPedido {
     if (p == null) {
       return null;
     }
-    Optional<ProdutoCatalogo> c = catalogo.produto(p.sku());
-    Boolean reconhecido =
-        p.skuReconhecidoPOS() != null || !consultarPos
-            ? p.skuReconhecidoPOS()
-            : pos.skuReconhecido(p.sku());
+    boolean temSku = p.sku() != null && !p.sku().isBlank();
+    Optional<ProdutoCatalogo> c = temSku ? catalogo.produto(p.sku()) : Optional.empty();
+    Boolean reconhecido = p.skuReconhecidoPOS();
+    if (reconhecido == null && consultarPos && temSku) {
+      reconhecido = pos.skuReconhecido(p.sku());
+    }
     return new ProdutoRequest(
         p.sku(),
         reconhecido,

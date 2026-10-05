@@ -43,6 +43,7 @@ public class AvaliacaoController {
 
   @PostMapping
   @Operation(
+      operationId = "avaliar",
       summary = "Avalia um pedido e devolve a decisão",
       description =
           "O colaborador é o utilizador autenticado. Recusa o pedido (422) se faltarem dados"
@@ -56,13 +57,15 @@ public class AvaliacaoController {
   }
 
   @GetMapping("/{id}")
-  @Operation(summary = "Consulta uma avaliação")
+  @Operation(operationId = "consultarAvaliacao", summary = "Consulta uma avaliação")
   public DecisaoResponse consultar(@PathVariable UUID id) {
     return avaliacoes.consultar(id);
   }
 
   @GetMapping
-  @Operation(summary = "Histórico de avaliações, mais recentes primeiro (gestão da loja)")
+  @Operation(
+      operationId = "listarAvaliacoes",
+      summary = "Histórico de avaliações, mais recentes primeiro (gestão da loja)")
   public PaginaDto<AvaliacaoResumoResponse> listar(
       @Parameter(description = "Código da loja; vazio para todas") @RequestParam(required = false)
           String loja,
@@ -73,6 +76,7 @@ public class AvaliacaoController {
 
   @PostMapping("/dados-em-falta")
   @Operation(
+      operationId = "dadosEmFalta",
       summary = "O que falta?",
       description =
           "Dados de entrada em falta (perguntas) para o pedido em preenchimento, cada um com o"
@@ -86,6 +90,7 @@ public class AvaliacaoController {
 
   @PostMapping("/porque")
   @Operation(
+      operationId = "porque",
       summary = "Porquê?",
       description =
           "Porque é que o sistema faz a pergunta indicada (ex.: IN-010) para o pedido em"

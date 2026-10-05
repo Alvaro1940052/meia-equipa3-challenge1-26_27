@@ -1,0 +1,71 @@
+<section class="pagina">
+  <h1 i18n="@@historico.titulo">Histórico de avaliações</h1>
+  <form class="filtro" (ngSubmit)="carregar(0)">
+    <label>
+      <span i18n="@@historico.loja">Código da loja</span>
+      <input name="loja" [ngModel]="loja()" (ngModelChange)="loja.set($event)" />
+    </label>
+    <button type="submit" class="secundario" i18n="@@historico.filtrar">Filtrar</button>
+  </form>
+
+  @if (erro(); as e) {
+    <div class="alerta erro" role="alert">
+      <strong>{{ e.titulo }}</strong>
+      @if (e.detalhe) {
+        <p>{{ e.detalhe }}</p>
+      }
+    </div>
+  } @else if (pagina(); as p) {
+    @if (p.conteudo?.length) {
+      <div class="tabela-rolavel">
+        <table class="tabela">
+          <thead>
+            <tr>
+              <th i18n="@@historico.quando">Quando</th>
+              <th i18n="@@resultado.pedido">Pedido</th>
+              <th i18n="@@historico.loja">Código da loja</th>
+              <th i18n="@@saida.OUT-001">Elegibilidade</th>
+              <th i18n="@@saida.OUT-002">Tipo de transação</th>
+              <th i18n="@@saida.OUT-003">Valor da devolução</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of p.conteudo; track a.avaliacaoId) {
+              <tr>
+                <td>
+                  <a [routerLink]="['/avaliacoes', a.avaliacaoId]">{{ a.avaliadaEm | date: 'short' }}</a>
+                </td>
+                <td>{{ a.pedidoId }}</td>
+                <td>{{ a.lojaCodigo }}</td>
+                <td>
+                  <span [class]="'etiqueta ' + (a.elegibilidade ?? '').toLowerCase()">{{ elegibilidade(a.elegibilidade) }}</span>
+                </td>
+                <td>{{ transacao(a.tipoTransacao) }}</td>
+                <td>{{ a.valorDevolucao === undefined || a.valorDevolucao === null ? '—' : (a.valorDevolucao | number: '1.2-2') }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="acoes">
+        <button type="button" class="secundario" [disabled]="(p.pagina ?? 0) === 0" (click)="carregar((p.pagina ?? 0) - 1)" i18n="@@avaliacao.anterior">
+          Anterior
+        </button>
+        <span class="nota">{{ (p.pagina ?? 0) + 1 }} / {{ p.totalPaginas || 1 }}</span>
+        <button
+          type="button"
+          class="secundario"
+          [disabled]="(p.pagina ?? 0) + 1 >= (p.totalPaginas ?? 0)"
+          (click)="carregar((p.pagina ?? 0) + 1)"
+          i18n="@@avaliacao.seguinte"
+        >
+          Seguinte
+        </button>
+      </div>
+    } @else {
+      <p i18n="@@historico.vazio">Ainda não há avaliações.</p>
+    }
+  } @else {
+    <p i18n="@@comum.aCarregar">A carregar…</p>
+  }
+</section>

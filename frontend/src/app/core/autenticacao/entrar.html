@@ -1,0 +1,61 @@
+<section class="pagina estreita">
+  <h1 i18n="@@entrar.titulo">Entrar</h1>
+  <p class="nota" i18n="@@entrar.nota">
+    Ambiente de desenvolvimento: escolha com que colaborador entra. A função e a aprovação do
+    District Manager decidem a regra HS-006.
+  </p>
+
+  @if (erro(); as e) {
+    <div class="alerta erro" role="alert">
+      <strong>{{ e.titulo }}</strong>
+      @if (e.detalhe) {
+        <p>{{ e.detalhe }}</p>
+      }
+    </div>
+  }
+
+  <h2 i18n="@@entrar.exemplos">Colaboradores de exemplo</h2>
+  <ul class="lista-escolha">
+    @for (c of exemplos(); track c.id) {
+      <li>
+        <button type="button" class="escolha" [disabled]="aEntrar()" (click)="entrar(c)" [attr.data-teste]="'entrar-' + c.id">
+          <strong>{{ c.nome }}</strong>
+          <span>{{ rotuloFuncao(c.funcao) }}{{ c.aprovadoPeloDM ? ' · DM' : '' }}</span>
+        </button>
+      </li>
+    }
+  </ul>
+
+  <h2 i18n="@@entrar.outro">Outro colaborador</h2>
+  <form class="cartao formulario-grelha" (ngSubmit)="entrar(outro)" #f="ngForm">
+    <label>
+      <span i18n="@@entrar.id">Identificação</span>
+      <input name="id" required [(ngModel)]="outro.id" data-teste="entrar-id" />
+    </label>
+    <label>
+      <span i18n="@@entrar.nome">Nome</span>
+      <input name="nome" [(ngModel)]="outro.nome" data-teste="entrar-nome" />
+    </label>
+    <label>
+      <span i18n="@@entrar.funcao">Função</span>
+      <select name="funcao" [(ngModel)]="outro.funcao" data-teste="entrar-funcao">
+        @for (f of funcoes; track f) {
+          <option [value]="f">{{ rotuloFuncao(f) }}</option>
+        }
+      </select>
+    </label>
+    <label>
+      <span i18n="@@entrar.credencial">Credencial de POS</span>
+      <input name="idCredencialPOS" [(ngModel)]="outro.idCredencialPOS" data-teste="entrar-credencial" />
+    </label>
+    <label class="caixa">
+      <input type="checkbox" name="aprovadoPeloDM" [(ngModel)]="outro.aprovadoPeloDM" data-teste="entrar-dm" />
+      <span i18n="@@entrar.dm">Aprovado pelo District Manager</span>
+    </label>
+    <div class="acoes">
+      <button type="submit" class="primario" [disabled]="aEntrar() || !f.valid" data-teste="entrar-outro" i18n="@@entrar.botao">
+        Entrar
+      </button>
+    </div>
+  </form>
+</section>

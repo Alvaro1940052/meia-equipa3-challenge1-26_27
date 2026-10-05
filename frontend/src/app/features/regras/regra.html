@@ -1,0 +1,37 @@
+<section class="pagina">
+  <p><a routerLink="/regras" i18n="@@regra.voltar">← Base de conhecimento</a></p>
+  <h1>{{ codigo() }}</h1>
+  @if (erro(); as e) {
+    <div class="alerta erro" role="alert"><strong>{{ e.titulo }}</strong></div>
+  } @else if (regra(); as r) {
+    @for (v of r.variantes; track v.nome) {
+      <article class="cartao">
+        <h2>
+          {{ v.nome }} <span class="etiqueta">{{ v.modulo }}</span>
+          @if (v.aValidar) {
+            <span class="etiqueta a-validar" i18n="@@comum.aValidar">a validar</span>
+          }
+        </h2>
+        <p>{{ v.descricao }}</p>
+        @if (v.condicoes?.length) {
+          <h3 i18n="@@regra.condicoes">Condições</h3>
+          <ul>
+            @for (c of v.condicoes; track $index) {
+              <li>{{ c }}</li>
+            }
+          </ul>
+        }
+        @if (v.conclusoes?.length) {
+          <h3 i18n="@@regra.conclusoes">Conclusões</h3>
+          <ul>
+            @for (c of v.conclusoes; track $index) {
+              <li>{{ c }}</li>
+            }
+          </ul>
+        }
+      </article>
+    }
+  } @else {
+    <p i18n="@@comum.aCarregar">A carregar…</p>
+  }
+</section>

@@ -1,0 +1,33 @@
+<header>
+  <strong i18n="@@porque.titulo">Porquê esta pergunta? ({{ codigo() }})</strong>
+  <button type="button" class="ligacao" (click)="fechar.emit()" i18n="@@porque.fechar">Fechar</button>
+</header>
+@if (estado() === 'a-carregar') {
+  <p i18n="@@comum.aCarregar">A carregar…</p>
+} @else if (erro(); as e) {
+  <p class="erro">{{ e.titulo }}{{ e.detalhe ? ': ' + e.detalhe : '' }}</p>
+} @else if (explicacao(); as x) {
+  <p class="pergunta">{{ x.pergunta }}</p>
+  <p data-teste="porque-resumo">{{ x.resumo }}</p>
+  @if (x.regrasEmEspera?.length) {
+    <p i18n="@@porque.emEspera">Regras que esperam por este dado para decidir:</p>
+    <ul>
+      @for (r of x.regrasEmEspera; track $index) {
+        <li>
+          <strong>{{ r.codigoRegra }}</strong> {{ semCodigo(r.nomeRegra, r.codigoRegra) }}
+          @if (r.artigoId) {
+            <span class="etiqueta">{{ r.artigoId }}</span>
+          }
+          @if (r.conclusoes?.length) {
+            <span class="nota"> → {{ r.conclusoes!.join(', ') }}</span>
+          }
+        </li>
+      }
+    </ul>
+  }
+  @if (x.regrasQueDependem?.length) {
+    <p class="nota">
+      <span i18n="@@porque.dependem">Regras que usam este dado:</span> {{ x.regrasQueDependem!.join(', ') }}
+    </p>
+  }
+}

@@ -1,0 +1,88 @@
+<section class="pagina">
+  <div class="titulo-acoes">
+    <h1 i18n="@@resultado.titulo">Decisão</h1>
+    <a routerLink="/avaliacao" class="botao secundario" i18n="@@resultado.nova">Nova avaliação</a>
+  </div>
+
+  @if (erro(); as e) {
+    <div class="alerta erro" role="alert">
+      <strong>{{ e.titulo }}</strong>
+      @if (e.detalhe) {
+        <p>{{ e.detalhe }}</p>
+      }
+    </div>
+  } @else if (decisao(); as d) {
+    <p class="nota">
+      <span i18n="@@resultado.pedido">Pedido</span> {{ d.pedidoId }} ·
+      <span i18n="@@resultado.avaliacao">avaliação</span>&ngsp;<code>{{ d.avaliacaoId }}</code>
+    </p>
+    <lv-cartao-decisao [decisao]="d" />
+
+    <div class="separadores" role="tablist">
+      @for (p of paineis; track p.id) {
+        <button
+          type="button"
+          role="tab"
+          [attr.aria-selected]="painel() === p.id"
+          [class.atual]="painel() === p.id"
+          (click)="painel.set(p.id)"
+          [attr.data-painel]="p.id"
+        >
+          {{ p.titulo }}
+        </button>
+      }
+    </div>
+    <div class="cartao painel" role="tabpanel">
+      @switch (painel()) {
+        @case ('como') {
+          <lv-como-completo [avaliacaoId]="d.avaliacaoId!" />
+        }
+        @case ('porque-nao') {
+          <lv-porque-nao [avaliacaoId]="d.avaliacaoId!" [artigos]="artigos()" />
+        }
+        @case ('e-se') {
+          <lv-e-se [avaliacaoId]="d.avaliacaoId!" [artigos]="artigos()" />
+        }
+        @case ('rasto') {
+          <div class="tabela-rolavel">
+            <table class="tabela" data-teste="rasto">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th i18n="@@rasto.regra">Regra</th>
+                  <th i18n="@@rasto.modulo">Módulo</th>
+                  <th i18n="@@decisao.artigo">Artigo</th>
+                  <th i18n="@@rasto.resultado">Resultado</th>
+                  <th i18n="@@rasto.mensagem">Mensagem</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (r of d.regras; track r.ordem) {
+                  <tr [attr.data-regra]="r.codigoRegra">
+                    <td>{{ r.ordem }}</td>
+                    <td>
+                      <a [routerLink]="['/regras', r.codigoRegra]"><strong>{{ r.codigoRegra }}</strong></a>
+                      @if (r.aValidar) {
+                        <span class="etiqueta a-validar" i18n="@@comum.aValidar">a validar</span>
+                      }
+                    </td>
+                    <td>{{ r.modulo }}</td>
+                    <td>{{ r.artigoId ?? '' }}</td>
+                    <td>
+                      @if (r.resultado) {
+                        <span [class]="'etiqueta ' + r.resultado.toLowerCase()">{{ elegibilidade(r.resultado) }}</span>
+                      }
+                    </td>
+                    <td>{{ r.mensagem }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+    </div>
+  } @else {
+    <p i18n="@@comum.aCarregar">A carregar…</p>
+  }
+</section>

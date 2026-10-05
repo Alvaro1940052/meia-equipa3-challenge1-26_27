@@ -8,6 +8,7 @@ import com.levis.devolucoes.dto.enums.EstadoConta;
 import com.levis.devolucoes.dto.enums.Marca;
 import com.levis.devolucoes.dto.enums.MeioPagamento;
 import com.levis.devolucoes.dto.pedido.ArtigoRequest;
+import com.levis.devolucoes.dto.pedido.ArtigoTrocaRequest;
 import com.levis.devolucoes.dto.pedido.CompraRequest;
 import com.levis.devolucoes.dto.pedido.PagamentoRequest;
 import com.levis.devolucoes.dto.pedido.PedidoAvaliacaoRequest;
@@ -105,6 +106,32 @@ class EnriquecedorPedidoTest {
     assertThat(produto.categoria()).isEqualTo(CategoriaProduto.VESTUARIO);
     assertThat(produto.precoAtual()).isEqualByComparingTo("29.99");
     assertThat(enriquecido.portalOnlineDisponivel()).isFalse();
+  }
+
+  /** Pedido em preenchimento: artigo de troca sem "reconhecido pelo POS" e artigo ainda sem SKU. */
+  @Test
+  void aceitaProdutosPorCompletar() {
+    PedidoAvaliacaoRequest emCurso =
+        new PedidoAvaliacaoRequest(
+            "P-1",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            List.of(new ArtigoRequest("A-1", so(null), null, null, null, false, null, null)),
+            List.of(new ArtigoTrocaRequest(so("501-ORIG-34"), false, null)),
+            null,
+            null,
+            null,
+            null);
+
+    PedidoAvaliacaoRequest enriquecido = enriquecedor.enriquecer(emCurso);
+
+    assertThat(enriquecido.artigos().getFirst().produto().skuReconhecidoPOS()).isNull();
+    assertThat(enriquecido.artigosTroca().getFirst().produto().skuReconhecidoPOS()).isNull();
+    assertThat(enriquecido.artigosTroca().getFirst().produto().marca()).isEqualTo(Marca.LEVIS);
   }
 
   @Test

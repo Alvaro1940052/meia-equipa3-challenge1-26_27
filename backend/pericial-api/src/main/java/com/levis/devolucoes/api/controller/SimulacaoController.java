@@ -28,6 +28,7 @@ public class SimulacaoController {
 
   @PostMapping
   @Operation(
+      operationId = "simular",
       summary = "E se?",
       description = "Reavalia o pedido com as alterações indicadas e mostra as diferenças.")
   public SimulacaoResponse simular(

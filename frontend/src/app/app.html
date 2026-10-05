@@ -1,0 +1,23 @@
+<a class="saltar" href="#conteudo" i18n="@@app.saltar">Saltar para o conteúdo</a>
+<header class="barra">
+  <a routerLink="/avaliacao" class="marca" i18n="@@app.nome">Devoluções e trocas</a>
+  @if (autenticacao.autenticado()) {
+    <nav i18n-aria-label="@@app.navegacao" aria-label="Navegação principal">
+      <a routerLink="/avaliacao" routerLinkActive="ativo" i18n="@@app.avaliar">Avaliar</a>
+      @if (autenticacao.podeVerHistorico()) {
+        <a routerLink="/historico" routerLinkActive="ativo" i18n="@@app.historico">Histórico</a>
+      }
+      <a routerLink="/regras" routerLinkActive="ativo" i18n="@@app.regras">Regras</a>
+    </nav>
+    <div class="sessao">
+      @if (autenticacao.colaborador(); as c) {
+        <span data-teste="colaborador">{{ c.nome || c.id }} · {{ funcao(c.funcao) }}</span>
+      }
+      <button type="button" class="ligacao" (click)="sair()" i18n="@@app.sair">Sair</button>
+    </div>
+  }
+  <a class="idioma" [href]="'/' + outroIdioma.codigo + '/'" [attr.hreflang]="outroIdioma.codigo">{{ outroIdioma.nome }}</a>
+</header>
+<main id="conteudo">
+  <router-outlet />
+</main>

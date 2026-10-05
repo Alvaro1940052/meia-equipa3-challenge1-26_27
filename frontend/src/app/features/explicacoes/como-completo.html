@@ -1,0 +1,33 @@
+@if (erro(); as e) {
+  <p class="erro">{{ e.titulo }}{{ e.detalhe ? ': ' + e.detalhe : '' }}</p>
+} @else if (explicacao(); as x) {
+  <p data-teste="como-completo-resumo">{{ x.resumo }}</p>
+  @if (x.modulosPercorridos?.length) {
+    <p class="nota"><span i18n="@@como.modulos">Módulos percorridos:</span> {{ x.modulosPercorridos!.join(' → ') }}</p>
+  }
+  @if (x.paragem) {
+    <p class="alerta aviso"><span i18n="@@como.paragem">Paragem:</span> {{ x.paragem }}</p>
+  }
+  <ol class="passos-explicacao">
+    @for (p of x.passos; track p.ordem) {
+      <li>
+        <span class="etiqueta">{{ p.modulo }}</span>
+        <strong>{{ p.codigoRegra }}</strong> {{ semCodigo(p.nomeRegra, p.codigoRegra) }}
+        @if (p.artigoId) {
+          <span class="etiqueta">{{ p.artigoId }}</span>
+        }
+        @if (p.resultado) {
+          <span [class]="'etiqueta ' + p.resultado.toLowerCase()">{{ elegibilidade(p.resultado) }}</span>
+        }
+        @if (p.aValidar) {
+          <span class="etiqueta a-validar" i18n="@@comum.aValidar">a validar</span>
+        }
+        @if (p.mensagem) {
+          <div class="nota">{{ p.mensagem }}</div>
+        }
+      </li>
+    }
+  </ol>
+} @else {
+  <p i18n="@@comum.aCarregar">A carregar…</p>
+}

@@ -33,6 +33,7 @@ public class ExplicacaoController {
 
   @GetMapping("/como")
   @Operation(
+      operationId = "como",
       summary = "Como?",
       description =
           "Sem conclusão: o caminho completo percorrido (ExplicacaoComoResponse). Com conclusão"
@@ -60,6 +61,7 @@ public class ExplicacaoController {
 
   @GetMapping("/porque-nao")
   @Operation(
+      operationId = "porqueNao",
       summary = "Porque não?",
       description =
           "Indicar exatamente um de: conclusão (ex.: OUT-001:PERMITIR), a razão de não ter sido"

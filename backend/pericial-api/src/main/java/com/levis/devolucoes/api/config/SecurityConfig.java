@@ -50,6 +50,9 @@ public class SecurityConfig {
                 pedidos
                     .requestMatchers("/actuator/health/**", "/actuator/info")
                     .permitAll()
+                    // Erros encaminhados pelo servidor: sem isto, um 500 aparecia como 403
+                    .requestMatchers("/error")
+                    .permitAll()
                     .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
                     .permitAll()
                     .requestMatchers("/api/v1/dev/**")
