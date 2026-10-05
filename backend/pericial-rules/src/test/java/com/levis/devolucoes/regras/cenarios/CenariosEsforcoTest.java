@@ -2,18 +2,11 @@ package com.levis.devolucoes.regras.cenarios;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.levis.devolucoes.model.decisao.DecisaoArtigo;
 import com.levis.devolucoes.regras.suporte.MotorTeste;
 import com.levis.devolucoes.regras.suporte.ResultadoAvaliacao;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.assertj.core.api.SoftAssertions;
@@ -27,23 +20,8 @@ import org.junit.jupiter.params.provider.MethodSource;
  */
 class CenariosEsforcoTest {
 
-  static final ObjectMapper JSON =
-      new ObjectMapper()
-          .registerModule(new JavaTimeModule())
-          .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-
   static Stream<Cenario> cenarios() {
-    return IntStream.rangeClosed(1, 10).mapToObj(CenariosEsforcoTest::ler);
-  }
-
-  static Cenario ler(int numero) {
-    String recurso = String.format("/cenarios/cenario-%02d.json", numero);
-    try (InputStream entrada = CenariosEsforcoTest.class.getResourceAsStream(recurso)) {
-      Objects.requireNonNull(entrada, recurso);
-      return JSON.readValue(entrada, Cenario.class);
-    } catch (IOException e) {
-      throw new UncheckedIOException(recurso, e);
-    }
+    return IntStream.rangeClosed(1, CarregadorCenarios.TOTAL).mapToObj(CarregadorCenarios::ler);
   }
 
   @Test

@@ -74,6 +74,18 @@
         <extensions>true</extensions>
       </plugin>
       <plugin>
+        <!-- Publica os cenários de aceitação (JSON e carregador) para explicações, serviço e API -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>test-jar</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <!-- Os metadados gerados pelo modelo executável não são regras: ficam fora da cobertura.
              As classes geradas das regras (Rules*, Lambda*) continuam a ser medidas. -->
         <groupId>org.jacoco</groupId>

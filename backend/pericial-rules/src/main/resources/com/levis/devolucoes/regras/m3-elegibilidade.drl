@@ -153,7 +153,7 @@ rule "PC-006 Defeito de fabrico confirmado"
     @id("PC-006")
     @modulo("M3")
     @descricao("Permitir o reembolso pelo meio permitido ou a substituição por um artigo sem defeito; dar baixa por dano ao artigo devolvido (M9). Só para produto não personalizado nem alterado (HS-003 prevalece).")
-    @condicoes("defeitoFabricoConfirmado,naoBodywear")
+    @condicoes("defeitoFabricoConfirmado,naoModificado,naoBodywear")
     agenda-group "M3"
     salience 60
 when

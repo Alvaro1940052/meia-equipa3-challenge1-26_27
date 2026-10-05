@@ -15,6 +15,10 @@
   <name>pericial-explanation</name>
   <description>Explicações: Como, Porquê, Porque não, E se e O que falta.</description>
 
+  <properties>
+    <jacoco.cobertura.minima>0.80</jacoco.cobertura.minima>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>com.levis.devolucoes</groupId>
@@ -36,6 +40,12 @@
     <dependency>
       <groupId>com.levis.devolucoes</groupId>
       <artifactId>pericial-rules</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.levis.devolucoes</groupId>
+      <artifactId>pericial-rules</artifactId>
+      <type>test-jar</type>
       <scope>test</scope>
     </dependency>
     <dependency>

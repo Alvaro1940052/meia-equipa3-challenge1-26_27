@@ -113,7 +113,7 @@ rule "PT-004 Devolução verificada após 30 dias: rever"
     @id("PT-004")
     @modulo("M5")
     @descricao("Após 30 dias: rever. O crédito de loja pode ser aprovado se o artigo for vendável, verificável e de baixo risco. Falta avaliar a revenda (IN-010) [a validar: A-17, A-19].")
-    @condicoes("devolucaoVerificada,mais30DiasDesdeCompra,naoEAjustePreco,artigoElegivel,revendivelPorAvaliar")
+    @condicoes("devolucaoVerificada,mais30DiasDesdeCompra,naoEAjustePreco,artigoElegivel,artigoRevendivelPorAvaliar")
     agenda-group "M5"
     salience 100
 when
@@ -137,7 +137,7 @@ rule "PT-004 Devolução verificada após 30 dias: crédito de loja aprovado"
     @id("PT-004")
     @modulo("M5")
     @descricao("Após 30 dias, artigo vendável, verificável e de baixo risco: crédito de loja aprovado pela gestão. Baixo risco = sem indício significativo ou confirmado [a validar: A-17, A-19].")
-    @condicoes("devolucaoVerificada,mais30DiasDesdeCompra,naoEAjustePreco,artigoElegivel,revendivel,baixoRisco")
+    @condicoes("devolucaoVerificada,mais30DiasDesdeCompra,naoEAjustePreco,artigoElegivel,artigoRevendivel,baixoRisco")
     agenda-group "M5"
     salience 100
 when
@@ -238,7 +238,7 @@ rule "PT-007 Ajuste de preço único em compra de loja até 14 dias"
     @id("PT-007")
     @modulo("M5")
     @descricao("Compra em loja, até 14 dias, com recibo original: permitir um ajuste de preço único para o artigo idêntico, pela diferença calculada pelo POS.")
-    @condicoes("ajustePreco,compraEmLoja,ate14DiasDesdeCompra,reciboOriginal,devolucaoVerificada,semAjusteAnterior")
+    @condicoes("ajustePreco,compraMainlineOuOutlet,ate14DiasDesdeCompra,reciboOriginal,devolucaoVerificada,semAjusteAnterior")
     agenda-group "M5"
     salience 90
 when
