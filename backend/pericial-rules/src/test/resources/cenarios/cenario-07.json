@@ -46,7 +46,7 @@
     "tipoVerificacao": "VERIFICADA",
     "tipoTransacao": "REEMBOLSO",
     "valorDevolucao": 79.50,
-    "regrasDisparadas": ["CT-003", "CH-001", "PC-001", "PT-001", "PT-003", "EX-002", "TN-011"],
+    "regrasDisparadas": ["CT-003", "CH-001", "PC-001", "PT-001", "PT-003", "EX-002", "TN-011", "CT-001", "CT-004", "CT-005", "CT-006", "CT-007"],
     "regrasNaoDisparadas": ["TN-001", "TN-004", "TN-012"],
     "artigos": { "A-1": { "elegibilidade": "PERMITIR", "regrasDisparadas": ["PC-001"] } }
   }

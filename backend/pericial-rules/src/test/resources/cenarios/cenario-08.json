@@ -45,7 +45,7 @@
     "tipoVerificacao": "VERIFICADA",
     "tipoTransacao": "NENHUMA",
     "regrasDisparadas": ["CT-003", "CH-001", "PC-001", "PT-001", "PT-008", "EX-002"],
-    "regrasNaoDisparadas": ["PT-007", "PT-002", "PT-003"],
+    "regrasNaoDisparadas": ["PT-007", "PT-002", "PT-003", "CT-005"],
     "artigos": { "A-1": { "elegibilidade": "PERMITIR", "regrasDisparadas": ["PC-001"] } }
   }
 }

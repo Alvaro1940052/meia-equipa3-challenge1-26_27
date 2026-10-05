@@ -36,8 +36,9 @@
     "valorDevolucao": 39.99,
     "meioReembolso": "CREDITO_LOJA",
     "baseValor": "VALOR_PROMOCIONAL",
-    "regrasDisparadas": ["CT-003", "IN-003", "PC-001", "PT-002", "PT-005"],
-    "regrasNaoDisparadas": ["PT-006", "PT-001"],
+    "regrasDisparadas": ["CT-003", "IN-003", "PC-001", "PT-002", "PT-005", "CT-002", "CT-005", "CT-007"],
+    "aprovacao": "XSTORE_MANAGER",
+    "regrasNaoDisparadas": ["PT-006", "PT-001", "CT-001", "CT-004"],
     "artigos": { "A-1": { "elegibilidade": "PERMITIR", "regrasDisparadas": ["PC-001"] } }
   }
 }

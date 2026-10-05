@@ -38,7 +38,7 @@
   "esperado": {
     "tipoVerificacao": "VERIFICADA",
     "regrasDisparadas": ["CT-003", "CH-001", "HS-003", "PT-001"],
-    "regrasNaoDisparadas": ["PC-006", "PC-004", "PT-003"],
+    "regrasNaoDisparadas": ["PC-006", "PC-004", "PT-003", "CT-005"],
     "artigos": { "A-1": { "elegibilidade": "RECUSAR", "tipoTransacao": "NENHUMA", "regrasDisparadas": ["HS-003"] } }
   }
 }

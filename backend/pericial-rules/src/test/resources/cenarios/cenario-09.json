@@ -40,7 +40,7 @@
     "tipoTransacao": "REEMBOLSO",
     "meioReembolso": "MEIO_ORIGINAL",
     "valorDevolucao": 29.99,
-    "regrasDisparadas": ["PC-008", "CT-003", "CH-001", "PC-007", "PT-001", "PT-003", "TN-001"],
+    "regrasDisparadas": ["PC-008", "CT-003", "CH-001", "PC-007", "PT-001", "PT-003", "TN-001", "CT-001", "CT-004", "CT-005", "CT-006", "CT-007"],
     "regrasNaoDisparadas": ["PC-004", "PC-005"],
     "artigos": {
       "A-1": { "elegibilidade": "PERMITIR", "destino": "RISCO_BIOLOGICO", "regrasDisparadas": ["PC-008", "PC-007"] }

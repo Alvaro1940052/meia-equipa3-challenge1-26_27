@@ -58,8 +58,8 @@
     "meioReembolso": "MEIO_ORIGINAL",
     "processo": "BACKPOCKET",
     "aprovacao": "RESPONSAVEL_SENIOR",
-    "regrasDisparadas": ["CT-003", "PC-001", "CH-002", "TN-010", "HS-005", "EX-002", "EX-003", "EX-004", "EX-006"],
-    "regrasNaoDisparadas": ["CH-001", "IN-003", "PT-001", "PT-003", "CH-006", "EP-002", "EX-005"],
+    "regrasDisparadas": ["CT-003", "PC-001", "CH-002", "TN-010", "HS-005", "EX-002", "EX-003", "EX-004", "EX-006", "CT-001", "CT-005", "CT-007"],
+    "regrasNaoDisparadas": ["CH-001", "IN-003", "PT-001", "PT-003", "CH-006", "EP-002", "EX-005", "CT-004"],
     "artigos": { "A-1": { "elegibilidade": "PERMITIR", "regrasDisparadas": ["PC-001"] } }
   }
 }

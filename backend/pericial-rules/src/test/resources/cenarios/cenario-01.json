@@ -50,8 +50,8 @@
     "tipoTransacao": "TROCA",
     "valorDevolucao": 69.50,
     "aprovacao": "RESPONSAVEL_SENIOR",
-    "regrasDisparadas": ["CT-003", "CH-001", "PC-002", "PT-001", "PT-003", "EP-001", "EX-001"],
-    "regrasNaoDisparadas": ["EP-002", "EX-002", "TN-006"],
+    "regrasDisparadas": ["CT-003", "CH-001", "PC-002", "PT-001", "PT-003", "EP-001", "EX-001", "CT-001", "CT-004", "CT-005", "CT-007"],
+    "regrasNaoDisparadas": ["EP-002", "EX-002", "TN-006", "CT-006"],
     "artigos": { "A-1": { "elegibilidade": "REVER", "regrasDisparadas": ["PC-002"] } }
   }
 }
