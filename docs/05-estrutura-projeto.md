@@ -53,7 +53,7 @@ levis-devolucoes/
 │   │   │   │                EventoRegra (CRIADA, DISPARADA, CANCELADA)
 │   │   │   ├── catalogo/    CatalogoRegras, MetadadosRegra, CondicaoRegra
 │   │   │   ├── como/        ExplicadorComo
-│   │   │   ├── porque/      ExplicadorPorque
+│   │   │   ├── porque/      ExplicadorPorque (perguntas), DadoEntrada, DependenciasDados
 │   │   │   ├── porquenao/   ExplicadorPorqueNao, AvaliadorCondicoes, RegistoPredicados
 │   │   │   ├── esenao/      SimuladorCenario
 │   │   │   ├── emfalta/     DetetorDadosEmFalta
@@ -151,19 +151,20 @@ pericial-api ──► pericial-service ──► pericial-explanation ──►
 As 16 classes e 22 enumerações de `04-diagrama-classes.md`, como POJO simples. São os objetos que entram na sessão Drools.
 
 ### Rules
-Empacotado como kjar, com `releaseId` próprio. Cada ficheiro DRL corresponde a um módulo do fluxograma e a um `agenda-group`. Cada regra declara metadados que alimentam o catálogo e as explicações, por exemplo `@id("PT-003")`, `@modulo("M5")`, `@descricao(...)` e `@condicoes("compraVerificada,ate30Dias,estadoAceite")`. Os testes incluem os 10 cenários de `06-casos-teste.md`, em ficheiros JSON.
+Empacotado como kjar, com `releaseId` próprio. Cada ficheiro DRL corresponde a um módulo do fluxograma e a um `agenda-group`. Cada regra declara metadados que alimentam o catálogo e as explicações, por exemplo `@id("PT-003")`, `@modulo("M5")`, `@descricao(...)`, `@condicoes("devolucaoVerificada,ate30DiasDesdeCompra,artigoElegivel")` e `@conclusoes("OUT-001=PERMITIR,OUT-002=REEMBOLSO")` (conclusões que a regra pode produzir, usadas pelo "Porque não?"). Os testes incluem os 10 cenários de `06-casos-teste.md`, em ficheiros JSON.
 
 ### Explanation
-Responde a cinco perguntas:
+Responde a cinco perguntas (definições aprovadas a 2026-10-05, ADR 0006):
 
-- **Como? (How)** — Lê a sequência de regras disparadas e os factos alterados (através do `RastreioListener`) e mostra o caminho percorrido no fluxograma.
-- **Porquê? (Why)** — Para um campo de saída (por exemplo, "porque é RECUSAR?"), indica a regra que o definiu, as condições que se verificaram e os valores dos factos.
-- **Porque não? (Why Not)** — Para uma regra ou resultado esperado, classifica a causa:
+- **Como? (How)** — Justifica o caminho que o sistema seguiu para obter uma conclusão. Lê a sequência de regras disparadas e os campos de saída que cada uma alterou (através do `RastreioListener`) e mostra o caminho completo no fluxograma ou o caminho de uma conclusão (por exemplo, "como se concluiu OUT-001 = REVER?": a regra que fixou o valor, as anteriores, as condições que se verificaram e os valores dos factos).
+- **Porque não? (Why Not)** — Justifica a razão pela qual uma conclusão não foi obtida (por exemplo, "porque não PERMITIR?" ou "porque não reembolso no meio original?"). Identifica as regras capazes de produzir essa conclusão (metadado `@conclusoes`), indica se alguma a chegou a propor e qual fixou o valor final, e classifica, para cada regra, a causa de não a ter produzido:
   - o módulo nunca foi alcançado, porque uma paragem obrigatória anterior terminou o fluxo;
-  - a regra foi ativada mas cancelada por uma regra com precedência;
+  - a regra foi vencida por uma regra com precedência;
   - uma ou mais condições falharam — o `AvaliadorCondicoes` testa cada predicado declarado nos metadados e lista os que falharam.
-- **E se? (What If)** — Clona os factos, aplica as alterações pedidas, reavalia numa sessão stateless e devolve as diferenças no resultado.
-- **O que falta?** — Antes da avaliação, identifica os dados de entrada (IN) em falta para se poder decidir.
+  Também se pode perguntar diretamente por uma regra.
+- **Porquê? (Why)** — Justifica a razão pela qual o sistema faz uma pergunta ao colaborador. Para um dado de entrada (IN-001 a IN-010 e outros dados do pedido), indica as regras cujas condições dependem dele e, no pedido atual, as que só esperam por essa resposta para concluir, com as conclusões que cada uma produziria (por exemplo, "pergunto se o artigo pode ser revendido porque o PC-002 precisa da resposta para decidir entre PERMITIR e RECUSAR").
+- **E se? (What If)** — Clona os factos, aplica as alterações pedidas, reavalia numa sessão nova e devolve as diferenças no resultado.
+- **O que falta?** — Antes da avaliação, identifica os dados de entrada (IN) em falta para se poder decidir; cada dado em falta é uma pergunta com o respetivo "Porquê?".
 
 ### DTO
 Records imutáveis com validação Bean Validation (`@NotNull`, `@PastOrPresent`, etc.). Contrato público, versionado com a API.
@@ -181,12 +182,14 @@ As integrações seguem o padrão portas e adaptadores: cada sistema externo tem
 
 | Método | Endpoint | Função |
 |---|---|---|
-| POST | `/api/v1/avaliacoes/dados-em-falta` | Lista os dados IN em falta |
+| POST | `/api/v1/avaliacoes/dados-em-falta` | Lista os dados IN em falta (perguntas), cada um com o seu "Porquê?" |
+| POST | `/api/v1/avaliacoes/porque?dado=IN-010` | Porque é feita uma pergunta, para o pedido em preenchimento (Why) |
 | POST | `/api/v1/avaliacoes` | Avalia um pedido e devolve a decisão |
 | GET | `/api/v1/avaliacoes/{id}` | Consulta uma avaliação |
-| GET | `/api/v1/avaliacoes/{id}/explicacoes/como` | Caminho percorrido (How) |
-| GET | `/api/v1/avaliacoes/{id}/explicacoes/porque?campo=OUT-001` | Justificação de um resultado (Why) |
-| GET | `/api/v1/avaliacoes/{id}/explicacoes/porque-nao?regra=PT-003` | Causa de uma regra não ter disparado (Why Not) |
+| GET | `/api/v1/avaliacoes/{id}/explicacoes/como` | Caminho completo percorrido (How) |
+| GET | `/api/v1/avaliacoes/{id}/explicacoes/como?conclusao=OUT-001&artigo=A-1` | Caminho até uma conclusão (How) |
+| GET | `/api/v1/avaliacoes/{id}/explicacoes/porque-nao?conclusao=OUT-001:PERMITIR&artigo=A-1` | Razão de uma conclusão não ter sido obtida (Why Not) |
+| GET | `/api/v1/avaliacoes/{id}/explicacoes/porque-nao?regra=PT-003&artigo=A-1` | Razão de uma regra não ter disparado (Why Not) |
 | POST | `/api/v1/avaliacoes/{id}/simulacoes` | Cenário alternativo (What If) |
 | GET | `/api/v1/regras`, `/api/v1/regras/{codigo}` | Catálogo da base de conhecimento |
 

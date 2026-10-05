@@ -1,6 +1,7 @@
-package com.levis.devolucoes.explicacao.porque;
+package com.levis.devolucoes.explicacao.catalogo;
 
 import java.util.List;
+import java.util.Optional;
 
 /** Campos de saída do sistema pericial (docs/01, OUT-001 a OUT-008) e os campos que os guardam. */
 public enum CampoSaida {
@@ -33,7 +34,9 @@ public enum CampoSaida {
     return descricao;
   }
 
-  /** O campo pertence a cada artigo (OUT-007) e não ao pedido. */
+  /**
+   * O campo só existe por artigo (OUT-007); os outros são do pedido e, alguns, também do artigo.
+   */
   public boolean doArtigo() {
     return doArtigo;
   }
@@ -45,6 +48,16 @@ public enum CampoSaida {
 
   public boolean inclui(String campo) {
     return campos.stream().anyMatch(c -> c.endsWith(".") ? campo.startsWith(c) : campo.equals(c));
+  }
+
+  /** Campo de saída de um campo do instantâneo (ex.: destino → OUT-007); vazio se não for OUT. */
+  public static Optional<CampoSaida> doCampo(String nomeCampo) {
+    for (CampoSaida campo : values()) {
+      if (campo.inclui(nomeCampo)) {
+        return Optional.of(campo);
+      }
+    }
+    return Optional.empty();
   }
 
   /** Aceita "OUT-001" ou "OUT_001". */

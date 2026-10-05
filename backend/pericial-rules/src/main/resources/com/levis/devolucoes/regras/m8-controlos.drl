@@ -19,6 +19,7 @@ rule "CT-001 Devolução verificada processada por pessoal autorizado"
     @modulo("M8")
     @descricao("A Gestão da Loja, o Key Holder, ou um Lead Cashier ou Elevated Stylist aprovado pelo District Manager processam a transação com as suas próprias credenciais de POS.")
     @condicoes("transacaoAProcessar,devolucaoVerificada,colaboradorAutorizado")
+    @conclusoes("")
     agenda-group "M8"
     salience 100
 when
@@ -39,6 +40,7 @@ rule "CT-002 Devolução às cegas por Lead Cashier ou Elevated Stylist"
     @modulo("M8")
     @descricao("A devolução às cegas processada por um Lead Cashier ou Elevated Stylist aprovado exige a aprovação do XStore Manager.")
     @condicoes("transacaoAProcessar,devolucaoAsCegas,processadorLeadCashierOuElevatedStylist")
+    @conclusoes("OUT-005=XSTORE_MANAGER")
     agenda-group "M8"
     salience 100
 when
@@ -61,6 +63,7 @@ rule "CT-004 Atribuir a devolução ao Stylist da venda original"
     @modulo("M8")
     @descricao("A devolução com recibo concluída é atribuída ao Stylist creditado com a venda original.")
     @condicoes("transacaoAProcessar,devolucaoVerificada,stylistDaVendaConhecido")
+    @conclusoes("OUT-008")
     agenda-group "M8"
     salience 90
 when
@@ -81,6 +84,7 @@ rule "CT-005 Assinaturas do recibo de devolução"
     @modulo("M8")
     @descricao("Obter a assinatura do cliente ou escrever \"Recusado\"; a assinatura do processador; e a da testemunha ou \"SSC\" em cobertura de loja única.")
     @condicoes("transacaoAProcessar")
+    @conclusoes("OUT-008")
     agenda-group "M8"
     salience 80
 when
@@ -105,6 +109,7 @@ rule "CT-006 Recibo original entregue"
     @modulo("M8")
     @descricao("Agrafar o recibo original ao exemplar da loja; se o cliente o mantiver ou se incluir outros artigos, anotar esse facto no exemplar da loja.")
     @condicoes("assinaturasObtidas,reciboOriginalImpresso")
+    @conclusoes("OUT-008")
     agenda-group "M8"
     salience 70
 when
@@ -131,6 +136,7 @@ rule "EX-007 Documentar a exceção aprovada"
     @modulo("M8")
     @descricao("Documentar o motivo, o aprovador, o valor, o resultado, a preocupação do cliente e o destino do produto na cópia da loja ou no registo aprovado.")
     @condicoes("excecaoAprovada,excecaoNaoRecusada")
+    @conclusoes("OUT-008")
     agenda-group "M8"
     salience 60
 when
@@ -156,6 +162,7 @@ rule "CT-007 Retenção dos suportes durante 90 dias"
     @modulo("M8")
     @descricao("Conservar o exemplar da loja e as assinaturas nos ficheiros de retenção de suportes durante 90 dias; arquivar as cópias das devoluções online com os suportes diários.")
     @condicoes("assinaturasObtidas")
+    @conclusoes("OUT-008")
     agenda-group "M8"
     salience 50
 when

@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.kie.api.KieBase;
@@ -70,6 +71,7 @@ public final class CatalogoRegras {
         condicoes == null || condicoes.isBlank()
             ? List.of()
             : Arrays.stream(condicoes.split(",")).map(String::trim).toList(),
+        Conclusao.lista(texto(meta.get("conclusoes"))),
         SEM_GUARDA_TERMINAL.contains(id));
   }
 
@@ -106,11 +108,16 @@ public final class CatalogoRegras {
   public Set<String> condicoesDeclaradas() {
     return porNome.values().stream()
         .flatMap(r -> r.condicoes().stream())
-        .collect(Collectors.toCollection(java.util.TreeSet::new));
+        .collect(Collectors.toCollection(TreeSet::new));
   }
 
   /** Primeiro módulo em que um ID é avaliado (um ID pode ter variantes em módulos diferentes). */
   public Optional<String> primeiroModulo(String id) {
     return variantes(id).stream().map(MetadadosRegra::modulo).findFirst();
+  }
+
+  /** Regras (variantes) que podem produzir o valor indicado de um campo de saída. */
+  public List<MetadadosRegra> produtoras(CampoSaida campo, Object valor) {
+    return porNome.values().stream().filter(r -> r.produz(campo, valor)).toList();
   }
 }

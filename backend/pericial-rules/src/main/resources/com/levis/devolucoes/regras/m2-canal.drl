@@ -16,6 +16,7 @@ rule "CH-008 Produto grossista"
     @modulo("M2")
     @descricao("Recusar e encaminhar o cliente para o retalhista grossista original: as lojas Levi's não aceitam devoluções de produtos grossistas.")
     @condicoes("canalGrossista")
+    @conclusoes("OUT-001=RECUSAR,OUT-002=NENHUMA")
     agenda-group "M2"
     salience 100
 when
@@ -36,6 +37,7 @@ rule "CH-007 Produto da franquia do Canadá"
     @modulo("M2")
     @descricao("Encaminhar para o processo específico de devolução da franquia do Canadá, com o SKU da franquia e nunca um SKU genérico. Aplica-se em qualquer mercado [a validar: A-07].")
     @condicoes("canalFranquiaCanada")
+    @conclusoes("OUT-001=ENCAMINHAR,OUT-002=NENHUMA,OUT-006=FRANQUIA_CANADA")
     agenda-group "M2"
     salience 100
 when
@@ -57,6 +59,7 @@ rule "CH-001 Compra Mainline ou Outlet devolvida numa loja Levi's"
     @modulo("M2")
     @descricao("Aplicar as regras de devolução verificada ou às cegas e as regras de avaliação da loja recetora: as devoluções entre canais são permitidas quando o produto é elegível.")
     @condicoes("canalLoja")
+    @conclusoes("")
     agenda-group "M2"
     salience 50
 when
@@ -76,6 +79,7 @@ rule "IN-003 Canal de compra desconhecido"
     @modulo("M2")
     @descricao("Canal desconhecido: segue para a elegibilidade do produto (M3) e o comprovativo decide em M4 (docs/03) [a validar: A-01].")
     @condicoes("canalDesconhecido")
+    @conclusoes("")
     agenda-group "M2"
     salience 50
 when

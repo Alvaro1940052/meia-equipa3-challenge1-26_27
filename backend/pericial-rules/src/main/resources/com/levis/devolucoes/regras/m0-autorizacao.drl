@@ -12,6 +12,7 @@ rule "HS-006 Colaborador não autorizado a processar devoluções ou trocas"
     @modulo("M0")
     @descricao("Encaminhar para a Gestão da Loja, um Key Holder, ou um Lead Cashier ou Elevated Stylist aprovado pelo District Manager. O XStore Manager é considerado autorizado [a validar: A-23].")
     @condicoes("colaboradorNaoAutorizado")
+    @conclusoes("OUT-001=ENCAMINHAR")
     agenda-group "M0"
     salience 100
 when
@@ -30,6 +31,7 @@ rule "CT-003 Mesmo colaborador do início ao fim com credenciais próprias"
     @modulo("M0")
     @descricao("O colaborador que inicia sessão no POS conclui a transação do início ao fim; as credenciais não podem ser partilhadas.")
     @condicoes("colaboradorAutorizado,credencialPosPropria")
+    @conclusoes("")
     agenda-group "M0"
     salience 90
 when

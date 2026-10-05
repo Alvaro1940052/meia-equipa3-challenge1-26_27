@@ -63,6 +63,22 @@ class MetadadosRegrasTest {
   }
 
   @Test
+  void cadaRegraDeclaraAsConclusoesNoFormatoOut() {
+    Pattern conclusao = Pattern.compile("OUT-00[1-8](=([A-Z_]+|null))?");
+    for (Rule regra : regras) {
+      Object valor = regra.getMetaData().get("conclusoes");
+      assertThat(valor).as("@conclusoes em \"%s\"", regra.getName()).isNotNull();
+      String texto = valor.toString();
+      if (texto.isBlank()) {
+        continue;
+      }
+      for (String parte : texto.split(",")) {
+        assertThat(parte.trim()).as("conclusão em \"%s\"", regra.getName()).matches(conclusao);
+      }
+    }
+  }
+
+  @Test
   void oIdExisteNaBaseDeConhecimentoEIniciaONome() {
     for (Rule regra : regras) {
       String id = String.valueOf(regra.getMetaData().get("id"));

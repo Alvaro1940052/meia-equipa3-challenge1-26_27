@@ -1,6 +1,6 @@
 # ADR 0005 — Explicações: rastreio, causas e execução do motor
 
-- **Estado:** proposto
+- **Estado:** proposto; a definição das explicações foi revista no ADR 0006
 - **Data:** 2026-10-05
 
 ## Contexto

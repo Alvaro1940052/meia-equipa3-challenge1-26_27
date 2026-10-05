@@ -29,6 +29,7 @@ rule "PT-001 Comprovativo válido confirma a compra"
     @modulo("M4")
     @descricao("Tratar como devolução verificada: recibo impresso ou digital, confirmação de encomenda, recibo de oferta, consulta da transação, fotografia do recibo ou consulta de encomenda BackPocket.")
     @condicoes("compraNaoOnline,comprovativoValido,comprovativoConfirmaCompra")
+    @conclusoes("")
     agenda-group "M4"
     salience 100
 when
@@ -48,6 +49,7 @@ rule "PT-002 Compra não verificável: devolução às cegas"
     @modulo("M4")
     @descricao("Não é possível verificar a compra: processar apenas como devolução às cegas, se o produto for elegível por outros motivos.")
     @condicoes("compraNaoOnline,naoEAjustePreco,semComprovativoValido")
+    @conclusoes("")
     agenda-group "M4"
     salience 90
 when
@@ -67,6 +69,7 @@ rule "PT-006 Cliente sem recibo não fornece dados ou há barreira linguística"
     @modulo("M4")
     @descricao("Selecionar \"Saltar\" e prosseguir com a devolução às cegas elegível; não pressionar o cliente para fornecer informações.")
     @condicoes("devolucaoAsCegas,clienteNaoForneceDadosOuBarreiraLinguistica")
+    @conclusoes("")
     agenda-group "M4"
     salience 80
 when
@@ -89,6 +92,7 @@ rule "PT-003 Devolução verificada até 30 dias"
     @modulo("M5")
     @descricao("Permitir o reembolso total do valor pago no meio de pagamento original, ou uma troca elegível. Prazo de 30 dias inclusive [a validar: A-22].")
     @condicoes("devolucaoVerificada,ate30DiasDesdeCompra,naoEAjustePreco,artigoElegivel")
+    @conclusoes("OUT-001=PERMITIR,OUT-002=REEMBOLSO,OUT-002=TROCA,OUT-003,OUT-004=MEIO_ORIGINAL")
     agenda-group "M5"
     salience 100
 when
@@ -114,6 +118,7 @@ rule "PT-004 Devolução verificada após 30 dias: rever"
     @modulo("M5")
     @descricao("Após 30 dias: rever. O crédito de loja pode ser aprovado se o artigo for vendável, verificável e de baixo risco. Falta avaliar a revenda (IN-010) [a validar: A-17, A-19].")
     @condicoes("devolucaoVerificada,mais30DiasDesdeCompra,naoEAjustePreco,artigoElegivel,artigoRevendivelPorAvaliar")
+    @conclusoes("OUT-001=REVER,OUT-005=RESPONSAVEL_SENIOR")
     agenda-group "M5"
     salience 100
 when
@@ -138,6 +143,7 @@ rule "PT-004 Devolução verificada após 30 dias: crédito de loja aprovado"
     @modulo("M5")
     @descricao("Após 30 dias, artigo vendável, verificável e de baixo risco: crédito de loja aprovado pela gestão. Baixo risco = sem indício significativo ou confirmado [a validar: A-17, A-19].")
     @condicoes("devolucaoVerificada,mais30DiasDesdeCompra,naoEAjustePreco,artigoElegivel,artigoRevendivel,baixoRisco")
+    @conclusoes("OUT-001=PERMITIR,OUT-002=CREDITO_LOJA,OUT-003,OUT-004=CREDITO_LOJA,OUT-005=RESPONSAVEL_SENIOR")
     agenda-group "M5"
     salience 100
 when
@@ -167,6 +173,7 @@ rule "PT-004 Devolução verificada após 30 dias: recusada, artigo não vendáv
     @modulo("M5")
     @descricao("Após 30 dias e o artigo não é vendável (IN-010 = não): recusar.")
     @condicoes("devolucaoVerificada,mais30DiasDesdeCompra,naoEAjustePreco,artigoNaoRevendivel")
+    @conclusoes("OUT-001=RECUSAR,OUT-002=NENHUMA")
     agenda-group "M5"
     salience 100
 when
@@ -189,6 +196,7 @@ rule "PT-005 Devolução às cegas: só troca ou crédito de loja ao preço atua
     @modulo("M5")
     @descricao("Artigo sem recibo elegível: permitir apenas troca ou crédito de loja, ao preço de venda atual; sem numerário nem meio original. Sem prazo [a validar: A-13, A-16].")
     @condicoes("devolucaoAsCegas,naoEAjustePreco,artigoElegivel")
+    @conclusoes("OUT-001=PERMITIR,OUT-002=CREDITO_LOJA,OUT-002=TROCA,OUT-003,OUT-004=CREDITO_LOJA,OUT-004=null")
     agenda-group "M5"
     salience 100
 when
@@ -217,6 +225,7 @@ rule "PT-008 Ajuste de preço após 14 dias ou sem recibo original"
     @modulo("M5")
     @descricao("Recusar o ajuste de preço: falta o prazo de 14 dias ou o recibo original. A fotografia do recibo não é o recibo original [a validar: A-14].")
     @condicoes("ajustePreco,mais14DiasOuSemReciboOriginal")
+    @conclusoes("OUT-001=RECUSAR,OUT-002=NENHUMA")
     agenda-group "M5"
     salience 100
 when
@@ -239,6 +248,7 @@ rule "PT-007 Ajuste de preço único em compra de loja até 14 dias"
     @modulo("M5")
     @descricao("Compra em loja, até 14 dias, com recibo original: permitir um ajuste de preço único para o artigo idêntico, pela diferença calculada pelo POS.")
     @condicoes("ajustePreco,compraMainlineOuOutlet,ate14DiasDesdeCompra,reciboOriginal,devolucaoVerificada,semAjusteAnterior")
+    @conclusoes("OUT-001=PERMITIR,OUT-002=AJUSTE_PRECO,OUT-003,OUT-004=MEIO_ORIGINAL")
     agenda-group "M5"
     salience 90
 when
@@ -264,6 +274,7 @@ rule "PT-007 Ajuste de preço já aplicado nesta compra"
     @modulo("M5")
     @descricao("O ajuste de preço de 14 dias é único: se já foi aplicado, recusar [a validar: A-14].")
     @condicoes("ajustePreco,ajusteAnterior")
+    @conclusoes("OUT-001=RECUSAR,OUT-002=NENHUMA")
     agenda-group "M5"
     salience 90
 when
@@ -283,6 +294,7 @@ rule "PT-007 Ajuste de preço de compra fora da loja: rever"
     @modulo("M5")
     @descricao("PT-007 só cobre compras em loja; o ajuste de compras online ou BackPocket não está previsto: rever [a validar: A-14].")
     @condicoes("ajustePreco,compraForaDaLoja,ate14DiasDesdeCompra,reciboOriginal")
+    @conclusoes("OUT-001=REVER,OUT-005=RESPONSAVEL_SENIOR")
     agenda-group "M5"
     salience 90
 when

@@ -1,6 +1,8 @@
 package com.levis.devolucoes.explicacao.porquenao;
 
+import com.levis.devolucoes.explicacao.catalogo.CampoSaida;
 import com.levis.devolucoes.explicacao.catalogo.CatalogoRegras;
+import com.levis.devolucoes.explicacao.catalogo.Conclusao;
 import com.levis.devolucoes.explicacao.catalogo.MetadadosRegra;
 import com.levis.devolucoes.explicacao.motor.ResultadoExecucao;
 import com.levis.devolucoes.explicacao.rastreio.AlteracaoCampo;
@@ -150,6 +152,87 @@ public class ExplicadorPorqueNao {
         varianteMelhor,
         condicoes,
         resumo);
+  }
+
+  /**
+   * "Porque não?" de uma conclusão: porque é que o campo de saída não tem o valor indicado. Procura
+   * as regras capazes de produzir o valor ({@code @conclusoes}) e explica cada uma.
+   *
+   * @param campo campo de saída (ex.: OUT-001)
+   * @param valor valor perguntado (ex.: PERMITIR, ou "null")
+   * @param artigoId artigo (obrigatório para OUT-007); nulo para o pedido
+   */
+  public ExplicacaoPorqueNaoConclusao explicarConclusao(
+      CampoSaida campo, String valor, String artigoId, ResultadoExecucao resultado) {
+    if (campo.doArtigo() && artigoId == null) {
+      throw new IllegalArgumentException(
+          campo.codigo() + " é uma conclusão por artigo: indique o artigo");
+    }
+    String alvo = artigoId == null ? InstantaneoDecisao.PEDIDO : artigoId;
+    String campoPrincipal = campo.campos().getFirst();
+    Object obtido = resultado.instantaneo().valor(alvo, campoPrincipal);
+    String textoObtido = obtido == null ? Conclusao.NULO : obtido.toString();
+    String rotulo = campo.codigo() + " = " + valor;
+
+    // Quem fixou o valor final e quem chegou a propor o valor perguntado
+    String definidoPor = null;
+    List<String> propostaPor = new ArrayList<>();
+    for (EventoRegra disparo : resultado.rastreio().disparos()) {
+      for (AlteracaoCampo alteracao : disparo.alteracoes()) {
+        if (alteracao.alvo().equals(alvo) && alteracao.campo().equals(campoPrincipal)) {
+          definidoPor = disparo.codigoRegra();
+        }
+      }
+      boolean produtora =
+          catalogo.porNome(disparo.nomeRegra()).map(r -> r.produz(campo, valor)).orElse(false);
+      if (produtora && disparo.doArtigo(artigoId) && !propostaPor.contains(disparo.codigoRegra())) {
+        propostaPor.add(disparo.codigoRegra());
+      }
+    }
+
+    if (valor.equals(textoObtido)) {
+      return new ExplicacaoPorqueNaoConclusao(
+          campo,
+          valor,
+          artigoId,
+          obtido,
+          true,
+          propostaPor,
+          definidoPor,
+          List.of(),
+          texto.formatar("porquenao.conclusao_obtida", rotulo, definidoPor));
+    }
+
+    List<String> produtoras =
+        catalogo.produtoras(campo, valor).stream().map(MetadadosRegra::id).distinct().toList();
+    List<ExplicacaoPorqueNao> regras = new ArrayList<>();
+    for (String id : produtoras) {
+      regras.add(explicar(id, artigoId, resultado));
+    }
+
+    String resumo;
+    if (produtoras.isEmpty()) {
+      resumo = texto.formatar("porquenao.conclusao_sem_regras", rotulo);
+    } else if (!propostaPor.isEmpty()) {
+      resumo =
+          texto.formatar(
+              "porquenao.conclusao_substituida",
+              rotulo,
+              String.join(", ", propostaPor),
+              textoObtido,
+              definidoPor == null ? "-" : definidoPor);
+    } else {
+      resumo =
+          texto.formatar(
+              "porquenao.conclusao_nao_produzida",
+              rotulo,
+              textoObtido,
+              regras.stream()
+                  .map(r -> r.codigoRegra() + " — " + r.resumo())
+                  .collect(Collectors.joining(" ")));
+    }
+    return new ExplicacaoPorqueNaoConclusao(
+        campo, valor, artigoId, obtido, false, propostaPor, definidoPor, regras, resumo);
   }
 
   /** Menos condições falhadas e, em empate, mais condições cumpridas. */

@@ -1,27 +1,19 @@
 package com.levis.devolucoes.explicacao.porque;
 
-import com.levis.devolucoes.explicacao.porquenao.ResultadoCondicao;
 import java.util.List;
-import java.util.Map;
 
 /**
- * "Porquê?": justificação do valor de um campo de saída.
+ * "Porquê?": porque é que o sistema faz uma pergunta ao colaborador.
  *
- * @param campo campo de saída perguntado
- * @param artigoId artigo (para OUT-007), ou nulo
- * @param valores valor final de cada campo que guarda o resultado
- * @param regra regra que definiu o valor final, ou nula
- * @param mensagem mensagem da regra
- * @param condicoes condições da regra sobre os dados de entrada, com os valores dos factos
- * @param historico regras que alteraram o campo, por ordem (incluindo a final)
+ * @param dado dado perguntado
+ * @param pergunta texto da pergunta
+ * @param regrasQueDependem IDs das regras cujas condições leem este dado (em geral)
+ * @param regrasEmEspera regras que, neste pedido, só esperam por esta resposta
  * @param resumo texto para o colaborador
  */
 public record ExplicacaoPorque(
-    CampoSaida campo,
-    String artigoId,
-    Map<String, Object> valores,
-    String regra,
-    String mensagem,
-    List<ResultadoCondicao> condicoes,
-    List<String> historico,
+    DadoEntrada dado,
+    String pergunta,
+    List<String> regrasQueDependem,
+    List<RegraEmEspera> regrasEmEspera,
     String resumo) {}

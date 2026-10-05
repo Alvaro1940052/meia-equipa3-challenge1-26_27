@@ -17,6 +17,7 @@ rule "EX-008 Indícios de fraude ou inconsistências relevantes"
     @modulo("TRANSVERSAL")
     @descricao("Suspender a transação, envolver a Gestão da Loja e comunicar o risco significativo ou confirmado ao District ou Area Manager e à Global Safety and Security. Só um indício significativo ou confirmado suspende [a validar: A-26].")
     @condicoes("indicioFraudeRelevante,pedidoNaoSuspenso")
+    @conclusoes("OUT-001=REVER,OUT-005=DISTRICT_AREA")
     agenda-group "TRANSVERSAL"
     auto-focus true
     salience 1000
@@ -38,6 +39,7 @@ rule "PC-008 Artigo sujo, contaminado ou inseguro de manusear"
     @modulo("TRANSVERSAL")
     @descricao("Minimizar o manuseamento; colocar num saco de risco biológico, etiquetado e datado; guardar na sala de reservas; enviar e-mail ao escritório corporativo; não revender e aguardar instruções de eliminação. Não altera a elegibilidade [a validar: A-15, A-28].")
     @condicoes("artigoSujoOuInseguro")
+    @conclusoes("OUT-007=RISCO_BIOLOGICO")
     agenda-group "TRANSVERSAL"
     auto-focus true
     salience 900

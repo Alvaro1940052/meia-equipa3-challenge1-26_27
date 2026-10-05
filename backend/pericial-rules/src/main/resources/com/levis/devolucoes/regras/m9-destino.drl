@@ -28,6 +28,7 @@ rule "OUT-007 Artigo recusado: devolução ao cliente"
     @modulo("M9")
     @descricao("Transação ou artigo recusado: o artigo é devolvido ao cliente (docs/03, módulo 10). Um artigo inseguro continua isolado [a validar: A-28].")
     @condicoes("artigoOuPedidoRecusado,pedidoNaoSuspenso,semDestino")
+    @conclusoes("OUT-007=DEVOLUCAO_CLIENTE")
     agenda-group "M9"
     salience 100
 when
@@ -52,6 +53,7 @@ rule "BW-004 Bodywear usado e sujo ou inseguro"
     @modulo("M9")
     @descricao("Colocar imediatamente num saco de risco biológico, etiquetar e datar, guardar na sala de reservas, enviar e-mail ao escritório corporativo e seguir as instruções de eliminação. Prevalece sobre BW-003.")
     @condicoes("bodywearAceite,usado,sujoOuInseguro")
+    @conclusoes("OUT-007=RISCO_BIOLOGICO")
     agenda-group "M9"
     salience 95
 when
@@ -76,6 +78,7 @@ rule "BW-003 Bodywear com unidades em falta ou usado"
     @modulo("M9")
     @descricao("Dar baixa por dano a todo o conjunto quando faltam unidades do conjunto original ou o produto foi usado.")
     @condicoes("bodywearAceite,conjuntoIncompletoOuUsado,semDestino")
+    @conclusoes("OUT-007=BAIXA_DANO")
     agenda-group "M9"
     salience 90
 when
@@ -99,6 +102,7 @@ rule "BW-001 Bodywear com embalagem intacta: inspeção confirma revenda"
     @modulo("M9")
     @descricao("Embalagem original intacta: inspecionar totalmente e devolver à venda apenas quando for confirmado que não foi usado e é vendável.")
     @condicoes("bodywearAceite,embalagemIntacta,naoUsado,conjuntoCompleto,revendivel")
+    @conclusoes("OUT-007=AREA_VENDAS")
     agenda-group "M9"
     salience 85
 when
@@ -122,6 +126,7 @@ rule "BW-001 Bodywear com embalagem intacta: inspeção não confirma revenda"
     @modulo("M9")
     @descricao("Embalagem intacta, mas a inspeção não confirma que é vendável: baixa por dano (docs/03).")
     @condicoes("bodywearAceite,embalagemIntacta,naoUsado,conjuntoCompleto,naoRevendivel")
+    @conclusoes("OUT-007=BAIXA_DANO")
     agenda-group "M9"
     salience 85
 when
@@ -145,6 +150,7 @@ rule "BW-001 Bodywear com embalagem intacta: inspecionar"
     @modulo("M9")
     @descricao("Embalagem intacta e a inspeção ainda não foi feita (IN-010): inspecionar totalmente antes de decidir o destino.")
     @condicoes("bodywearAceite,embalagemIntacta,naoUsado,conjuntoCompleto,revendivelPorAvaliar")
+    @conclusoes("")
     agenda-group "M9"
     salience 85
 when
@@ -168,6 +174,7 @@ rule "BW-002 Bodywear sem embalagem, não usado e completo"
     @modulo("M9")
     @descricao("Pendurar em saldos, marcar com 50 por cento de desconto, riscar o código de barras a vermelho e aplicar as promoções de saldo elegíveis.")
     @condicoes("bodywearAceite,semEmbalagem,naoUsado,conjuntoCompleto")
+    @conclusoes("OUT-007=SALDOS")
     agenda-group "M9"
     salience 85
 when
@@ -197,6 +204,7 @@ rule "PC-006 Baixa por dano do artigo com defeito de fabrico"
     @modulo("M9")
     @descricao("Dar baixa por dano ao artigo devolvido com defeito de fabrico confirmado.")
     @condicoes("defeitoFabricoAceite,semDestino")
+    @conclusoes("OUT-007=BAIXA_DANO")
     agenda-group "M9"
     salience 85
 when
@@ -218,6 +226,7 @@ rule "CT-008 Inspeção antes de devolver à área de vendas"
     @modulo("M9")
     @descricao("Inspecionar o dano, as etiquetas de preço e a precisão do RFID antes de devolver o produto à área de vendas; só o produto vendável e corretamente preparado volta ao stock.")
     @condicoes("artigoAceite,naoBodywear,semDefeito,semDestino")
+    @conclusoes("OUT-007=BAIXA_DANO,OUT-007=REETIQUETAR,OUT-007=AREA_VENDAS")
     agenda-group "M9"
     salience 80
 when
@@ -262,6 +271,7 @@ rule "EP-007 Artigo entre canais já em saldo"
     @modulo("M9")
     @descricao("Colocar em saldos e aplicar as promoções de saldo elegíveis atuais: a mercadoria em saldo mantém-se em saldo. Avaliada antes de EP-006.")
     @condicoes("entreCanais,inspecionado,emSaldo")
+    @conclusoes("OUT-007=SALDOS")
     agenda-group "M9"
     salience 70
 when
@@ -283,6 +293,7 @@ rule "EP-005 Artigo entre canais no sortido da loja recetora"
     @modulo("M9")
     @descricao("Reprecificar ao preço de venda atual da loja recetora e devolver à área de vendas, se for vendável.")
     @condicoes("entreCanais,inspecionado,noSortidoDaLojaRecetora,naoEmSaldo")
+    @conclusoes("OUT-007=AREA_VENDAS")
     agenda-group "M9"
     salience 60
 when
@@ -307,6 +318,7 @@ rule "EP-006 Artigo entre canais fora do sortido da loja recetora"
     @modulo("M9")
     @descricao("Colocar em saldos e marcar com 20 por cento de desconto sobre o preço devolvido, combinável com as promoções elegíveis na loja.")
     @condicoes("entreCanais,inspecionado,foraDoSortidoDaLojaRecetora,naoEmSaldo")
+    @conclusoes("OUT-007=SALDOS")
     agenda-group "M9"
     salience 60
 when
@@ -337,6 +349,7 @@ rule "OUT-001 Elegibilidade do pedido a partir dos artigos"
     @modulo("M9")
     @descricao("A elegibilidade do pedido é a mais severa entre a do pedido e as dos artigos; se todos os artigos forem recusados, não há transação [a validar: A-25].")
     @condicoes("pedidoNaoSuspenso")
+    @conclusoes("OUT-001=PERMITIR,OUT-001=REVER,OUT-001=ENCAMINHAR,OUT-001=RECUSAR,OUT-002=NENHUMA")
     agenda-group "M9"
     salience 1
 when

@@ -28,6 +28,7 @@ rule "CH-002 Encomenda online encontrada: processar na BackPocket"
     @modulo("ONLINE")
     @descricao("Encaminhar através da BackPocket e reembolsar no meio de pagamento original; o cliente nos EUA pode pedir um cartão de oferta eletrónico.")
     @condicoes("compraOnline,naoEAjustePreco,encomendaEncontrada,portalDisponivel,artigoElegivel")
+    @conclusoes("OUT-001=ENCAMINHAR,OUT-002=REEMBOLSO,OUT-003,OUT-004=MEIO_ORIGINAL,OUT-006=BACKPOCKET")
     agenda-group "ONLINE"
     salience 100
 when
@@ -56,6 +57,7 @@ rule "CH-004 Encomenda encontrada com o portal online indisponível: rever"
     @modulo("ONLINE")
     @descricao("Encomenda encontrada mas o portal está indisponível: nenhum documento cobre o caso; rever com a gestão, sem meio de reembolso definido [a validar: A-04].")
     @condicoes("compraOnline,naoEAjustePreco,encomendaEncontrada,portalIndisponivel,artigoElegivel")
+    @conclusoes("OUT-001=REVER,OUT-005=RESPONSAVEL_SENIOR")
     agenda-group "ONLINE"
     salience 100
 when
@@ -79,6 +81,7 @@ rule "TN-010 Compra online com Afterpay"
     @modulo("ONLINE")
     @descricao("Processar na BackPocket para o método original; não fornecer troca, cartão de oferta nem meio de pagamento alternativo.")
     @condicoes("compraOnline,encaminhadaBackPocket,pagamentoAfterpay")
+    @conclusoes("OUT-002=REEMBOLSO,OUT-004=MEIO_ORIGINAL,OUT-006=BACKPOCKET")
     agenda-group "ONLINE"
     salience 80
 when
@@ -101,6 +104,7 @@ rule "HS-005 Exceção ao meio de pagamento Afterpay online"
     @modulo("ONLINE")
     @descricao("Recusar a exceção (troca, cartão de oferta, numerário ou outro meio) e reembolsar através da Afterpay para o método original.")
     @condicoes("compraOnline,pagamentoAfterpay,pedidoDeExcecaoAoMeio")
+    @conclusoes("")
     agenda-group "ONLINE"
     salience 70
 when
@@ -123,6 +127,7 @@ rule "CH-005 Encomenda online enviada há mais de 30 dias"
     @modulo("ONLINE")
     @descricao("Emitir cartão de oferta quando o artigo for elegível por outros motivos. Não se aplica a Afterpay (TN-010) nem a PayPal/Venmo (TN-008 prevalece) [a validar: A-05, A-06, A-22].")
     @condicoes("compraOnline,encaminhadaBackPocket,mais30DiasDesdeEnvio,pagamentoSemProcessoProprio")
+    @conclusoes("OUT-001=PERMITIR,OUT-002=REEMBOLSO,OUT-004=CARTAO_OFERTA")
     agenda-group "ONLINE"
     salience 60
 when
@@ -146,6 +151,7 @@ rule "CH-006 Troca de encomenda online"
     @modulo("ONLINE")
     @descricao("Concluir a troca e devolver qualquer saldo elegível remanescente ao meio de pagamento original; a Afterpay continua excluída (TN-010, HS-005).")
     @condicoes("compraOnline,encaminhadaBackPocket,pedidoTroca,ate30DiasDesdeEnvio,naoAfterpay")
+    @conclusoes("OUT-001=PERMITIR,OUT-002=TROCA,OUT-004=MEIO_ORIGINAL")
     agenda-group "ONLINE"
     salience 60
 when
@@ -172,6 +178,7 @@ rule "CH-003 Encomenda online não encontrada: às cegas com cartão de oferta"
     @modulo("ONLINE")
     @descricao("Usar uma devolução às cegas apenas quando o cenário da política o permitir; o meio predefinido é o cartão de oferta [a validar: A-03].")
     @condicoes("compraOnline,naoEAjustePreco,encomendaNaoEncontrada,politicaPermiteAsCegasOnline,artigoElegivel")
+    @conclusoes("OUT-001=PERMITIR,OUT-002=REEMBOLSO,OUT-003,OUT-004=CARTAO_OFERTA")
     agenda-group "ONLINE"
     salience 100
 when
@@ -197,6 +204,7 @@ rule "CH-003 Encomenda online não encontrada: às cegas não permitida"
     @modulo("ONLINE")
     @descricao("Encomenda não encontrada e a política não permite a devolução às cegas neste caso: recusar [a validar: A-03].")
     @condicoes("compraOnline,naoEAjustePreco,encomendaNaoEncontrada,politicaNaoPermiteAsCegasOnline")
+    @conclusoes("OUT-001=RECUSAR,OUT-002=NENHUMA")
     agenda-group "ONLINE"
     salience 100
 when
@@ -217,6 +225,7 @@ rule "CH-004 Portal online indisponível: às cegas no meio original"
     @modulo("ONLINE")
     @descricao("Portal online indisponível: processar a devolução às cegas permitida no meio de pagamento original (substitui o cartão de oferta de CH-003).")
     @condicoes("compraOnline,devolucaoAsCegasOnlinePermitida,portalIndisponivel")
+    @conclusoes("OUT-001=PERMITIR,OUT-004=MEIO_ORIGINAL")
     agenda-group "ONLINE"
     salience 90
 when

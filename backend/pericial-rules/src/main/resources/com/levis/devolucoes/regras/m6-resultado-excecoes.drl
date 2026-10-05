@@ -28,6 +28,7 @@ rule "EP-001 Troca com recibo que altera apenas o tamanho"
     @modulo("M6")
     @descricao("Respeitar o preço de venda original ou promocional para o artigo de substituição: a correspondência de promoções limita-se a trocas de tamanho.")
     @condicoes("trocaPermitida,devolucaoVerificada,apenasMudaTamanho")
+    @conclusoes("")
     agenda-group "M6"
     salience 100
 when
@@ -48,6 +49,7 @@ rule "EP-002 Troca que altera o modelo ou a cor"
     @modulo("M6")
     @descricao("Devolver o artigo original pelo seu valor elegível e vender o novo artigo ao preço atual.")
     @condicoes("trocaPermitida,mudaModeloOuCor")
+    @conclusoes("")
     agenda-group "M6"
     salience 100
 when
@@ -71,6 +73,7 @@ rule "EX-001 Uma regra devolveu REVER: critério da gestão"
     @modulo("M6")
     @descricao("Avaliar a possibilidade de revenda, o comprovativo, o tempo decorrido, o valor da transação, o risco de fraude e as circunstâncias do cliente.")
     @condicoes("resultadoRever")
+    @conclusoes("OUT-005=RESPONSAVEL_SENIOR")
     agenda-group "M6"
     salience 90
 when
@@ -97,6 +100,7 @@ rule "EX-002 O cliente contesta o resultado padrão"
     @modulo("M6")
     @descricao("Explicar a política e oferecer a melhor alternativa em conformidade com a política, antes de considerar uma exceção. Também depois de uma paragem obrigatória (ADR 0004).")
     @condicoes("clienteContesta,resultadoEmitido")
+    @conclusoes("")
     agenda-group "M6"
     salience 80
 when
@@ -117,6 +121,7 @@ rule "EX-003 O cliente fica irritado ou cria perturbação"
     @modulo("M6")
     @descricao("Escalar para o responsável sénior de serviço. A agitação por si só não cria elegibilidade (ADR 0004).")
     @condicoes("clienteAgitado,politicaExplicada")
+    @conclusoes("OUT-005=RESPONSAVEL_SENIOR")
     agenda-group "M6"
     salience 70
 when
@@ -141,6 +146,7 @@ rule "EX-004 Exceção de apaziguamento: pode ser aprovada"
     @modulo("M6")
     @descricao("Aprovar apenas quando nenhuma regra de paragem obrigatória se aplique, o artigo possa ser verificado, o risco de fraude seja baixo e o resultado possa ser concluído no sistema [a validar: A-18].")
     @condicoes("escaladoResponsavelSenior,pedidoExcecao,semParagemHs,devolucaoVerificada,baixoRisco,concluivelNoSistema")
+    @conclusoes("")
     agenda-group "M6"
     salience 60
 when
@@ -164,6 +170,7 @@ rule "EX-004 Exceção de apaziguamento: não pode ser aprovada"
     @modulo("M6")
     @descricao("A exceção de apaziguamento não pode contornar controlos absolutos: há uma paragem obrigatória, a compra não é verificável, o risco de fraude não é baixo ou o resultado não pode ser concluído no sistema.")
     @condicoes("escaladoResponsavelSenior,pedidoExcecao,paragemOuNaoVerificadaOuRiscoOuNaoConcluivel")
+    @conclusoes("")
     agenda-group "M6"
     salience 55
 when
@@ -181,7 +188,8 @@ rule "EX-006 A exceção exige contornar um controlo obrigatório"
     @id("EX-006")
     @modulo("M6")
     @descricao("Recusar a exceção que exija um meio de pagamento proibido, um SKU incorreto, um produto excluído, ou contornar a Afterpay, o PayPal, o Venmo ou o processamento online, e usar o processo obrigatório. Anula EX-004 e EX-005.")
-    @condicoes("excecaoEmAvaliacao,exigeControloObrigatorio")
+    @condicoes("pedidoExcecao,excecaoEmAvaliacao,exigeControloObrigatorio")
+    @conclusoes("")
     agenda-group "M6"
     salience 50
 when
@@ -203,7 +211,8 @@ rule "EX-005 Exceção elegível com artigo vendável: resolução menos abrange
     @id("EX-005")
     @modulo("M6")
     @descricao("Preferir a resolução menos abrangente: troca pelo mesmo artigo, depois crédito de loja, depois reembolso no meio de pagamento original quando permitido.")
-    @condicoes("excecaoEmAvaliacao,excecaoNaoRecusada,artigoRevendivel")
+    @condicoes("pedidoExcecao,excecaoEmAvaliacao,excecaoNaoRecusada,artigoRevendivel")
+    @conclusoes("")
     agenda-group "M6"
     salience 40
 when
@@ -225,7 +234,8 @@ rule "EX-005 Exceção com artigo não vendável: recusar"
     @id("EX-005")
     @modulo("M6")
     @descricao("A possibilidade de revenda é um fator formal em qualquer exceção: artigo não vendável, recusar a exceção.")
-    @condicoes("excecaoEmAvaliacao,excecaoNaoRecusada,artigoNaoRevendivel")
+    @condicoes("pedidoExcecao,excecaoEmAvaliacao,excecaoNaoRecusada,artigoNaoRevendivel")
+    @conclusoes("")
     agenda-group "M6"
     salience 40
 when

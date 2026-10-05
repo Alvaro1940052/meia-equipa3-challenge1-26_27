@@ -179,6 +179,8 @@ condições falhadas) — testado com cenário 4 (PC-006 cancelada por HS-003) e
 "E se" no cenário 10 (portal disponível) e cenário 8 (recibo original = sim → PT-007); "O que falta" no cenário 3.
 **Cenários:** 3, 4, 5, 8, 10 (explicações).
 
+> **Revisão de 2026-10-05 (ADR 0006):** as explicações seguem as definições do utilizador — Como (caminho até uma conclusão), Porque não (razão de uma conclusão não ter sido obtida, com `@conclusoes` nas regras) e Porquê (razão de uma pergunta ao colaborador). Os endpoints de `docs/05` foram atualizados.
+
 ### Fase 6 — Persistência (`pericial-persistence`)
 **Ficheiros:** `entidade/AvaliacaoEntity` (pedido e decisão em JSONB, versão do kjar `groupId:artifactId:version`),
 `RegistoRegraEntity`, `ExcecaoAprovadaEntity`; `repositorio/*`; `db/migration/V1__esquema_inicial.sql`.

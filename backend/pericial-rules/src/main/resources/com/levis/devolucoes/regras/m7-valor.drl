@@ -36,6 +36,7 @@ rule "CH-009 Devolução às cegas na Outlet: preço atual após promoções"
     @modulo("M7")
     @descricao("Na devolução ou troca às cegas na Outlet, usar o preço de venda atual após as promoções ativas da Outlet, não o PVP.")
     @condicoes("devolucaoAsCegas,lojaOutlet,artigoElegivel")
+    @conclusoes("OUT-003")
     agenda-group "M7"
     salience 110
 when
@@ -59,6 +60,7 @@ rule "CH-010 Compra Mainline ou online com recibo devolvida na Outlet: PVP origi
     @modulo("M7")
     @descricao("A devolução entre canais com recibo, da Mainline ou Online para a Outlet, pode ser processada ao PVP original quando permitido pelo POS e pela política [a validar: A-21].")
     @condicoes("devolucaoVerificada,lojaOutlet,origemMainlineOuOnline,artigoElegivel")
+    @conclusoes("OUT-003")
     agenda-group "M7"
     salience 110
 when
@@ -84,6 +86,7 @@ rule "EP-003 Devolução às cegas numa promoção por escalões"
     @modulo("M7")
     @descricao("Usar o número de artigos devolvidos na transação atual para determinar o valor do escalão aplicável; o valor vem do POS [a validar: A-21, A-30].")
     @condicoes("devolucaoAsCegas,promocaoEscaloes,artigoElegivel")
+    @conclusoes("OUT-003")
     agenda-group "M7"
     salience 100
 when
@@ -112,6 +115,7 @@ rule "EP-004 Devolução com recibo numa promoção por escalões"
     @modulo("M7")
     @descricao("Utilizar o reembolso calculado pelo POS com base na quantidade original comprada.")
     @condicoes("devolucaoVerificada,promocaoEscaloes,artigoElegivel")
+    @conclusoes("OUT-003")
     agenda-group "M7"
     salience 100
 when
@@ -136,6 +140,7 @@ rule "OUT-003 Valor do artigo segundo a base da decisão"
     @modulo("M7")
     @descricao("Valor da devolução do artigo pela base definida em M5 ou no caminho online: valor original pago, preço de venda atual ou valor calculado pelo POS.")
     @condicoes("baseValorDefinida,artigoElegivel,semBaseEspecifica")
+    @conclusoes("OUT-003")
     agenda-group "M7"
     salience 90
 when
@@ -160,6 +165,7 @@ rule "OUT-003 Valor total da devolução"
     @modulo("M7")
     @descricao("Soma dos valores dos artigos elegíveis; a base do pedido passa a ser a dos artigos quando é comum a todos.")
     @condicoes("baseValorDefinida,valoresDosArtigos")
+    @conclusoes("OUT-003")
     agenda-group "M7"
     salience 10
 when

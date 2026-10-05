@@ -1,121 +1,126 @@
 package com.levis.devolucoes.explicacao.porque;
 
 import com.levis.devolucoes.explicacao.catalogo.CatalogoRegras;
+import com.levis.devolucoes.explicacao.catalogo.MetadadosRegra;
+import com.levis.devolucoes.explicacao.emfalta.DadoEmFalta;
 import com.levis.devolucoes.explicacao.motor.ResultadoExecucao;
 import com.levis.devolucoes.explicacao.porquenao.AvaliadorCondicoes;
 import com.levis.devolucoes.explicacao.porquenao.ContextoAvaliacao;
 import com.levis.devolucoes.explicacao.porquenao.ResultadoCondicao;
-import com.levis.devolucoes.explicacao.rastreio.AlteracaoCampo;
-import com.levis.devolucoes.explicacao.rastreio.EventoRegra;
-import com.levis.devolucoes.explicacao.rastreio.InstantaneoDecisao;
 import com.levis.devolucoes.explicacao.texto.GeradorTexto;
+import com.levis.devolucoes.model.produto.ArtigoDevolvido;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
- * "Porquê?": para um campo de saída, indica a regra que definiu o valor final, as condições que se
- * verificaram (com os valores dos factos) e o histórico de alterações.
+ * "Porquê?": justifica porque é que o sistema faz uma pergunta ao colaborador. Indica as regras que
+ * dependem da resposta e, no pedido atual, as que só esperam por ela para concluir (as outras
+ * condições já se cumprem), com as conclusões que cada uma produziria.
  */
 public class ExplicadorPorque {
 
   private final CatalogoRegras catalogo;
   private final AvaliadorCondicoes avaliador;
+  private final DependenciasDados dependencias;
   private final GeradorTexto texto;
 
   public ExplicadorPorque(
-      CatalogoRegras catalogo, AvaliadorCondicoes avaliador, GeradorTexto texto) {
+      CatalogoRegras catalogo,
+      AvaliadorCondicoes avaliador,
+      DependenciasDados dependencias,
+      GeradorTexto texto) {
     this.catalogo = catalogo;
     this.avaliador = avaliador;
+    this.dependencias = dependencias;
     this.texto = texto;
   }
 
-  /**
-   * @param campo campo de saída
-   * @param artigoId artigo, obrigatório para OUT-007
-   */
-  public ExplicacaoPorque explicar(CampoSaida campo, String artigoId, ResultadoExecucao resultado) {
-    if (campo.doArtigo() && artigoId == null) {
-      throw new IllegalArgumentException(
-          campo.codigo() + " é um campo de artigo: indique o artigo");
-    }
-    String alvo = campo.doArtigo() ? artigoId : InstantaneoDecisao.PEDIDO;
-    InstantaneoDecisao finalDecisao = resultado.instantaneo();
-    Map<String, Object> valores = new LinkedHashMap<>();
-    finalDecisao
-        .campos(alvo)
-        .forEach(
-            (nome, valor) -> {
-              if (campo.inclui(nome)) {
-                valores.put(nome, valor);
-              }
-            });
+  /** Porquê de um dado em falta devolvido pelo "O que falta?". */
+  public ExplicacaoPorque explicar(DadoEmFalta emFalta, ResultadoExecucao resultadoAtual) {
+    DadoEntrada dado =
+        DadoEntrada.deCodigo(emFalta.codigo())
+            .orElseThrow(
+                () -> new IllegalArgumentException("Dado desconhecido: " + emFalta.codigo()));
+    return explicar(dado, resultadoAtual);
+  }
 
-    List<String> historico = new ArrayList<>();
-    EventoRegra ultima = null;
-    for (EventoRegra disparo : resultado.rastreio().disparos()) {
-      for (AlteracaoCampo alteracao : disparo.alteracoes()) {
-        if (alteracao.alvo().equals(alvo) && campo.inclui(alteracao.campo())) {
-          historico.add(
-              disparo.codigoRegra()
-                  + ": "
-                  + alteracao.campo()
-                  + " "
-                  + alteracao.antes()
-                  + " → "
-                  + alteracao.depois());
-          ultima = disparo;
+  /**
+   * @param dado pergunta
+   * @param resultadoAtual avaliação do pedido tal como está (possivelmente incompleto)
+   */
+  public ExplicacaoPorque explicar(DadoEntrada dado, ResultadoExecucao resultadoAtual) {
+    List<MetadadosRegra> relacionadas =
+        catalogo.regras().stream()
+            .filter(r -> r.condicoes().stream().anyMatch(c -> dependencias.le(c, dado)))
+            .toList();
+    List<String> ids = relacionadas.stream().map(MetadadosRegra::id).distinct().toList();
+
+    List<RegraEmEspera> emEspera = new ArrayList<>();
+    for (MetadadosRegra regra : relacionadas) {
+      for (ContextoAvaliacao contexto : contextos(regra, resultadoAtual)) {
+        String artigoId = contexto.temArtigo() ? contexto.artigo().getId() : null;
+        if (resultadoAtual.rastreio().eventos().stream()
+            .anyMatch(
+                e -> e.disparou() && e.nomeRegra().equals(regra.nome()) && e.doArtigo(artigoId))) {
+          continue;
+        }
+        if (bloqueada(regra, contexto)) {
+          continue;
+        }
+        List<ResultadoCondicao> condicoes = avaliador.avaliar(regra, contexto);
+        boolean outrasCumpridas =
+            condicoes.stream()
+                .filter(c -> !dependencias.le(c.nome(), dado))
+                .noneMatch(c -> Boolean.FALSE.equals(c.cumprida()));
+        if (outrasCumpridas) {
+          emEspera.add(
+              new RegraEmEspera(
+                  regra.id(),
+                  regra.nome(),
+                  regra.modulo(),
+                  artigoId,
+                  regra.conclusoes(),
+                  condicoes.stream().filter(c -> dependencias.le(c.nome(), dado)).toList()));
         }
       }
     }
 
-    if (ultima == null) {
-      return new ExplicacaoPorque(
-          campo,
-          artigoId,
-          valores,
-          null,
-          null,
-          List.of(),
-          historico,
-          texto.formatar("porque.sem_regra", campo.codigo(), valores.values()));
-    }
-    EventoRegra regra = ultima;
-    List<ResultadoCondicao> condicoes =
-        catalogo
-            .porNome(regra.nomeRegra())
-            .map(
-                meta ->
-                    avaliador
-                        .avaliar(
-                            meta,
-                            regra.artigoId() == null
-                                ? ContextoAvaliacao.doPedido(resultado)
-                                : ContextoAvaliacao.doArtigo(resultado, regra.artigoId()))
-                        .stream()
-                        .filter(c -> sobreEntrada(c.nome()))
-                        .toList())
-            .orElse(List.of());
     String resumo =
-        texto.formatar(
-            "porque.definido",
-            campo.codigo(),
-            valores.values(),
-            regra.codigoRegra(),
-            regra.mensagem() == null ? regra.nomeRegra() : regra.mensagem());
-    return new ExplicacaoPorque(
-        campo,
-        artigoId,
-        valores,
-        regra.codigoRegra(),
-        regra.mensagem(),
-        condicoes,
-        historico,
-        resumo);
+        emEspera.isEmpty()
+            ? texto.formatar("porque.sem_espera", dado.pergunta(), String.join(", ", ids))
+            : texto.formatar(
+                "porque.pergunta",
+                dado.pergunta(),
+                emEspera.size(),
+                emEspera.stream()
+                    .map(
+                        r ->
+                            r.codigoRegra()
+                                + (r.artigoId() == null ? "" : " [" + r.artigoId() + "]")
+                                + (r.conclusoes().isEmpty() ? "" : " → " + r.conclusoes()))
+                    .collect(Collectors.joining("; ")));
+    return new ExplicacaoPorque(dado, dado.pergunta(), ids, emEspera, resumo);
   }
 
-  private boolean sobreEntrada(String condicao) {
-    return avaliador.predicados().predicado(condicao).map(p -> p.sobreEntrada()).orElse(false);
+  /** A regra não pode disparar por causa de uma paragem anterior (a guarda terminal). */
+  private static boolean bloqueada(MetadadosRegra regra, ContextoAvaliacao contexto) {
+    if (regra.semGuardaTerminal()) {
+      return false;
+    }
+    return contexto.decisao().isTerminal()
+        || (contexto.decisaoArtigo() != null && contexto.decisaoArtigo().isTerminal());
+  }
+
+  private List<ContextoAvaliacao> contextos(MetadadosRegra regra, ResultadoExecucao resultado) {
+    List<ContextoAvaliacao> contextos = new ArrayList<>();
+    if (!avaliador.temCondicoesDeArtigo(regra)) {
+      contextos.add(ContextoAvaliacao.doPedido(resultado));
+      return contextos;
+    }
+    for (ArtigoDevolvido artigo : resultado.pedido().getArtigos()) {
+      contextos.add(ContextoAvaliacao.doArtigo(resultado, artigo.getId()));
+    }
+    return contextos;
   }
 }

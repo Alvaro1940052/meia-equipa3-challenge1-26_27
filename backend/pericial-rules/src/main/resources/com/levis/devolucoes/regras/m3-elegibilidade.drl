@@ -28,6 +28,7 @@ rule "HS-001 Produto não reconhecido no POS"
     @modulo("M3")
     @descricao("Recusar a devolução e a troca: é necessário um SKU de produto válido. Não usar um SKU diferente ou genérico.")
     @condicoes("skuNaoReconhecido,produtoNaoFranquia")
+    @conclusoes("OUT-001=RECUSAR,OUT-002=NENHUMA")
     agenda-group "M3"
     salience 100
 when
@@ -48,6 +49,7 @@ rule "HS-004 SKU da franquia do Canadá não reconhecido"
     @modulo("M3")
     @descricao("Não usar um SKU diferente ou genérico; o produto da franquia do Canadá segue o processo da franquia (CH-007).")
     @condicoes("skuNaoReconhecido,produtoFranquia")
+    @conclusoes("OUT-001=ENCAMINHAR,OUT-002=NENHUMA,OUT-006=FRANQUIA_CANADA")
     agenda-group "M3"
     salience 100
 when
@@ -69,6 +71,7 @@ rule "CH-007 Produto da franquia do Canadá apresentado na loja"
     @modulo("M3")
     @descricao("Produto da franquia do Canadá com SKU reconhecido: encaminhar para o processo da franquia, com o SKU da franquia [a validar: A-07].")
     @condicoes("skuReconhecido,produtoFranquia")
+    @conclusoes("OUT-001=ENCAMINHAR,OUT-002=NENHUMA,OUT-006=FRANQUIA_CANADA")
     agenda-group "M3"
     salience 100
 when
@@ -89,6 +92,7 @@ rule "HS-002 Marca ou produto grossista não aceite na loja"
     @modulo("M3")
     @descricao("Recusar a devolução e a troca de Dockers, Levi Strauss Signature, Beyond Yoga ou produto grossista não vendido na loja.")
     @condicoes("skuReconhecido,marcaExcluidaOuGrossistaNaoVendido")
+    @conclusoes("OUT-001=RECUSAR,OUT-002=NENHUMA")
     agenda-group "M3"
     salience 90
 when
@@ -113,6 +117,7 @@ rule "HS-003 Produto personalizado, alterado ou embainhado"
     @modulo("M3")
     @descricao("Recusar a devolução e a troca de produto personalizado, alterado ou embainhado, mesmo que tenha defeito.")
     @condicoes("produtoModificado")
+    @conclusoes("OUT-001=RECUSAR,OUT-002=NENHUMA")
     agenda-group "M3"
     salience 80
 when
@@ -136,6 +141,7 @@ rule "PC-007 Bodywear aceite em qualquer estado"
     @modulo("M3")
     @descricao("Permitir a devolução de bodywear em qualquer estado; o destino é definido pelas regras BW. Prevalece sobre PC-004 e PC-005.")
     @condicoes("bodywear")
+    @conclusoes("OUT-001=PERMITIR")
     agenda-group "M3"
     salience 70
 when
@@ -154,6 +160,7 @@ rule "PC-006 Defeito de fabrico confirmado"
     @modulo("M3")
     @descricao("Permitir o reembolso pelo meio permitido ou a substituição por um artigo sem defeito; dar baixa por dano ao artigo devolvido (M9). Só para produto não personalizado nem alterado (HS-003 prevalece).")
     @condicoes("defeitoFabricoConfirmado,naoModificado,naoBodywear")
+    @conclusoes("OUT-001=PERMITIR")
     agenda-group "M3"
     salience 60
 when
@@ -174,6 +181,7 @@ rule "PC-001 Não usado com etiquetas colocadas"
     @modulo("M3")
     @descricao("Estado elegível padrão: permitir se forem cumpridas as regras de canal, comprovativo e prazo.")
     @condicoes("naoUsado,etiquetasColocadas,semDefeito,naoBodywear")
+    @conclusoes("OUT-001=PERMITIR")
     agenda-group "M3"
     salience 50
 when
@@ -195,6 +203,7 @@ rule "PC-002 Etiquetas soltas: rever a possibilidade de revenda"
     @modulo("M3")
     @descricao("Não usado com etiquetas soltas: rever; aprovar só se o artigo puder ser verificado, reetiquetado e revendido (IN-010). Aprovação da gestão [a validar: A-19].")
     @condicoes("naoUsado,etiquetasSoltas,semDefeito,naoBodywear,revendivelPorAvaliar")
+    @conclusoes("OUT-001=REVER,OUT-005=RESPONSAVEL_SENIOR")
     agenda-group "M3"
     salience 50
 when
@@ -218,6 +227,7 @@ rule "PC-002 Etiquetas soltas: aprovado, artigo revendível"
     @modulo("M3")
     @descricao("Não usado com etiquetas soltas e revendível (IN-010 = sim): aprovar com a gestão [a validar: A-19].")
     @condicoes("naoUsado,etiquetasSoltas,semDefeito,naoBodywear,revendivel")
+    @conclusoes("OUT-001=PERMITIR,OUT-005=RESPONSAVEL_SENIOR")
     agenda-group "M3"
     salience 50
 when
@@ -240,6 +250,7 @@ rule "PC-002 Etiquetas soltas: recusado, artigo não revendível"
     @modulo("M3")
     @descricao("Não usado com etiquetas soltas e não revendível (IN-010 = não): recusar.")
     @condicoes("naoUsado,etiquetasSoltas,semDefeito,naoBodywear,naoRevendivel")
+    @conclusoes("OUT-001=RECUSAR,OUT-002=NENHUMA")
     agenda-group "M3"
     salience 50
 when
@@ -262,6 +273,7 @@ rule "PC-003 Sem etiquetas: rever a possibilidade de revenda"
     @modulo("M3")
     @descricao("Não usado sem etiquetas: rever; aprovar só se o artigo puder ser verificado e preparado para revenda (IN-010). Aprovação da gestão [a validar: A-19].")
     @condicoes("naoUsado,etiquetasAusentes,semDefeito,naoBodywear,revendivelPorAvaliar")
+    @conclusoes("OUT-001=REVER,OUT-005=RESPONSAVEL_SENIOR")
     agenda-group "M3"
     salience 50
 when
@@ -285,6 +297,7 @@ rule "PC-003 Sem etiquetas: aprovado, artigo revendível"
     @modulo("M3")
     @descricao("Não usado sem etiquetas e revendível (IN-010 = sim): aprovar com a gestão [a validar: A-19].")
     @condicoes("naoUsado,etiquetasAusentes,semDefeito,naoBodywear,revendivel")
+    @conclusoes("OUT-001=PERMITIR,OUT-005=RESPONSAVEL_SENIOR")
     agenda-group "M3"
     salience 50
 when
@@ -307,6 +320,7 @@ rule "PC-003 Sem etiquetas: recusado, artigo não revendível"
     @modulo("M3")
     @descricao("Não usado sem etiquetas e não revendível (IN-010 = não): recusar.")
     @condicoes("naoUsado,etiquetasAusentes,semDefeito,naoBodywear,naoRevendivel")
+    @conclusoes("OUT-001=RECUSAR,OUT-002=NENHUMA")
     agenda-group "M3"
     salience 50
 when
@@ -329,6 +343,7 @@ rule "PC-004 Claramente usado: rever troca pelo mesmo artigo"
     @modulo("M3")
     @descricao("Usado sem defeito confirmado: recusar o reembolso; a gestão pode aprovar apenas uma troca pelo mesmo artigo. Decisão da gestão pendente [a validar: A-18, A-19, A-29].")
     @condicoes("usado,semDefeito,naoBodywear,aprovacaoGestaoPendente")
+    @conclusoes("OUT-001=REVER,OUT-005=RESPONSAVEL_SENIOR")
     agenda-group "M3"
     salience 50
 when
@@ -352,6 +367,7 @@ rule "PC-004 Claramente usado: troca pelo mesmo artigo aprovada"
     @modulo("M3")
     @descricao("Usado sem defeito confirmado e a gestão aprovou: só troca pelo mesmo artigo, sem numerário nem crédito de loja [a validar: A-18, A-29].")
     @condicoes("usado,semDefeito,naoBodywear,aprovadoPelaGestao")
+    @conclusoes("OUT-001=PERMITIR,OUT-002=TROCA_MESMO_ARTIGO,OUT-005=RESPONSAVEL_SENIOR")
     agenda-group "M3"
     salience 50
 when
@@ -375,6 +391,7 @@ rule "PC-004 Claramente usado: recusado pela gestão"
     @modulo("M3")
     @descricao("Usado sem defeito confirmado e a gestão não aprovou a troca pelo mesmo artigo: recusar [a validar: A-18, A-29].")
     @condicoes("usado,semDefeito,naoBodywear,recusadoPelaGestao")
+    @conclusoes("OUT-001=RECUSAR,OUT-002=NENHUMA")
     agenda-group "M3"
     salience 50
 when
@@ -397,6 +414,7 @@ rule "PC-005 Lavado sem defeito de fabrico confirmado"
     @modulo("M3")
     @descricao("Recusar a devolução e a troca: produto lavado não é vendável.")
     @condicoes("lavado,semDefeito,naoBodywear")
+    @conclusoes("OUT-001=RECUSAR,OUT-002=NENHUMA")
     agenda-group "M3"
     salience 50
 when
