@@ -2,13 +2,16 @@ package com.levis.devolucoes.explicacao.esenao;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.levis.devolucoes.model.decisao.IndicadorFraude;
 import com.levis.devolucoes.model.pedido.PedidoDevolucao;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -31,6 +34,34 @@ public class ClonadorFactos {
 
   public PedidoDevolucao clonar(PedidoDevolucao pedido) {
     return alterar(pedido, Map.of());
+  }
+
+  /** JSON de um facto (pedido ou lista de indícios), para gravar a avaliação. */
+  public String paraJson(Object facto) {
+    try {
+      return json.writeValueAsString(facto);
+    } catch (JsonProcessingException e) {
+      throw new IllegalStateException("Não foi possível converter para JSON", e);
+    }
+  }
+
+  /** Pedido a partir do JSON gravado. */
+  public PedidoDevolucao pedidoDeJson(String texto) {
+    return deJson(texto, json.getTypeFactory().constructType(PedidoDevolucao.class));
+  }
+
+  /** Indícios de fraude a partir do JSON gravado. */
+  public List<IndicadorFraude> fraudesDeJson(String texto) {
+    return deJson(
+        texto, json.getTypeFactory().constructCollectionType(List.class, IndicadorFraude.class));
+  }
+
+  private <T> T deJson(String texto, JavaType tipo) {
+    try {
+      return json.readValue(texto, tipo);
+    } catch (JsonProcessingException e) {
+      throw new IllegalArgumentException("JSON de factos inválido", e);
+    }
   }
 
   /** Cópia do pedido com as alterações aplicadas; o pedido original não muda. */
