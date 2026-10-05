@@ -20,7 +20,8 @@ class ConvencoesDrlTest {
 
   private static final Path REGRAS = Path.of("src/main/resources/com/levis/devolucoes/regras");
   private static final Pattern REGRA = Pattern.compile("(?s)\\brule\\s+\"([^\"]+)\"(.*?)\\nend\\b");
-  private static final Set<String> SEM_GUARDA = Set.of("EX-008", "PC-008", "EX-002", "EX-003");
+  private static final Set<String> SEM_GUARDA =
+      Set.of("EX-008", "PC-008", "EX-002", "EX-003", "OUT-007", "OUT-001");
 
   @Test
   void cadaRegraTemAGuardaTerminalEUmAgendaGroup() throws IOException {

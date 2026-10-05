@@ -10,6 +10,7 @@ import com.levis.devolucoes.model.enums.TipoTransacao;
 import com.levis.devolucoes.model.enums.TipoVerificacao;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /** Facto de saída do pedido: preenche os campos OUT-001 a OUT-008 e guarda o rasto das regras. */
@@ -55,6 +56,53 @@ public class Decisao extends DecisaoBase {
   public void recusarExcecao(String regra, Modulo modulo, String mensagem) {
     registar(regra, modulo, Elegibilidade.RECUSAR, mensagem);
     excecaoRecusada = true;
+  }
+
+  /**
+   * Agrega os resultados por artigo no pedido (ADR 0002): a elegibilidade do pedido passa a ser a
+   * mais severa entre a do pedido e as dos artigos; se todos os artigos forem recusados, não há
+   * transação. Os artigos sem resultado não contam.
+   */
+  public void agregarArtigos(String regra, Modulo modulo, List<DecisaoArtigo> artigos) {
+    resultadosArtigos = new ArrayList<>(artigos);
+    resultadosArtigos.sort(Comparator.comparing(DecisaoArtigo::getArtigoId));
+
+    Elegibilidade pior = null;
+    long permitidos = 0;
+    long recusados = 0;
+    long emRevisao = 0;
+    for (DecisaoArtigo artigo : resultadosArtigos) {
+      Elegibilidade resultado = artigo.getElegibilidade();
+      if (resultado == null) {
+        continue;
+      }
+      if (resultado.maisSeveroQue(pior)) {
+        pior = resultado;
+      }
+      permitidos += resultado == Elegibilidade.PERMITIR ? 1 : 0;
+      recusados += resultado == Elegibilidade.RECUSAR ? 1 : 0;
+      emRevisao += resultado == Elegibilidade.REVER ? 1 : 0;
+    }
+    if (pior != null && pior.maisSeveroQue(getElegibilidade())) {
+      definirElegibilidade(pior);
+    }
+    if (!resultadosArtigos.isEmpty() && recusados == resultadosArtigos.size()) {
+      tipoTransacao = TipoTransacao.NENHUMA;
+    }
+    registar(
+        regra,
+        modulo,
+        getElegibilidade(),
+        resultadosArtigos.size()
+            + " artigo(s): "
+            + permitidos
+            + " permitido(s), "
+            + emRevisao
+            + " em revisão, "
+            + recusados
+            + " recusado(s). Elegibilidade do pedido: "
+            + getElegibilidade()
+            + ".");
   }
 
   public boolean isExcecaoRecusada() {

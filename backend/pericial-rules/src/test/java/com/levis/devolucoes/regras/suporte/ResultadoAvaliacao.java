@@ -25,6 +25,11 @@ public record ResultadoAvaliacao(
     return artigo;
   }
 
+  /** Regras disparadas, sem as regras de suporte dos campos de saída (OUT-001, OUT-003, ...). */
+  public List<String> regrasDeNegocio() {
+    return disparos.stream().filter(id -> !id.startsWith("OUT-")).toList();
+  }
+
   public boolean disparou(String regra) {
     return disparos.contains(regra);
   }

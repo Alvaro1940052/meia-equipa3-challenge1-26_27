@@ -20,7 +20,18 @@ public class DecisaoArtigo extends DecisaoBase {
   private DestinoProduto destino;
   private NivelAprovacao aprovacao = NivelAprovacao.NENHUMA;
 
+  /** Percentagem de desconto quando o destino é saldos (EP-006, BW-002). */
+  private int descontoSaldo;
+
   public DecisaoArtigo() {}
+
+  public int getDescontoSaldo() {
+    return descontoSaldo;
+  }
+
+  public void setDescontoSaldo(int descontoSaldo) {
+    this.descontoSaldo = descontoSaldo;
+  }
 
   public DecisaoArtigo(String pedidoId, String artigoId) {
     this.pedidoId = pedidoId;

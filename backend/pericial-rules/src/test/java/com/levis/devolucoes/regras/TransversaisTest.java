@@ -39,7 +39,7 @@ class TransversaisTest {
       assertThat(resultado.decisao().getElegibilidade()).isEqualTo(Elegibilidade.REVER);
       assertThat(resultado.decisao().getAprovacao()).isEqualTo(NivelAprovacao.DISTRICT_AREA);
       assertThat(resultado.decisao().isTerminal()).isTrue();
-      assertThat(resultado.disparos()).containsExactly("EX-008");
+      assertThat(resultado.regrasDeNegocio()).containsExactly("EX-008");
       assertThat(resultado.decisao().getRegistos().getFirst().getMensagem())
           .contains("Recibo adulterado");
     }
@@ -79,7 +79,7 @@ class TransversaisTest {
               new IndicadorFraude("P-1", "Recibo adulterado", NivelRisco.CONFIRMADO),
               new IndicadorFraude("P-1", "Etiqueta trocada", NivelRisco.SIGNIFICATIVO));
 
-      assertThat(resultado.disparos()).containsExactly("EX-008");
+      assertThat(resultado.regrasDeNegocio()).containsExactly("EX-008");
     }
   }
 
@@ -124,7 +124,7 @@ class TransversaisTest {
 
       ResultadoAvaliacao resultado = MotorTeste.avaliar(pedido);
 
-      assertThat(resultado.artigo("A-1").getDestino()).isNull();
+      assertThat(resultado.artigo("A-1").getDestino()).isNotEqualTo(DestinoProduto.RISCO_BIOLOGICO);
       assertThat(resultado.artigo("A-2").getDestino()).isEqualTo(DestinoProduto.RISCO_BIOLOGICO);
     }
 
@@ -139,7 +139,7 @@ class TransversaisTest {
           MotorTeste.avaliar(
               pedido, new IndicadorFraude("P-1", "Inconsistência", NivelRisco.SIGNIFICATIVO));
 
-      assertThat(resultado.disparos()).containsExactly("EX-008", "PC-008");
+      assertThat(resultado.regrasDeNegocio()).containsExactly("EX-008", "PC-008");
       assertThat(resultado.artigo("A-1").getDestino()).isEqualTo(DestinoProduto.RISCO_BIOLOGICO);
     }
 

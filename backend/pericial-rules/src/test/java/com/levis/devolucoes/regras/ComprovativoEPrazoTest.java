@@ -317,8 +317,7 @@ class ComprovativoEPrazoTest {
           avaliar(ajuste(13).comprovativo(TipoComprovativo.FOTOGRAFIA_RECIBO, false));
 
       assertThat(resultado.decisao().getElegibilidade()).isEqualTo(Elegibilidade.RECUSAR);
-      assertThat(resultado.decisao().getRegistos().getLast().getMensagem())
-          .contains("sem o recibo original");
+      assertThat(resultado.registo("PT-008").getMensagem()).contains("sem o recibo original");
       assertThat(resultado.disparos()).doesNotContain("PT-007");
     }
 

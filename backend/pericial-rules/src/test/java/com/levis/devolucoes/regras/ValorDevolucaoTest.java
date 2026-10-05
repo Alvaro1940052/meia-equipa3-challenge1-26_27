@@ -184,8 +184,7 @@ class ValorDevolucaoTest {
       assertThat(resultado.disparos()).contains("CH-009", "EP-003");
       assertThat(resultado.artigo("A-1").getValorDevolucao()).isEqualByComparingTo(POS);
       assertThat(resultado.artigo("A-1").getBaseValor()).isEqualTo(BaseValor.VALOR_ESCALAO);
-      assertThat(resultado.artigo("A-1").getRegistos().getLast().getMensagem())
-          .contains("2 artigos devolvidos");
+      assertThat(resultado.registo("EP-003").getMensagem()).contains("2 artigos devolvidos");
     }
 
     @Test
@@ -198,8 +197,7 @@ class ValorDevolucaoTest {
                   .com(p -> p.getCompraOriginal().setPromocaoEscaloes(true)));
 
       assertThat(resultado.artigo("A-1").getValorDevolucao()).isNull();
-      assertThat(resultado.artigo("A-1").getRegistos().getLast().getMensagem())
-          .contains("falta o valor do escalão");
+      assertThat(resultado.registo("EP-003").getMensagem()).contains("falta o valor do escalão");
       assertThat(resultado.decisao().getValorDevolucao()).isNull();
     }
 

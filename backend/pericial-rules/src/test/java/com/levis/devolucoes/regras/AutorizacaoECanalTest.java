@@ -36,7 +36,7 @@ class AutorizacaoECanalTest {
 
       assertThat(resultado.decisao().getElegibilidade()).isEqualTo(Elegibilidade.ENCAMINHAR);
       assertThat(resultado.decisao().isTerminal()).isTrue();
-      assertThat(resultado.disparos()).containsExactly("HS-006");
+      assertThat(resultado.regrasDeNegocio()).containsExactly("HS-006");
       assertThat(resultado.decisao().getRegistos().getFirst().getModulo()).isEqualTo(Modulo.M0);
     }
 
@@ -45,7 +45,7 @@ class AutorizacaoECanalTest {
       ResultadoAvaliacao resultado =
           MotorTeste.avaliar(umPedido().com(p -> p.setColaborador(null)).construir());
 
-      assertThat(resultado.disparos()).containsExactly("HS-006");
+      assertThat(resultado.regrasDeNegocio()).containsExactly("HS-006");
     }
 
     @Test
@@ -56,7 +56,7 @@ class AutorizacaoECanalTest {
           MotorTeste.avaliar(
               umPedido().funcao(Funcao.STYLIST, false).canal(CanalCompra.GROSSISTA).construir());
 
-      assertThat(resultado.disparos()).containsExactly("HS-006");
+      assertThat(resultado.regrasDeNegocio()).containsExactly("HS-006");
     }
 
     @ParameterizedTest
@@ -120,7 +120,7 @@ class AutorizacaoECanalTest {
       assertThat(resultado.decisao().getElegibilidade()).isEqualTo(Elegibilidade.RECUSAR);
       assertThat(resultado.decisao().getTipoTransacao()).isEqualTo(TipoTransacao.NENHUMA);
       assertThat(resultado.decisao().isTerminal()).isTrue();
-      assertThat(resultado.disparos()).containsExactly("CT-003", "CH-008");
+      assertThat(resultado.regrasDeNegocio()).containsExactly("CT-003", "CH-008");
     }
   }
 
@@ -142,7 +142,7 @@ class AutorizacaoECanalTest {
       assertThat(resultado.decisao().getElegibilidade()).isEqualTo(Elegibilidade.ENCAMINHAR);
       assertThat(resultado.decisao().getProcesso()).isEqualTo(ProcessoObrigatorio.FRANQUIA_CANADA);
       assertThat(resultado.decisao().isTerminal()).isTrue();
-      assertThat(resultado.disparos()).containsExactly("CT-003", "CH-007");
+      assertThat(resultado.regrasDeNegocio()).containsExactly("CT-003", "CH-007");
     }
   }
 

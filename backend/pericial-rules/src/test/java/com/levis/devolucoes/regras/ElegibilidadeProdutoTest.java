@@ -363,7 +363,7 @@ class ElegibilidadeProdutoTest {
 
       assertThat(resultado.artigo("A-1").getElegibilidade()).isEqualTo(Elegibilidade.PERMITIR);
       assertThat(resultado.artigo("A-1").getRegistos())
-          .filteredOn(r -> r.getModulo() != Modulo.M7)
+          .filteredOn(r -> r.getModulo() != Modulo.M7 && r.getModulo() != Modulo.M9)
           .extracting(r -> r.getCodigoRegra())
           .containsExactly("PC-007");
     }
@@ -401,15 +401,15 @@ class ElegibilidadeProdutoTest {
                           .andThen(a -> a.getEstado().setSujoOuInseguro(true))));
 
       assertThat(resultado.artigo("A-1").getRegistos())
-          .filteredOn(r -> r.getModulo() != Modulo.M7)
+          .filteredOn(r -> r.getModulo() != Modulo.M7 && r.getModulo() != Modulo.M9)
           .extracting(r -> r.getCodigoRegra())
           .containsExactly("PC-003");
       assertThat(resultado.artigo("A-2").getRegistos())
-          .filteredOn(r -> r.getModulo() != Modulo.M7)
+          .filteredOn(r -> r.getModulo() != Modulo.M7 && r.getModulo() != Modulo.M9)
           .extracting(r -> r.getCodigoRegra())
           .containsExactly("PC-004");
       assertThat(resultado.artigo("A-3").getRegistos())
-          .filteredOn(r -> r.getModulo() != Modulo.M7)
+          .filteredOn(r -> r.getModulo() != Modulo.M7 && r.getModulo() != Modulo.M9)
           .extracting(r -> r.getCodigoRegra())
           .containsExactly("PC-008", "PC-004");
     }

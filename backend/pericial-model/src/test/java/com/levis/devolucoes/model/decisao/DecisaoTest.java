@@ -5,10 +5,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.levis.devolucoes.model.enums.Elegibilidade;
 import com.levis.devolucoes.model.enums.Modulo;
 import com.levis.devolucoes.model.enums.NivelAprovacao;
+import com.levis.devolucoes.model.enums.TipoTransacao;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -137,6 +139,60 @@ class DecisaoTest {
     assertThat(decisao.isExcecaoRecusada()).isTrue();
     assertThat(decisao.isTerminal()).isFalse();
     assertThat(decisao.getRegistos().getLast().getResultado()).isEqualTo(Elegibilidade.RECUSAR);
+  }
+
+  private static DecisaoArtigo artigo(String id, Elegibilidade elegibilidade) {
+    DecisaoArtigo artigo = new DecisaoArtigo("P-1", id);
+    if (elegibilidade != null) {
+      artigo.aplicar("TESTE", Modulo.M3, elegibilidade, "teste");
+    }
+    return artigo;
+  }
+
+  @Test
+  void agregacaoUsaOResultadoMaisSeveroDosArtigos() {
+    decisao.aplicar("PT-003", Modulo.M5, Elegibilidade.PERMITIR, "Reembolso.");
+    decisao.agregarArtigos(
+        "OUT-001",
+        Modulo.M9,
+        List.of(artigo("A-2", Elegibilidade.REVER), artigo("A-1", Elegibilidade.PERMITIR)));
+
+    assertThat(decisao.getElegibilidade()).isEqualTo(Elegibilidade.REVER);
+    assertThat(decisao.getResultadosArtigos())
+        .extracting(DecisaoArtigo::getArtigoId)
+        .containsExactly("A-1", "A-2");
+    assertThat(decisao.getRegistos().getLast().getMensagem())
+        .contains("2 artigo(s): 1 permitido(s), 1 em revisão, 0 recusado(s)");
+  }
+
+  @Test
+  void agregacaoNaoBaixaAElegibilidadeDoPedido() {
+    decisao.aplicar("PT-008", Modulo.M5, Elegibilidade.RECUSAR, "Ajuste recusado.");
+    decisao.agregarArtigos("OUT-001", Modulo.M9, List.of(artigo("A-1", Elegibilidade.PERMITIR)));
+
+    assertThat(decisao.getElegibilidade()).isEqualTo(Elegibilidade.RECUSAR);
+  }
+
+  @Test
+  void todosOsArtigosRecusadosNaoHaTransacao() {
+    decisao.agregarArtigos(
+        "OUT-001",
+        Modulo.M9,
+        List.of(artigo("A-1", Elegibilidade.RECUSAR), artigo("A-2", Elegibilidade.RECUSAR)));
+
+    assertThat(decisao.getElegibilidade()).isEqualTo(Elegibilidade.RECUSAR);
+    assertThat(decisao.getTipoTransacao()).isEqualTo(TipoTransacao.NENHUMA);
+  }
+
+  @Test
+  void artigosSemResultadoNaoContam() {
+    decisao.agregarArtigos(
+        "OUT-001",
+        Modulo.M9,
+        List.of(artigo("A-1", null), artigo("A-2", Elegibilidade.ENCAMINHAR)));
+
+    assertThat(decisao.getElegibilidade()).isEqualTo(Elegibilidade.ENCAMINHAR);
+    assertThat(decisao.getTipoTransacao()).isNull();
   }
 
   @Test
