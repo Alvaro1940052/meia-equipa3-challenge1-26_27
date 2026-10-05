@@ -38,8 +38,9 @@
   "esperado": {
     "tipoVerificacao": "VERIFICADA",
     "tipoTransacao": "REEMBOLSO",
+    "meioReembolso": "MEIO_ORIGINAL",
     "valorDevolucao": 29.99,
-    "regrasDisparadas": ["PC-008", "CT-003", "CH-001", "PC-007", "PT-001", "PT-003"],
+    "regrasDisparadas": ["PC-008", "CT-003", "CH-001", "PC-007", "PT-001", "PT-003", "TN-001"],
     "regrasNaoDisparadas": ["PC-004", "PC-005"],
     "artigos": {
       "A-1": { "elegibilidade": "PERMITIR", "destino": "RISCO_BIOLOGICO", "regrasDisparadas": ["PC-008", "PC-007"] }

@@ -1,0 +1,390 @@
+package com.levis.devolucoes.regras;
+
+// M7 — Meio de reembolso (docs/02, etapa 7; docs/03, módulo 8).
+// As regras TN só se aplicam a um reembolso (ou ajuste) verificado no meio original, definido por
+// PT-003, PT-007, CH-002, CH-004 ou CH-006. O meio alternativo só depois de o original falhar.
+// Saliences abaixo das do valor (m7-valor.drl); TN-006 depois do total (OUT-003, salience 10).
+
+import com.levis.devolucoes.model.decisao.Decisao;
+import com.levis.devolucoes.model.enums.CanalCompra;
+import com.levis.devolucoes.model.enums.Elegibilidade;
+import com.levis.devolucoes.model.enums.EstadoConta;
+import com.levis.devolucoes.model.enums.MeioPagamento;
+import com.levis.devolucoes.model.enums.MeioReembolso;
+import com.levis.devolucoes.model.enums.Mercado;
+import com.levis.devolucoes.model.enums.Modulo;
+import com.levis.devolucoes.model.enums.NivelAprovacao;
+import com.levis.devolucoes.model.enums.ProcessoObrigatorio;
+import com.levis.devolucoes.model.enums.TipoPedido;
+import com.levis.devolucoes.model.enums.TipoTransacao;
+import com.levis.devolucoes.model.enums.TipoVerificacao;
+import com.levis.devolucoes.model.pedido.PedidoDevolucao;
+import com.levis.devolucoes.model.produto.ArtigoTroca;
+import java.math.BigDecimal;
+
+function BigDecimal precoDosArtigosDeTroca( PedidoDevolucao pedido ) {
+    BigDecimal total = BigDecimal.ZERO;
+    for ( ArtigoTroca artigo : pedido.getArtigosTroca() ) {
+        if ( artigo.getPrecoVenda() != null ) {
+            total = total.add( artigo.getPrecoVenda() );
+        }
+    }
+    return total;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Devolução de oferta
+// ---------------------------------------------------------------------------------------------
+
+rule "TN-007 Devolução de oferta paga a crédito ou débito"
+    @id("TN-007")
+    @modulo("M7")
+    @descricao("Oferecer reembolso tokenizado para o cartão original do comprador, ou emitir crédito de loja. A escolha é do cliente (resolucaoPedida) [a validar: A-12].")
+    @condicoes("devolucaoOferta,reembolsoVerificadoNoMeioOriginal,pagamentoCreditoOuDebito")
+    agenda-group "M7"
+    salience 80
+when
+    $d : Decisao( terminal == false, tipoVerificacao == TipoVerificacao.VERIFICADA, elegibilidade != Elegibilidade.RECUSAR,
+                  meioReembolso == MeioReembolso.MEIO_ORIGINAL, tipoTransacao == TipoTransacao.REEMBOLSO,
+                  disparou( "TN-007" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, tipoPedido == TipoPedido.DEVOLUCAO_OFERTA, compraOriginal != null, compraOriginal.pagamento != null,
+                          compraOriginal.pagamento.meio == MeioPagamento.CREDITO || compraOriginal.pagamento.meio == MeioPagamento.DEBITO )
+then
+    boolean credito = $p.getPedidoExcecao() != null && $p.getPedidoExcecao().getResolucaoPedida() == TipoTransacao.CREDITO_LOJA;
+    modify( $d ) {
+        setTipoTransacao( credito ? TipoTransacao.CREDITO_LOJA : TipoTransacao.REEMBOLSO ),
+        setMeioReembolso( credito ? MeioReembolso.CREDITO_LOJA : MeioReembolso.MEIO_ORIGINAL ),
+        registar( "TN-007", Modulo.M7,
+                  "Devolução de oferta com recibo que mostra pagamento a " + $p.getCompraOriginal().getPagamento().getMeio()
+                  + ": oferecer reembolso tokenizado para o cartão original do comprador ou crédito de loja"
+                  + ( credito ? "; o destinatário escolheu crédito de loja." : "." ) )
+    }
+end
+
+// ---------------------------------------------------------------------------------------------
+// Cartões de crédito e débito
+// ---------------------------------------------------------------------------------------------
+
+rule "TN-001 Devolução verificada paga a crédito ou débito"
+    @id("TN-001")
+    @modulo("M7")
+    @descricao("Reembolsar automaticamente o cartão original através de tokenização; não pedir ao cliente para apresentar o cartão.")
+    @condicoes("reembolsoVerificadoNoMeioOriginal,pagamentoCreditoOuDebito,naoEOferta")
+    agenda-group "M7"
+    salience 70
+when
+    $d : Decisao( terminal == false, tipoVerificacao == TipoVerificacao.VERIFICADA, elegibilidade != Elegibilidade.RECUSAR,
+                  meioReembolso == MeioReembolso.MEIO_ORIGINAL,
+                  tipoTransacao == TipoTransacao.REEMBOLSO || tipoTransacao == TipoTransacao.AJUSTE_PRECO,
+                  disparou( "TN-001" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, tipoPedido != TipoPedido.DEVOLUCAO_OFERTA, compraOriginal != null, compraOriginal.pagamento != null,
+                          compraOriginal.pagamento.meio == MeioPagamento.CREDITO || compraOriginal.pagamento.meio == MeioPagamento.DEBITO )
+then
+    modify( $d ) {
+        registar( "TN-001", Modulo.M7,
+                  "Pagamento a " + $p.getCompraOriginal().getPagamento().getMeio() + ": reembolso automático no cartão "
+                  + "original por tokenização, sem pedir ao cliente para apresentar o cartão." )
+    }
+end
+
+rule "TN-002 Cartão perdido ou roubado com a conta ativa"
+    @id("TN-002")
+    @modulo("M7")
+    @descricao("Reembolsar automaticamente para a conta do cartão original: o token continua associado à conta ativa.")
+    @condicoes("tokenizacaoAplicada,contaAtivaCartaoPerdido")
+    agenda-group "M7"
+    salience 65
+when
+    $d : Decisao( terminal == false, meioReembolso == MeioReembolso.MEIO_ORIGINAL,
+                  disparou( "TN-001" ) == true, disparou( "TN-002" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, compraOriginal != null, compraOriginal.pagamento != null,
+                          compraOriginal.pagamento.estadoConta == EstadoConta.ATIVA_CARTAO_PERDIDO )
+then
+    modify( $d ) {
+        registar( "TN-002", Modulo.M7,
+                  "Cartão original perdido ou roubado, mas a conta está ativa: o reembolso vai automaticamente para a "
+                  + "conta do cartão original." )
+    }
+end
+
+rule "TN-003 Conta encerrada: tentar primeiro o cartão original"
+    @id("TN-003")
+    @modulo("M7")
+    @descricao("Conta do cartão original encerrada: tentar primeiro o cartão original; só após a recusa se pode usar outro meio.")
+    @condicoes("tokenizacaoAplicada,contaEncerrada,reembolsoOriginalNaoRecusado")
+    agenda-group "M7"
+    salience 65
+when
+    $d : Decisao( terminal == false, meioReembolso == MeioReembolso.MEIO_ORIGINAL,
+                  disparou( "TN-001" ) == true, disparou( "TN-003" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, compraOriginal != null, compraOriginal.pagamento != null,
+                          compraOriginal.pagamento.estadoConta == EstadoConta.ENCERRADA,
+                          compraOriginal.pagamento.reembolsoOriginalRecusado == false )
+then
+    modify( $d ) {
+        registar( "TN-003", Modulo.M7,
+                  "Conta do cartão original encerrada: tentar primeiro o reembolso no cartão original. Só se for "
+                  + "recusado se pode usar outro cartão, numerário ou cartão de oferta." )
+    }
+end
+
+rule "TN-003 Conta encerrada: reembolso original recusado, meio alternativo"
+    @id("TN-003")
+    @modulo("M7")
+    @descricao("Depois de o reembolso ao cartão original ser recusado, o sistema pode usar um cartão diferente, numerário ou cartão de oferta.")
+    @condicoes("tokenizacaoAplicada,contaEncerrada,reembolsoOriginalRecusado")
+    agenda-group "M7"
+    salience 65
+when
+    $d : Decisao( terminal == false, meioReembolso == MeioReembolso.MEIO_ORIGINAL,
+                  disparou( "TN-001" ) == true, disparou( "TN-003" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, compraOriginal != null, compraOriginal.pagamento != null,
+                          compraOriginal.pagamento.estadoConta == EstadoConta.ENCERRADA,
+                          compraOriginal.pagamento.reembolsoOriginalRecusado == true )
+then
+    modify( $d ) {
+        setMeioReembolso( MeioReembolso.MEIO_ALTERNATIVO ),
+        registar( "TN-003", Modulo.M7,
+                  "O reembolso ao cartão original (conta encerrada) foi recusado: usar um cartão de crédito ou débito "
+                  + "diferente, numerário ou cartão de oferta." )
+    }
+end
+
+rule "TN-004 Débito: sem numerário antes da recusa do reembolso original"
+    @id("TN-004")
+    @modulo("M7")
+    @descricao("Compra em débito e o reembolso ao débito original ainda não foi recusado: não emitir numerário; reembolsar o cartão de débito original. Não se aplica ao Interac [a validar: A-11].")
+    @condicoes("tokenizacaoAplicada,pagamentoDebito,reembolsoOriginalNaoRecusado")
+    agenda-group "M7"
+    salience 60
+when
+    $d : Decisao( terminal == false, meioReembolso == MeioReembolso.MEIO_ORIGINAL,
+                  disparou( "TN-001" ) == true, disparou( "TN-004" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, compraOriginal != null, compraOriginal.pagamento != null,
+                          compraOriginal.pagamento.meio == MeioPagamento.DEBITO,
+                          compraOriginal.pagamento.reembolsoOriginalRecusado == false )
+then
+    modify( $d ) {
+        registar( "TN-004", Modulo.M7,
+                  "Compra a débito: não emitir numerário; reembolsar o cartão de débito original enquanto esse reembolso "
+                  + "não for recusado." )
+    }
+end
+
+rule "TN-005 Pagamento contactless (Apple Pay ou Google Pay)"
+    @id("TN-005")
+    @modulo("M7")
+    @descricao("Reembolsar automaticamente para o cartão ou conta bancária associada: o reembolso segue a conta original.")
+    @condicoes("reembolsoVerificadoNoMeioOriginal,pagamentoContactless")
+    agenda-group "M7"
+    salience 70
+when
+    $d : Decisao( terminal == false, tipoVerificacao == TipoVerificacao.VERIFICADA, elegibilidade != Elegibilidade.RECUSAR,
+                  meioReembolso == MeioReembolso.MEIO_ORIGINAL,
+                  tipoTransacao == TipoTransacao.REEMBOLSO || tipoTransacao == TipoTransacao.AJUSTE_PRECO,
+                  disparou( "TN-005" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, compraOriginal != null, compraOriginal.pagamento != null,
+                          compraOriginal.pagamento.meio == MeioPagamento.APPLE_PAY || compraOriginal.pagamento.meio == MeioPagamento.GOOGLE_PAY )
+then
+    modify( $d ) {
+        registar( "TN-005", Modulo.M7,
+                  "Pagamento contactless (" + $p.getCompraOriginal().getPagamento().getMeio() + "): reembolso automático "
+                  + "para o cartão ou conta bancária associada." )
+    }
+end
+
+// ---------------------------------------------------------------------------------------------
+// Aplicações de pagamento e Afterpay em loja
+// ---------------------------------------------------------------------------------------------
+
+rule "TN-008 Compra via PayPal ou Venmo"
+    @id("TN-008")
+    @modulo("M7")
+    @descricao("O cliente acede à aplicação de pagamento e o reembolso é processado pelo fluxo prescrito da aplicação; não substituir por outro meio. PayPal e Venmo não são tokenizados.")
+    @condicoes("reembolsoNoMeioOriginalOuEmRevisao,pagamentoPaypalOuVenmo,acessoAplicacao")
+    agenda-group "M7"
+    salience 70
+when
+    $d : Decisao( terminal == false, elegibilidade != Elegibilidade.RECUSAR, disparou( "TN-008" ) == false,
+                  meioReembolso == MeioReembolso.MEIO_ORIGINAL || disparou( "CH-004" ) == true )
+    $p : PedidoDevolucao( id == $d.pedidoId, compraOriginal != null, compraOriginal.pagamento != null,
+                          compraOriginal.pagamento.meio == MeioPagamento.PAYPAL || compraOriginal.pagamento.meio == MeioPagamento.VENMO,
+                          compraOriginal.pagamento.acessoAplicacaoPagamento == true )
+then
+    modify( $d ) {
+        setMeioReembolso( MeioReembolso.APLICACAO_PAGAMENTO ),
+        setProcesso( ProcessoObrigatorio.PAYPAL_VENMO ),
+        registar( "TN-008", Modulo.M7,
+                  "Compra via " + $p.getCompraOriginal().getPagamento().getMeio() + ": o cliente acede à aplicação e o "
+                  + "reembolso é processado pelo fluxo prescrito da aplicação; não substituir por outro meio." )
+    }
+end
+
+rule "TN-008 PayPal ou Venmo sem acesso à aplicação na loja"
+    @id("TN-008")
+    @modulo("M7")
+    @descricao("O cliente não consegue aceder à aplicação: não substituir o meio de pagamento; rever com a gestão, sem meio alternativo [a validar: A-05].")
+    @condicoes("reembolsoNoMeioOriginalOuEmRevisao,pagamentoPaypalOuVenmo,semAcessoAplicacao")
+    agenda-group "M7"
+    salience 70
+when
+    $d : Decisao( terminal == false, elegibilidade != Elegibilidade.RECUSAR, disparou( "TN-008" ) == false,
+                  meioReembolso == MeioReembolso.MEIO_ORIGINAL || disparou( "CH-004" ) == true )
+    $p : PedidoDevolucao( id == $d.pedidoId, compraOriginal != null, compraOriginal.pagamento != null,
+                          compraOriginal.pagamento.meio == MeioPagamento.PAYPAL || compraOriginal.pagamento.meio == MeioPagamento.VENMO,
+                          compraOriginal.pagamento.acessoAplicacaoPagamento == false )
+then
+    modify( $d ) {
+        setMeioReembolso( MeioReembolso.APLICACAO_PAGAMENTO ),
+        setProcesso( ProcessoObrigatorio.PAYPAL_VENMO ),
+        setAprovacao( $d.getAprovacao() == NivelAprovacao.DISTRICT_AREA
+                      ? NivelAprovacao.DISTRICT_AREA : NivelAprovacao.RESPONSAVEL_SENIOR ),
+        aplicar( "TN-008", Modulo.M7, Elegibilidade.REVER,
+                 "Compra via " + $p.getCompraOriginal().getPagamento().getMeio() + " e o cliente não consegue aceder à "
+                 + "aplicação: o reembolso só pode ser feito pelo fluxo da aplicação; não substituir por outro meio. "
+                 + "Rever com a gestão." )
+    }
+end
+
+rule "TN-009 Compra em loja com Afterpay"
+    @id("TN-009")
+    @modulo("M7")
+    @descricao("O cliente localiza a encomenda na aplicação Afterpay; processar a devolução total para a Afterpay e fornecer o recibo de devolução do POS.")
+    @condicoes("reembolsoVerificadoNoMeioOriginal,compraEmLoja,pagamentoAfterpay")
+    agenda-group "M7"
+    salience 70
+when
+    $d : Decisao( terminal == false, tipoVerificacao == TipoVerificacao.VERIFICADA, elegibilidade != Elegibilidade.RECUSAR,
+                  meioReembolso == MeioReembolso.MEIO_ORIGINAL, disparou( "TN-009" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, compraOnline == false, compraOriginal != null, compraOriginal.pagamento != null,
+                          compraOriginal.pagamento.meio == MeioPagamento.AFTERPAY )
+then
+    modify( $d ) {
+        setProcesso( ProcessoObrigatorio.AFTERPAY ),
+        registar( "TN-009", Modulo.M7,
+                  "Compra em loja com Afterpay: o cliente localiza a encomenda na aplicação Afterpay; a loja processa a "
+                  + "devolução total para a Afterpay (não as prestações) e entrega o recibo de devolução do POS." )
+    }
+end
+
+// ---------------------------------------------------------------------------------------------
+// Interac no Canadá
+// ---------------------------------------------------------------------------------------------
+
+rule "TN-011 Interac no Canadá com o mesmo cartão físico"
+    @id("TN-011")
+    @modulo("M7")
+    @descricao("Compra em loja paga com Interac no Canadá: o cliente apresenta o mesmo cartão Interac físico usado na compra; os cartões Interac não são tokenizados.")
+    @condicoes("reembolsoVerificadoNoMeioOriginal,mercadoCanada,compraEmLoja,pagamentoInterac,cartaoFisicoPresente")
+    agenda-group "M7"
+    salience 70
+when
+    $d : Decisao( terminal == false, tipoVerificacao == TipoVerificacao.VERIFICADA, elegibilidade != Elegibilidade.RECUSAR,
+                  meioReembolso == MeioReembolso.MEIO_ORIGINAL, disparou( "TN-011" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, loja != null, loja.mercado == Mercado.CANADA, compraOnline == false,
+                          compraOriginal != null, compraOriginal.pagamento != null, compraOriginal.pagamento.meio == MeioPagamento.INTERAC,
+                          compraOriginal.pagamento.cartaoFisicoPresente == true )
+then
+    modify( $d ) {
+        registar( "TN-011", Modulo.M7,
+                  "Interac no Canadá: o cliente apresentou o mesmo cartão físico usado na compra; reembolso Interac." )
+    }
+end
+
+rule "TN-011 Interac no Canadá sem o mesmo cartão físico"
+    @id("TN-011")
+    @modulo("M7")
+    @descricao("Sem o mesmo cartão Interac físico não se processa o reembolso Interac nem se insere o cartão manualmente; um cartão de substituição não é o mesmo cartão. Rever, sem meio alternativo [a validar: A-10].")
+    @condicoes("reembolsoVerificadoNoMeioOriginal,mercadoCanada,compraEmLoja,pagamentoInterac,cartaoFisicoAusente")
+    agenda-group "M7"
+    salience 70
+when
+    $d : Decisao( terminal == false, tipoVerificacao == TipoVerificacao.VERIFICADA, elegibilidade != Elegibilidade.RECUSAR,
+                  meioReembolso == MeioReembolso.MEIO_ORIGINAL, disparou( "TN-011" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, loja != null, loja.mercado == Mercado.CANADA, compraOnline == false,
+                          compraOriginal != null, compraOriginal.pagamento != null, compraOriginal.pagamento.meio == MeioPagamento.INTERAC,
+                          compraOriginal.pagamento.cartaoFisicoPresente == false )
+then
+    modify( $d ) {
+        setMeioReembolso( null ),
+        setAprovacao( $d.getAprovacao() == NivelAprovacao.DISTRICT_AREA
+                      ? NivelAprovacao.DISTRICT_AREA : NivelAprovacao.RESPONSAVEL_SENIOR ),
+        aplicar( "TN-011", Modulo.M7, Elegibilidade.REVER,
+                 "Compra paga com Interac: é obrigatório apresentar o mesmo cartão físico usado na compra (os cartões "
+                 + "Interac não são tokenizados). Sem esse cartão não se processa o reembolso Interac nem se insere o "
+                 + "cartão manualmente; não usar outro cartão nem numerário. Rever com a gestão." )
+    }
+end
+
+rule "TN-012 Compra BackPocket no Canadá paga com Interac"
+    @id("TN-012")
+    @modulo("M7")
+    @descricao("Verificar o Interac; concluir a devolução na BackPocket; emitir um reembolso manual na VeriFone pelo valor exato, com o cartão presente e sem inserção manual.")
+    @condicoes("interacVerificado,compraBackPocket")
+    agenda-group "M7"
+    salience 5
+when
+    $d : Decisao( terminal == false, meioReembolso == MeioReembolso.MEIO_ORIGINAL,
+                  disparou( "TN-011" ) == true, disparou( "TN-012" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, compraOriginal != null, compraOriginal.canal == CanalCompra.BACKPOCKET )
+then
+    modify( $d ) {
+        setProcesso( ProcessoObrigatorio.VERIFONE_INTERAC ),
+        registar( "TN-012", Modulo.M7,
+                  "Compra BackPocket paga com Interac: concluir a devolução na BackPocket e emitir um reembolso manual "
+                  + "na VeriFone pelo valor exato" + ( $d.getValorDevolucao() == null ? "" : " (" + $d.getValorDevolucao() + ")" )
+                  + ", com o cartão presente e sem inserção manual." )
+    }
+end
+
+// ---------------------------------------------------------------------------------------------
+// Numerário e cartão de oferta (sem regra TN própria)
+// ---------------------------------------------------------------------------------------------
+
+rule "OUT-004 Compra paga em numerário ou cartão de oferta"
+    @id("OUT-004")
+    @modulo("M7")
+    @descricao("Nenhuma regra TN cobre o numerário nem o cartão de oferta: reembolso no meio original, segundo PT-003 (docs/03) [a validar: A-09].")
+    @condicoes("reembolsoVerificadoNoMeioOriginal,pagamentoNumerarioOuCartaoOferta")
+    agenda-group "M7"
+    salience 70
+when
+    $d : Decisao( terminal == false, tipoVerificacao == TipoVerificacao.VERIFICADA, elegibilidade != Elegibilidade.RECUSAR,
+                  meioReembolso == MeioReembolso.MEIO_ORIGINAL, disparou( "OUT-004" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, compraOriginal != null, compraOriginal.pagamento != null,
+                          compraOriginal.pagamento.meio == MeioPagamento.NUMERARIO
+                          || compraOriginal.pagamento.meio == MeioPagamento.CARTAO_OFERTA )
+then
+    modify( $d ) {
+        registar( "OUT-004", Modulo.M7,
+                  "Compra paga em " + $p.getCompraOriginal().getPagamento().getMeio() + ": reembolso no meio de pagamento "
+                  + "original." )
+    }
+end
+
+// ---------------------------------------------------------------------------------------------
+// Saldo de uma troca (depois do valor total)
+// ---------------------------------------------------------------------------------------------
+
+rule "TN-006 Troca parcial com saldo reembolsável"
+    @id("TN-006")
+    @modulo("M7")
+    @descricao("Concluir a troca e reembolsar automaticamente o valor remanescente para o cartão original.")
+    @condicoes("trocaVerificada,valorDevolucaoMaiorQueTroca,pagamentoComCartao")
+    agenda-group "M7"
+    salience 5
+when
+    $d : Decisao( terminal == false, tipoVerificacao == TipoVerificacao.VERIFICADA, tipoTransacao == TipoTransacao.TROCA,
+                  valorDevolucao != null, meioReembolso == MeioReembolso.MEIO_ORIGINAL, disparou( "TN-006" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, compraOriginal != null, compraOriginal.pagamento != null,
+                          compraOriginal.pagamento.meio == MeioPagamento.CREDITO || compraOriginal.pagamento.meio == MeioPagamento.DEBITO
+                          || compraOriginal.pagamento.meio == MeioPagamento.APPLE_PAY || compraOriginal.pagamento.meio == MeioPagamento.GOOGLE_PAY )
+    eval( $d.getValorDevolucao().compareTo( precoDosArtigosDeTroca( $p ) ) > 0 )
+then
+    BigDecimal saldo = $d.getValorDevolucao().subtract( precoDosArtigosDeTroca( $p ) );
+    modify( $d ) {
+        registar( "TN-006", Modulo.M7,
+                  "Troca parcial: concluir a troca e reembolsar automaticamente o saldo de " + saldo.toPlainString()
+                  + " para o cartão original." )
+    }
+end

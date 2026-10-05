@@ -54,6 +54,13 @@
    um artigo em REVER). Sem reatividade por propriedade, cada `modify` reavalia todos os padrões do facto. O
    `pericial-model` continua sem anotações do Drools.
 
+11. **Nulos verificados em cada padrão.** No Rete cada padrão é avaliado por si; uma condição como
+    `disparou("TN-001")` noutro padrão não protege o acesso `compraOriginal.pagamento.estadoConta`. Cada padrão verifica
+    os nulos dos caminhos que percorre; o `RobustezDadosEmFaltaTest` avalia pedidos com dados em falta e falha se alguma
+    regra lançar uma exceção.
+12. **REVER produzido em M7** (TN-008 sem acesso à aplicação, TN-011 sem o cartão Interac) surge depois de M6, por isso não
+    aciona EX-001: estas regras definem elas próprias a aprovação do responsável sénior.
+
 ## Consequências
 
 - O resultado deixa de depender da ordem de disparo entre regras com resultados diferentes.

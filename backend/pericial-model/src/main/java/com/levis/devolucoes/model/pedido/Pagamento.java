@@ -13,6 +13,17 @@ public class Pagamento {
   private boolean cartaoFisicoPresente;
   private boolean reembolsoOriginalRecusado;
 
+  /** TN-008: o cliente consegue aceder à aplicação PayPal ou Venmo na loja (ADR 0003, A-05). */
+  private boolean acessoAplicacaoPagamento = true;
+
+  public boolean isAcessoAplicacaoPagamento() {
+    return acessoAplicacaoPagamento;
+  }
+
+  public void setAcessoAplicacaoPagamento(boolean acessoAplicacaoPagamento) {
+    this.acessoAplicacaoPagamento = acessoAplicacaoPagamento;
+  }
+
   public MeioPagamento getMeio() {
     return meio;
   }

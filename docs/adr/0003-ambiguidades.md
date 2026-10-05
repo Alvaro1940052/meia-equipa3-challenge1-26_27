@@ -54,5 +54,5 @@ Quando a operação responder, atualiza-se a coluna **Resposta**, a regra, o tes
 ## Consequências
 
 - Os resultados esperados dos cenários afetados mudam quando a operação responder; os testes estão marcados para facilitar a revisão.
-- Novos inputs no modelo (`politicaPermiteAsCegasOnline`, `concluivelNoSistema`, `valorCalculadoPos`) são
+- Novos inputs no modelo (`politicaPermiteAsCegasOnline`, `concluivelNoSistema`, `valorCalculadoPos`, `acessoAplicacaoPagamento`) são
   acrescentados ao `pericial-model` e documentados aqui, sem alterar `docs/04` até pedido explícito.

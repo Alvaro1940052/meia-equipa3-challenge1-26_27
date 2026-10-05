@@ -41,12 +41,13 @@
   },
   "indicadoresFraude": [],
   "esperado": {
-    "elegibilidade": "PERMITIR",
+    "elegibilidade": "REVER",
+    "aprovacao": "RESPONSAVEL_SENIOR",
     "tipoVerificacao": "VERIFICADA",
     "tipoTransacao": "REEMBOLSO",
     "valorDevolucao": 79.50,
-    "meioReembolso": "MEIO_ORIGINAL",
-    "regrasDisparadas": ["CT-003", "CH-001", "PC-001", "PT-001", "PT-003", "EX-002"],
+    "regrasDisparadas": ["CT-003", "CH-001", "PC-001", "PT-001", "PT-003", "EX-002", "TN-011"],
+    "regrasNaoDisparadas": ["TN-001", "TN-004", "TN-012"],
     "artigos": { "A-1": { "elegibilidade": "PERMITIR", "regrasDisparadas": ["PC-001"] } }
   }
 }

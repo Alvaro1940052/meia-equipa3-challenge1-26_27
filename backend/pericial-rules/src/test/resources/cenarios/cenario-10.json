@@ -7,7 +7,7 @@
     "Colaborador Key Holder (docs/06 não indica quem processa).",
     "Data de compra igual à de envio (enviado há 37 dias).",
     "O pedido de pagamento dividido e de cartão de oferta para o remanescente, sem acesso ao PayPal, é registado como exceção que contorna o processo obrigatório do PayPal.",
-    "O cliente não consegue aceder à aplicação PayPal na loja (ainda sem atributo no modelo; ver A-05)."
+    "O cliente não consegue aceder à aplicação PayPal na loja (acessoAplicacaoPagamento = false, A-05)."
   ],
   "pedido": {
     "id": "C10",
@@ -21,7 +21,7 @@
       "canal": "LEVI_COM",
       "dataCompra": "2026-02-22",
       "dataEnvio": "2026-02-22",
-      "pagamento": { "meio": "PAYPAL", "valorPago": 69.50 },
+      "pagamento": { "meio": "PAYPAL", "valorPago": 69.50, "acessoAplicacaoPagamento": false },
       "quantidadeComprada": 1,
       "encomendaEncontrada": true
     },
@@ -54,8 +54,10 @@
   "esperado": {
     "elegibilidade": "REVER",
     "tipoVerificacao": "VERIFICADA",
+    "meioReembolso": "APLICACAO_PAGAMENTO",
+    "processo": "PAYPAL_VENMO",
     "aprovacao": "RESPONSAVEL_SENIOR",
-    "regrasDisparadas": ["CT-003", "PC-001", "CH-004", "EX-001", "EX-002", "EX-006"],
+    "regrasDisparadas": ["CT-003", "PC-001", "CH-004", "EX-001", "EX-002", "EX-006", "TN-008"],
     "regrasNaoDisparadas": ["CH-001", "IN-003", "PT-001", "PT-003", "CH-002", "CH-005", "CH-006", "EX-003", "EX-005"],
     "artigos": { "A-1": { "elegibilidade": "PERMITIR", "regrasDisparadas": ["PC-001"] } }
   }
