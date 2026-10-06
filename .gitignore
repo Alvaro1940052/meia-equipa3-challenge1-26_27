@@ -26,3 +26,9 @@ Thumbs.db
 # Segredos
 .env
 *.local.yml
+
+# Claude Code (instruções e definições locais do assistente; não fazem parte do projeto)
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+.mcp.json
