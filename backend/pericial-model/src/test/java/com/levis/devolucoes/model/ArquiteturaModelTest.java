@@ -22,7 +22,8 @@ class ArquiteturaModelTest {
           .dependOnClassesThat()
           .resideInAnyPackage(
               "org.springframework..", "jakarta.persistence..", "org.kie..", "org.drools..")
-          .because("pericial-model não pode depender de Spring, JPA nem Drools (CLAUDE.md)");
+          .because(
+              "pericial-model não pode depender de Spring, JPA nem Drools (convenções do projeto, README)");
 
   @ArchTest
   static final ArchRule SEM_OUTROS_MODULOS =

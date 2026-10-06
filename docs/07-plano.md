@@ -2,7 +2,7 @@
 
 ## Contexto
 
-O repositório contém apenas `CLAUDE.md` e `docs/01..06`. É preciso construir, de raiz, o sistema pericial
+O repositório contém apenas as convenções do projeto e `docs/01..06`. É preciso construir, de raiz, o sistema pericial
 (Java 21 / Spring Boot 3 / Drools 8 / Angular) que decide devoluções, trocas e ajustes de preço e explica
 cada decisão. Este plano, depois de aprovado, é gravado como `docs/07-plano.md` (primeiro passo da Fase 0)
 e passa a ser seguido fase a fase: planear → implementar → `mvn clean verify` verde → fase seguinte.
@@ -100,7 +100,7 @@ documentada, a validar pela operação; **[D]** inconsistência interna dos docu
     `aplicar` nunca baixa a severidade (RECUSAR > ENCAMINHAR > REVER > PERMITIR) exceto quando a regra seguinte
     resolve uma revisão (ex.: PC-002 com IN-010 = sim). Fica em ADR.
 29. Exemplo DRL em `04` importa `com.levis.devolucoes.modelo.*`, mas o pacote é `...model`. Usa-se `model`.
-30. CLAUDE.md pede "um DRL e um agenda-group por módulo", mas `05` junta M4+M5 num ficheiro, divide M7 em dois e não
+30. As convenções do projeto pedem "um DRL e um agenda-group por módulo", mas `05` junta M4+M5 num ficheiro, divide M7 em dois e não
     tem M1. Decisão: seguir os ficheiros de `05`; cada regra declara o seu `agenda-group` (M4, M5, M7…); M1 não tem
     regras (IN são dados, validados pelo `DetetorDadosEmFalta`).
 31. Atributos em falta no modelo para as soluções provisórias (A1.3, A3.18) → acrescentar ao `pericial-model` com ADR,
@@ -221,7 +221,7 @@ reutilizam os JSON de `pericial-rules`); `docker-compose.yml` passa a incluir o 
 
 ### Fase 10 — CI e fecho
 **Ficheiros:** `.github/workflows/ci.yml` (mvn verify, npm test, Playwright, imagens Docker), atualização de `README.md`.
-**Aceitação:** Definição de concluído do CLAUDE.md cumprida; lista de ambiguidades atualizada com o que a operação confirmou.
+**Aceitação:** Definição de concluído (README) cumprida; lista de ambiguidades atualizada com o que a operação confirmou.
 
 ---
 
@@ -264,7 +264,7 @@ Desvios ao plano, todos registados em ADR:
 - os E2E estão em `e2e/cenarios.spec.ts` (um teste por cenário) e `e2e/explicacoes.spec.ts`;
 - a ligação a um fornecedor OIDC de produção ficou fora do âmbito (decisão do utilizador).
 
-### Definição de concluído (`CLAUDE.md`)
+### Definição de concluído (README)
 
 | Critério | Verificação |
 |---|---|

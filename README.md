@@ -9,6 +9,42 @@ devoluções, trocas e ajustes de preço, e para explicar cada decisão (Como, P
 - `docs/07-plano.md`: plano de implementação por fases, estado e fecho (Definição de concluído).
 - `docs/adr/`: decisões de arquitetura e ambiguidades por validar (`0003-ambiguidades.md`).
 
+## Convenções
+
+### Fonte de verdade e decisões
+- `docs/01` a `docs/06` são a fonte de verdade; em caso de conflito, `01` prevalece sobre `02`, que prevalece sobre
+  `03` e `04`. Só se alteram por decisão explícita.
+- Não se inventam regras de negócio. Onde a base de conhecimento é omissa ou ambígua, implementa-se o comportamento
+  documentado, marcado "a validar" e registado em `docs/adr/0003-ambiguidades.md`.
+- As decisões de arquitetura ficam em `docs/adr/`.
+
+### Código
+- Código, mensagens e documentação em português de Portugal, sem acentos nos identificadores Java/TS. Os termos
+  operacionais ficam em inglês: Mainline, Outlet, BackPocket, Afterpay, PayPal, Venmo, Interac, bodywear, POS, SKU.
+- Valores monetários em `BigDecimal`, datas em `LocalDate`/`LocalDateTime`, DTO como `record` com Bean Validation.
+- `pericial-model` sem dependências de Spring/JPA; entidades JPA separadas dos factos Drools.
+- Os controllers só usam DTO e nunca acedem ao modelo nem ao Drools (garantido por ArchUnit).
+- As integrações externas (POS, BackPocket, Afterpay, PayPal/Venmo, Interac/VeriFone) ficam atrás de interfaces
+  (portas), com adaptadores simulados para desenvolvimento e testes.
+- Cada avaliação guarda a versão do kjar e o rasto das regras disparadas (auditoria).
+
+### Regras DRL
+- Cada regra usa o ID da base de conhecimento no nome (ex.: `rule "PT-003 Devolução verificada até 30 dias"`).
+- Cada regra declara os metadados:
+  - `@id`, `@modulo`, `@descricao` e `@condicoes`;
+  - `@conclusoes`: as conclusões OUT que pode produzir (ex.: `"OUT-001=PERMITIR,OUT-002=REEMBOLSO"`), vazio se só
+    regista uma ação (ADR 0006).
+- Há um `agenda-group` por módulo (M0–M9, ONLINE) e as precedências fazem-se com `salience`.
+- Todas as regras incluem `Decisao( terminal == false )`; as exceções estão no ADR 0004. EX-008 e PC-008 têm
+  `auto-focus true`.
+
+### Definição de concluído
+- Cada regra tem pelo menos um teste unitário que referencia o ID da regra.
+- Os 10 cenários de `docs/06-casos-teste.md` existem como testes de aceitação (JSON em
+  `backend/pericial-rules/src/test/resources/cenarios/`), com os resultados esperados derivados de `02` e marcados
+  "a validar" até confirmação da operação.
+- Build e testes verdes, sem violações de ArchUnit, Checkstyle ou Spotless.
+
 ## Requisitos
 
 - JDK 21 ou superior (o código é compilado com `release 21`).

@@ -5,7 +5,7 @@
 
 ## Contexto
 
-O `CLAUDE.md` proíbe inventar regras de negócio. A base de conhecimento (`01`) e a sua reescrita (`02`) são
+As convenções do projeto (README) proíbem inventar regras de negócio. A base de conhecimento (`01`) e a sua reescrita (`02`) são
 omissas ou contraditórias em vários pontos. O utilizador decidiu (2026-10-04) que estes pontos não bloqueiam a
 implementação: implementa-se o comportamento hoje documentado (sobretudo em `03`), marcado "a validar".
 

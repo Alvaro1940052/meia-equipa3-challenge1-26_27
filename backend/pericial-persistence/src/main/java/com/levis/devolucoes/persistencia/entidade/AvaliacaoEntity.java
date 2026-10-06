@@ -18,7 +18,7 @@ import org.hibernate.type.SqlTypes;
 /**
  * Avaliação guardada: os campos de saída principais (para consulta), os factos de entrada e a
  * decisão completa em JSON, a versão da base de conhecimento e o rasto das regras. Separada dos
- * factos Drools (CLAUDE.md): os enums são guardados como texto.
+ * factos Drools (convenções do projeto, README): os enums são guardados como texto.
  */
 @Entity
 @Table(name = "avaliacao")

@@ -33,7 +33,7 @@
    (sem módulo) não permitia preencher `RegistoRegra.modulo`. Também existem `registar(regra, modulo, msg)` (regra sem
    resultado, ex.: CT-005), `resolverRevisao(regra, modulo, msg)` e, só em `Decisao`, `suspender(regra, modulo, msg)` (EX-008).
 
-7. **Exceções à guarda `Decisao( terminal == false )`** (convenção do CLAUDE.md): EX-008 e PC-008. O EX-008 é a própria
+7. **Exceções à guarda `Decisao( terminal == false )`** (convenção do projeto, README): EX-008 e PC-008. O EX-008 é a própria
    interrupção (guarda: `PedidoDevolucao( suspenso == false )`); o PC-008 é, segundo `02`, "executado independentemente da
    elegibilidade", para que um artigo inseguro seja isolado mesmo numa transação recusada ou suspensa (A-28).
    O `ConvencoesDrlTest` verifica a guarda em todas as outras regras.

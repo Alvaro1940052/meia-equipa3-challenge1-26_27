@@ -5,7 +5,7 @@
 
 ## Contexto
 
-`docs/05-estrutura-projeto.md` define sete módulos Maven e a lista de ficheiros DRL. O `CLAUDE.md` pede
+`docs/05-estrutura-projeto.md` define sete módulos Maven e a lista de ficheiros DRL. As convenções do projeto (README) pedem
 "um ficheiro DRL e um `agenda-group` por módulo (M0–M9, ONLINE)", mas `05` junta M4 e M5 num só ficheiro,
 divide M7 em dois (valor e meio de reembolso) e não tem ficheiro para M1. Há ainda um desvio de nome de pacote:
 o exemplo DRL de `04` importa `com.levis.devolucoes.modelo.*`, enquanto `04` e `05` definem `...model`.

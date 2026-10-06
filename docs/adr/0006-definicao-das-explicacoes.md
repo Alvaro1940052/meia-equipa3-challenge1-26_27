@@ -33,7 +33,7 @@ a explicação de uma regra não ter disparado. O utilizador definiu as explica�
 
 ## Consequências
 
-- Cada regra nova declara `@conclusoes` (pode ser vazio para regras que só registam uma ação). A convenção do CLAUDE.md
+- Cada regra nova declara `@conclusoes` (pode ser vazio para regras que só registam uma ação). A convenção do projeto (README)
   sobre metadados (`@id`, `@modulo`, `@descricao`, `@condicoes`) passa, na prática, a incluir `@conclusoes`.
 - Os metadados `@condicoes` do EX-005 e do EX-006 passaram a declarar `pedidoExcecao`, que o DRL já exigia.
 - O assistente do frontend (Fase 9) mostra, para cada pergunta, o botão "Porquê?".

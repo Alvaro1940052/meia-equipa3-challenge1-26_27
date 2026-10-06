@@ -8,8 +8,7 @@
 ```
 levis-devolucoes/
 ├── pom.xml                                  # POM pai: módulos, versões, plugins comuns
-├── README.md
-├── CLAUDE.md
+├── README.md                                # visão geral, comandos e convenções do projeto
 ├── .gitignore  .editorconfig
 ├── docker-compose.yml                       # PostgreSQL + backend + frontend
 ├── .github/workflows/ci.yml                 # build, testes, cobertura, análise, imagens Docker

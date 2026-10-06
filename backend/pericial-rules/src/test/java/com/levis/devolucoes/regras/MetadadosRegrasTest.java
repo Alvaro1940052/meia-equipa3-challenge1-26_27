@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.kie.api.definition.rule.Rule;
 
 /**
- * Convenções do CLAUDE.md para cada regra: nome começado pelo ID, metadados {@code @id @modulo
+ * Convenções do projeto (README) para cada regra: nome começado pelo ID, metadados {@code @id @modulo
  * @descricao @condicoes}, ID existente na base de conhecimento (docs/01) e {@code @modulo} igual ao
  * agenda-group.
  */

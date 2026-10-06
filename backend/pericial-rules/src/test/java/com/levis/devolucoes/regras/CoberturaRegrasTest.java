@@ -18,9 +18,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
-/**
- * Definição de concluído (CLAUDE.md): cada regra tem pelo menos um teste que referencia o seu ID.
- */
+/** Definição de concluído (README): cada regra tem pelo menos um teste que referencia o seu ID. */
 class CoberturaRegrasTest {
 
   @Test
