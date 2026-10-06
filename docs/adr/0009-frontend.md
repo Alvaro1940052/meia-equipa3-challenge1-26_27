@@ -38,7 +38,8 @@ A Fase 9 cria a interface usada pelos colaboradores. Tem de:
    - Em desenvolvimento, o ecrã "Entrar" usa os endpoints `dev` da API (colaborador de exemplo ou indicado).
    - O token fica em `sessionStorage` e o interceptor envia-o, com o `Accept-Language` da interface.
    - Um 401 termina a sessão.
-   - A ligação ao fornecedor OIDC de produção fica por fazer até se conhecer o fornecedor (ADR 0008).
+   - A ligação a um fornecedor OIDC de produção está fora do âmbito desta implementação (decisão do utilizador,
+     2026-10-06); a API já aceita tokens OIDC (ADR 0008).
 7. **i18n de compilação** (`@angular/localize`):
    - uma versão por idioma (`/pt-PT/`, `/en/`), com IDs explícitos (`@@campo.loja.mercado`);
    - `messages.pt-PT.xlf` é extraído; `messages.en.xlf` é a tradução, verificada por `npm run i18n:verificar`;

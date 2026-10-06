@@ -6,7 +6,7 @@ devoluções, trocas e ajustes de preço, e para explicar cada decisão (Como, P
 ## Documentação
 
 - `docs/01` a `docs/06`: base de conhecimento, regras IF/THEN, fluxograma, modelo, estrutura e cenários de teste.
-- `docs/07-plano.md`: plano de implementação por fases.
+- `docs/07-plano.md`: plano de implementação por fases, estado e fecho (Definição de concluído).
 - `docs/adr/`: decisões de arquitetura e ambiguidades por validar (`0003-ambiguidades.md`).
 
 ## Requisitos
@@ -39,6 +39,14 @@ npm run api:atualizar     # copia o OpenAPI exportado pelos testes da API e rege
 npm run i18n:extrair      # extrai as mensagens (pt-PT); traduzir em src/locale/messages.en.xlf
 npm run verificar         # formatação (Prettier) e traduções completas
 ```
+
+## Integração contínua
+
+`.github/workflows/ci.yml` corre em cada push e pull request:
+- **backend:** `mvn verify` (testes, IT com Testcontainers, ArchUnit, Checkstyle, Spotless, JaCoCo) e a verificação de
+  que `frontend/openapi/openapi.json` corresponde à API;
+- **frontend:** formatação, cliente gerado sem diferenças, traduções completas, testes e build;
+- **e2e:** `docker compose up --build --wait` e os testes Playwright contra a imagem nginx.
 
 ## API
 

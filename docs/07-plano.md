@@ -239,3 +239,44 @@ reutilizam os JSON de `pericial-rules`); `docker-compose.yml` passa a incluir o 
 - Por fase: `mvn clean verify` na raiz (Spotless, Checkstyle, ArchUnit, JaCoCo incluídos).
 - Regras: `mvn -pl backend/pericial-rules verify` → `<Modulo>Test`, `CoberturaRegrasTest`, `CenariosEsforcoTest`.
 - Ponta a ponta: `docker compose up`, Swagger UI em dev, `cd frontend && npm ci && npm test && npx playwright test`.
+
+## D. Estado e fecho (2026-10-06)
+
+Todas as fases foram implementadas, verificadas e aprovadas uma a uma pelo utilizador.
+
+| Fase | Commit | Notas |
+|---|---|---|
+| 0 Plano e ADR | `8939404` | ADR 0001–0004 |
+| 1 Esqueleto Maven | `55c6594` | |
+| 2 `pericial-model` | `ed4b443` | `DecisaoArtigo` (ADR 0002) |
+| 3 Infraestrutura de regras | `91bdf46` | |
+| 4.1–4.10 Regras por módulo | `22baf1b` … `5ea3f69` | 10 cenários completos |
+| 5 Explicações | `0d317a0`, `01b0e15` | definições do utilizador (ADR 0006) |
+| 6 Persistência | `771f3e3` | PostgreSQL + Flyway, auditoria |
+| 7 DTO e serviço | `7c97db9` | ADR 0007 |
+| 8 API | `3f27783` | ADR 0008 |
+| 9 Frontend | `49360f1` | ADR 0009 |
+| 10 CI e fecho | este commit | `.github/workflows/ci.yml` |
+
+Desvios ao plano, todos registados em ADR:
+- o serviço usa o executor do módulo de explicações em vez de `SessaoFactory`/`OrdemModulos` (ADR 0007);
+- o cliente do frontend é gerado com `ng-openapi-gen` em vez do `openapi-generator` (ADR 0009);
+- os E2E estão em `e2e/cenarios.spec.ts` (um teste por cenário) e `e2e/explicacoes.spec.ts`;
+- a ligação a um fornecedor OIDC de produção ficou fora do âmbito (decisão do utilizador).
+
+### Definição de concluído (`CLAUDE.md`)
+
+| Critério | Verificação |
+|---|---|
+| Cada regra tem pelo menos um teste unitário que referencia o ID | 98 regras DRL de 76 IDs; os 76 IDs têm testes `@Regra`; o `CoberturaRegrasTest` falha se uma regra da kbase não tiver teste |
+| Os 10 cenários de `docs/06` como testes de aceitação em JSON | `pericial-rules/src/test/resources/cenarios/cenario-01..10.json`, todos `"a validar"`; corridos pelas regras (`CenariosEsforcoTest`), pelo serviço (`ServicoPericialIT`), pela API (`CenariosApiIT`) e pela interface (Playwright) |
+| Build e testes verdes; sem violações de ArchUnit, Checkstyle ou Spotless | `mvn clean verify` e o frontend (`npm run verificar`, `npm test`, `npm run build`, Playwright) verdes; o CI repete tudo em cada push |
+
+### Por fazer (fora do âmbito desta implementação)
+
+- Respostas da operação às ambiguidades A-01 a A-31 (ADR 0003): todas continuam "a validar".
+- Adaptadores reais das integrações (POS, BackPocket, Afterpay, PayPal/Venmo, Interac/VeriFone): hoje há só o
+  adaptador simulado (ADR 0007).
+- Fornecedor OIDC de produção e a correspondência dos seus grupos com as funções (ADR 0008).
+- Explicar avaliações feitas com uma versão anterior da base de conhecimento (hoje recusado com 409, ADR 0007).
+- Textos da base de conhecimento (nomes e mensagens das regras, perguntas) em inglês (ADR 0009).

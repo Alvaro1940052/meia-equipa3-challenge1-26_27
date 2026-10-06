@@ -50,6 +50,16 @@ Quando a operação responder, atualiza-se a coluna **Resposta**, a regra, o tes
 | A-29 | Usado com dano sem defeito confirmado | PC-004, PC-006 | PC-004 exclui "dano ou defeito confirmado" e nenhuma regra cobre um artigo usado com dano mas sem defeito de fabrico confirmado. Que regra se aplica? | PC-004 (o defeito não está confirmado); sem decisão da gestão fica REVER | — | |
 | A-30 | Promoção por escalões numa devolução às cegas | EP-003 | EP-003 refere-se a uma promoção por escalões ativa, mas sem comprovativo não se conhece a compra. Como se sabe que se aplica? | Usa-se o indicador `promocaoEscaloes` da compra original (registado pelo colaborador); o valor do escalão vem do POS | — | |
 | A-28 | Artigo inseguro em transação recusada ou suspensa | PC-008, M9 | Um artigo sujo/inseguro numa transação recusada ou suspensa é isolado ou devolvido ao cliente? | É isolado (PC-008 é independente da elegibilidade, `02`); destino `RISCO_BIOLOGICO` prevalece sobre `DEVOLUCAO_CLIENTE` | 6, 9 | |
+| A-31 | Acesso ao histórico de avaliações | — (acesso, não regra) | Que funções podem consultar o histórico de avaliações da loja? | GESTAO_LOJA, XSTORE_MANAGER e KEY_HOLDER (ADR 0008); as restantes funções avaliam e consultam uma avaliação pelo seu identificador | — | |
+
+## Ponto de situação (2026-10-06, fim da implementação inicial)
+
+- Nenhuma resposta da operação até esta data: todas as linhas continuam **a validar** (A-24 é uma decisão técnica).
+- Os 10 cenários de `docs/06` mantêm `"estado": "a validar"`; cada um lista em `aValidar` as linhas de que depende.
+- A decisão mostra as regras com comportamento provisório (`regrasAValidar`), e a interface assinala-as ("a validar"),
+  para que a operação as veja ao usar o sistema.
+- Para cada resposta: atualizar a coluna **Resposta**, a regra DRL (`@descricao`), o teste, o JSON dos cenários
+  afetados e retirar a marca; o CI (`.github/workflows/ci.yml`) confirma regras, serviço, API e interface.
 
 ## Consequências
 
