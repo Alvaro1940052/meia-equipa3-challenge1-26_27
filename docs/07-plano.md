@@ -246,16 +246,16 @@ Todas as fases foram implementadas, verificadas e aprovadas uma a uma pelo utili
 
 | Fase | Commit | Notas |
 |---|---|---|
-| 0 Plano e ADR | `8939404` | ADR 0001–0004 |
-| 1 Esqueleto Maven | `55c6594` | |
-| 2 `pericial-model` | `ed4b443` | `DecisaoArtigo` (ADR 0002) |
-| 3 Infraestrutura de regras | `91bdf46` | |
-| 4.1–4.10 Regras por módulo | `22baf1b` … `5ea3f69` | 10 cenários completos |
-| 5 Explicações | `0d317a0`, `01b0e15` | definições do utilizador (ADR 0006) |
-| 6 Persistência | `771f3e3` | PostgreSQL + Flyway, auditoria |
-| 7 DTO e serviço | `7c97db9` | ADR 0007 |
-| 8 API | `3f27783` | ADR 0008 |
-| 9 Frontend | `49360f1` | ADR 0009 |
+| 0 Plano e ADR | `f1c38bd` | ADR 0001–0004 |
+| 1 Esqueleto Maven | `e174f31` | |
+| 2 `pericial-model` | `58b19d8` | `DecisaoArtigo` (ADR 0002) |
+| 3 Infraestrutura de regras | `56fd000` | |
+| 4.1–4.10 Regras por módulo | `8b86268` … `72c74b7` | 10 cenários completos |
+| 5 Explicações | `7a8f45a`, `9014b26` | definições do utilizador (ADR 0006) |
+| 6 Persistência | `59c6ad4` | PostgreSQL + Flyway, auditoria |
+| 7 DTO e serviço | `a8d440f` | ADR 0007 |
+| 8 API | `a379f8f` | ADR 0008 |
+| 9 Frontend | `4323477` | ADR 0009 |
 | 10 CI e fecho | este commit | `.github/workflows/ci.yml` |
 
 Desvios ao plano, todos registados em ADR:
