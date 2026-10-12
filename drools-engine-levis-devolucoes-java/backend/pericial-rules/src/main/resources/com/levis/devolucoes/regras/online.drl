@@ -1,0 +1,244 @@
+package com.levis.devolucoes.regras;
+
+// Caminho online: levi.com e levi.ca devolvidos na loja (docs/02, etapa 6; docs/03, módulo 5).
+// A Afterpay é avaliada antes de qualquer outro meio (TN-010, HS-005 > CH-006).
+// Precedências: CH-004 substitui o meio predefinido de CH-003.
+
+import com.levis.devolucoes.model.decisao.Decisao;
+import com.levis.devolucoes.model.decisao.DecisaoArtigo;
+import com.levis.devolucoes.model.enums.BaseValor;
+import com.levis.devolucoes.model.enums.Elegibilidade;
+import com.levis.devolucoes.model.enums.MeioPagamento;
+import com.levis.devolucoes.model.enums.MeioReembolso;
+import com.levis.devolucoes.model.enums.Mercado;
+import com.levis.devolucoes.model.enums.Modulo;
+import com.levis.devolucoes.model.enums.NivelAprovacao;
+import com.levis.devolucoes.model.enums.ProcessoObrigatorio;
+import com.levis.devolucoes.model.enums.TipoPedido;
+import com.levis.devolucoes.model.enums.TipoTransacao;
+import com.levis.devolucoes.model.enums.TipoVerificacao;
+import com.levis.devolucoes.model.pedido.PedidoDevolucao;
+
+// ---------------------------------------------------------------------------------------------
+// Encomenda encontrada
+// ---------------------------------------------------------------------------------------------
+
+rule "CH-002 Encomenda online encontrada: processar na BackPocket"
+    @id("CH-002")
+    @modulo("ONLINE")
+    @descricao("Encaminhar através da BackPocket e reembolsar no meio de pagamento original; o cliente nos EUA pode pedir um cartão de oferta eletrónico.")
+    @condicoes("compraOnline,naoEAjustePreco,encomendaEncontrada,portalDisponivel,artigoElegivel")
+    @conclusoes("OUT-001=ENCAMINHAR,OUT-002=REEMBOLSO,OUT-003,OUT-004=MEIO_ORIGINAL,OUT-006=BACKPOCKET")
+    agenda-group "ONLINE"
+    salience 100
+when
+    $d : Decisao( terminal == false, disparou( "CH-002" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, compraOnline == true, tipoPedido != TipoPedido.AJUSTE_PRECO,
+                          compraOriginal.encomendaEncontrada == true, portalOnlineDisponivel == true )
+    exists DecisaoArtigo( pedidoId == $d.pedidoId, terminal == false,
+                          elegibilidade == Elegibilidade.PERMITIR || elegibilidade == Elegibilidade.REVER )
+then
+    boolean eua = $p.getLoja() != null && $p.getLoja().getMercado() == Mercado.EUA;
+    modify( $d ) {
+        setTipoVerificacao( TipoVerificacao.VERIFICADA ),
+        setProcesso( ProcessoObrigatorio.BACKPOCKET ),
+        setTipoTransacao( TipoTransacao.REEMBOLSO ),
+        setMeioReembolso( MeioReembolso.MEIO_ORIGINAL ),
+        setBaseValor( BaseValor.VALOR_PAGO ),
+        aplicar( "CH-002", Modulo.ONLINE, Elegibilidade.ENCAMINHAR,
+                 "Encomenda " + $p.getCompraOriginal().getCanal() + " encontrada: processar a devolução na BackPocket "
+                 + "e reembolsar no meio de pagamento original."
+                 + ( eua ? " Nos EUA, o cliente pode pedir um cartão de oferta eletrónico para outra compra online ou na BackPocket." : "" ) )
+    }
+end
+
+rule "CH-004 Encomenda encontrada com o portal online indisponível: rever"
+    @id("CH-004")
+    @modulo("ONLINE")
+    @descricao("Encomenda encontrada mas o portal está indisponível: nenhum documento cobre o caso; rever com a gestão, sem meio de reembolso definido [a validar: A-04].")
+    @condicoes("compraOnline,naoEAjustePreco,encomendaEncontrada,portalIndisponivel,artigoElegivel")
+    @conclusoes("OUT-001=REVER,OUT-005=RESPONSAVEL_SENIOR")
+    agenda-group "ONLINE"
+    salience 100
+when
+    $d : Decisao( terminal == false, disparou( "CH-004" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, compraOnline == true, tipoPedido != TipoPedido.AJUSTE_PRECO,
+                          compraOriginal.encomendaEncontrada == true, portalOnlineDisponivel == false )
+    exists DecisaoArtigo( pedidoId == $d.pedidoId, terminal == false,
+                          elegibilidade == Elegibilidade.PERMITIR || elegibilidade == Elegibilidade.REVER )
+then
+    modify( $d ) {
+        setTipoVerificacao( TipoVerificacao.VERIFICADA ),
+        setAprovacao( NivelAprovacao.RESPONSAVEL_SENIOR ),
+        aplicar( "CH-004", Modulo.ONLINE, Elegibilidade.REVER,
+                 "Encomenda " + $p.getCompraOriginal().getCanal() + " encontrada, mas o portal de devoluções online está "
+                 + "indisponível: a política não prevê este caso. Rever com a gestão." )
+    }
+end
+
+rule "TN-010 Compra online com Afterpay"
+    @id("TN-010")
+    @modulo("ONLINE")
+    @descricao("Processar na BackPocket para o método original; não fornecer troca, cartão de oferta nem meio de pagamento alternativo.")
+    @condicoes("compraOnline,encaminhadaBackPocket,pagamentoAfterpay")
+    @conclusoes("OUT-002=REEMBOLSO,OUT-004=MEIO_ORIGINAL,OUT-006=BACKPOCKET")
+    agenda-group "ONLINE"
+    salience 80
+when
+    $d : Decisao( terminal == false, disparou( "CH-002" ) == true, disparou( "TN-010" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, compraOnline == true,
+                          compraOriginal.pagamento != null, compraOriginal.pagamento.meio == MeioPagamento.AFTERPAY )
+then
+    modify( $d ) {
+        setTipoTransacao( TipoTransacao.REEMBOLSO ),
+        setMeioReembolso( MeioReembolso.MEIO_ORIGINAL ),
+        setProcesso( ProcessoObrigatorio.BACKPOCKET ),
+        registar( "TN-010", Modulo.ONLINE,
+                  "Compra online com Afterpay: reembolso na BackPocket para a Afterpay. Sem troca, cartão de oferta "
+                  + "nem meio de pagamento alternativo." )
+    }
+end
+
+rule "HS-005 Exceção ao meio de pagamento Afterpay online"
+    @id("HS-005")
+    @modulo("ONLINE")
+    @descricao("Recusar a exceção (troca, cartão de oferta, numerário ou outro meio) e reembolsar através da Afterpay para o método original.")
+    @condicoes("compraOnline,pagamentoAfterpay,pedidoDeExcecaoAoMeio")
+    @conclusoes("")
+    agenda-group "ONLINE"
+    salience 70
+when
+    $d : Decisao( terminal == false, disparou( "TN-010" ) == true, disparou( "HS-005" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId,
+                          tipoPedido == TipoPedido.TROCA
+                          || ( pedidoExcecao != null
+                               && ( pedidoExcecao.exigeMeioProibido == true || pedidoExcecao.contornaProcessoObrigatorio == true ) ) )
+then
+    modify( $d ) {
+        recusarExcecao( "HS-005", Modulo.ONLINE,
+                        "As exceções ao meio de pagamento Afterpay são proibidas: recusar o pedido de "
+                        + ( $p.getTipoPedido() == TipoPedido.TROCA ? "troca" : "outro meio de reembolso" )
+                        + " e reembolsar através da Afterpay para o método original." )
+    }
+end
+
+rule "CH-005 Encomenda online enviada há mais de 30 dias"
+    @id("CH-005")
+    @modulo("ONLINE")
+    @descricao("Emitir cartão de oferta quando o artigo for elegível por outros motivos. Não se aplica a Afterpay (TN-010) nem a PayPal/Venmo (TN-008 prevalece) [a validar: A-05, A-06, A-22].")
+    @condicoes("compraOnline,encaminhadaBackPocket,mais30DiasDesdeEnvio,pagamentoSemProcessoProprio")
+    @conclusoes("OUT-001=PERMITIR,OUT-002=REEMBOLSO,OUT-004=CARTAO_OFERTA")
+    agenda-group "ONLINE"
+    salience 60
+when
+    $d : Decisao( terminal == false, disparou( "CH-002" ) == true, disparou( "CH-005" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, compraOnline == true, diasDesdeEnvio != null, diasDesdeEnvio > 30,
+                          compraOriginal.pagamento == null
+                          || ( compraOriginal.pagamento.meio != MeioPagamento.AFTERPAY
+                               && compraOriginal.pagamento.meio != MeioPagamento.PAYPAL
+                               && compraOriginal.pagamento.meio != MeioPagamento.VENMO ) )
+then
+    modify( $d ) {
+        setTipoTransacao( TipoTransacao.REEMBOLSO ),
+        setMeioReembolso( MeioReembolso.CARTAO_OFERTA ),
+        aplicar( "CH-005", Modulo.ONLINE, Elegibilidade.PERMITIR,
+                 "Encomenda online enviada há " + $p.getDiasDesdeEnvio() + " dias (mais de 30): emitir cartão de oferta." )
+    }
+end
+
+rule "CH-006 Troca de encomenda online"
+    @id("CH-006")
+    @modulo("ONLINE")
+    @descricao("Concluir a troca e devolver qualquer saldo elegível remanescente ao meio de pagamento original; a Afterpay continua excluída (TN-010, HS-005).")
+    @condicoes("compraOnline,encaminhadaBackPocket,pedidoTroca,ate30DiasDesdeEnvio,naoAfterpay")
+    @conclusoes("OUT-001=PERMITIR,OUT-002=TROCA,OUT-004=MEIO_ORIGINAL")
+    agenda-group "ONLINE"
+    salience 60
+when
+    $d : Decisao( terminal == false, disparou( "CH-002" ) == true, disparou( "CH-006" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, compraOnline == true, tipoPedido == TipoPedido.TROCA,
+                          diasDesdeEnvio == null || diasDesdeEnvio <= 30,
+                          compraOriginal.pagamento == null || compraOriginal.pagamento.meio != MeioPagamento.AFTERPAY )
+then
+    modify( $d ) {
+        setTipoTransacao( TipoTransacao.TROCA ),
+        setMeioReembolso( MeioReembolso.MEIO_ORIGINAL ),
+        aplicar( "CH-006", Modulo.ONLINE, Elegibilidade.PERMITIR,
+                 "Troca de encomenda online: concluir a troca e devolver qualquer saldo remanescente ao meio de "
+                 + "pagamento original." )
+    }
+end
+
+// ---------------------------------------------------------------------------------------------
+// Encomenda não encontrada: devolução às cegas online
+// ---------------------------------------------------------------------------------------------
+
+rule "CH-003 Encomenda online não encontrada: às cegas com cartão de oferta"
+    @id("CH-003")
+    @modulo("ONLINE")
+    @descricao("Usar uma devolução às cegas apenas quando o cenário da política o permitir; o meio predefinido é o cartão de oferta [a validar: A-03].")
+    @condicoes("compraOnline,naoEAjustePreco,encomendaNaoEncontrada,politicaPermiteAsCegasOnline,artigoElegivel")
+    @conclusoes("OUT-001=PERMITIR,OUT-002=REEMBOLSO,OUT-003,OUT-004=CARTAO_OFERTA")
+    agenda-group "ONLINE"
+    salience 100
+when
+    $d : Decisao( terminal == false, disparou( "CH-003" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, compraOnline == true, tipoPedido != TipoPedido.AJUSTE_PRECO,
+                          compraOriginal.encomendaEncontrada == false, politicaPermiteAsCegasOnline == true )
+    exists DecisaoArtigo( pedidoId == $d.pedidoId, terminal == false,
+                          elegibilidade == Elegibilidade.PERMITIR || elegibilidade == Elegibilidade.REVER )
+then
+    modify( $d ) {
+        setTipoVerificacao( TipoVerificacao.AS_CEGAS ),
+        setTipoTransacao( TipoTransacao.REEMBOLSO ),
+        setMeioReembolso( MeioReembolso.CARTAO_OFERTA ),
+        setBaseValor( BaseValor.PRECO_ATUAL ),
+        aplicar( "CH-003", Modulo.ONLINE, Elegibilidade.PERMITIR,
+                 "Encomenda online não encontrada: devolução às cegas permitida pela política, com cartão de oferta. "
+                 + "O processamento às cegas de devoluções online deve ser pouco comum." )
+    }
+end
+
+rule "CH-003 Encomenda online não encontrada: às cegas não permitida"
+    @id("CH-003")
+    @modulo("ONLINE")
+    @descricao("Encomenda não encontrada e a política não permite a devolução às cegas neste caso: recusar [a validar: A-03].")
+    @condicoes("compraOnline,naoEAjustePreco,encomendaNaoEncontrada,politicaNaoPermiteAsCegasOnline")
+    @conclusoes("OUT-001=RECUSAR,OUT-002=NENHUMA")
+    agenda-group "ONLINE"
+    salience 100
+when
+    $d : Decisao( terminal == false, disparou( "CH-003" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, compraOnline == true, tipoPedido != TipoPedido.AJUSTE_PRECO,
+                          compraOriginal.encomendaEncontrada == false, politicaPermiteAsCegasOnline == false )
+then
+    modify( $d ) {
+        setTipoVerificacao( TipoVerificacao.AS_CEGAS ),
+        setTipoTransacao( TipoTransacao.NENHUMA ),
+        aplicar( "CH-003", Modulo.ONLINE, Elegibilidade.RECUSAR,
+                 "Encomenda online não encontrada e a política não permite a devolução às cegas neste caso: recusar." )
+    }
+end
+
+rule "CH-004 Portal online indisponível: às cegas no meio original"
+    @id("CH-004")
+    @modulo("ONLINE")
+    @descricao("Portal online indisponível: processar a devolução às cegas permitida no meio de pagamento original (substitui o cartão de oferta de CH-003).")
+    @condicoes("compraOnline,devolucaoAsCegasOnlinePermitida,portalIndisponivel")
+    @conclusoes("OUT-001=PERMITIR,OUT-004=MEIO_ORIGINAL")
+    agenda-group "ONLINE"
+    salience 90
+when
+    $d : Decisao( terminal == false, tipoVerificacao == TipoVerificacao.AS_CEGAS,
+                  meioReembolso == MeioReembolso.CARTAO_OFERTA,
+                  disparou( "CH-003" ) == true, disparou( "CH-004" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, compraOnline == true, politicaPermiteAsCegasOnline == true,
+                          portalOnlineDisponivel == false )
+then
+    modify( $d ) {
+        setMeioReembolso( MeioReembolso.MEIO_ORIGINAL ),
+        aplicar( "CH-004", Modulo.ONLINE, Elegibilidade.PERMITIR,
+                 "Portal de devoluções online indisponível: a devolução às cegas permitida é processada no meio de "
+                 + "pagamento original, em vez do cartão de oferta." )
+    }
+end

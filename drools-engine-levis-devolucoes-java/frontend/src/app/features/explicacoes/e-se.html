@@ -1,0 +1,94 @@
+<div class="formulario-grelha">
+  <label>
+    <span i18n="@@eSe.campo">Dado a alterar</span>
+    <select [ngModel]="escolhido()" (ngModelChange)="escolhido.set($event); texto.set('')" data-teste="e-se-campo">
+      <option value="" i18n="@@campo.escolher">— escolher —</option>
+      @for (c of campos(); track c.caminho) {
+        <option [value]="c.caminho">{{ c.rotulo }}</option>
+      }
+    </select>
+  </label>
+  @if (campoEscolhido(); as c) {
+    <label>
+      <span i18n="@@eSe.novoValor">Novo valor</span>
+      @if (opcoes().length) {
+        <select [ngModel]="texto()" (ngModelChange)="texto.set($event)" data-teste="e-se-valor">
+          <option value="" i18n="@@campo.naoIndicado">Não indicado</option>
+          @for (o of opcoes(); track o[0]) {
+            <option [value]="o[0]">{{ o[1] }}</option>
+          }
+        </select>
+      } @else {
+        <input
+          [type]="c.campo.tipo === 'data' ? 'date' : c.campo.tipo === 'inteiro' || c.campo.tipo === 'decimal' ? 'number' : 'text'"
+          [ngModel]="texto()"
+          (ngModelChange)="texto.set($event)"
+          data-teste="e-se-valor"
+        />
+      }
+    </label>
+    <div class="acoes">
+      <button type="button" class="secundario" (click)="acrescentar()" data-teste="e-se-acrescentar" i18n="@@eSe.acrescentar">
+        Acrescentar alteração
+      </button>
+    </div>
+  }
+</div>
+
+@if (alteracoes().length) {
+  <ul class="alteracoes">
+    @for (a of alteracoes(); track a.caminho) {
+      <li>
+        {{ a.rotulo }} → <strong>{{ a.texto || '—' }}</strong>
+        <button type="button" class="ligacao perigo" (click)="retirar(a.caminho)" i18n="@@grupo.remover">Remover</button>
+      </li>
+    }
+  </ul>
+  <button type="button" class="primario" [disabled]="aCarregar()" (click)="simular()" data-teste="e-se-simular" i18n="@@eSe.simular">
+    Simular
+  </button>
+}
+
+@if (erro(); as e) {
+  <p class="erro" role="alert">{{ e.titulo }}{{ e.detalhe ? ': ' + e.detalhe : '' }}</p>
+}
+@if (resposta(); as r) {
+  <div class="explicacao e-se" data-teste="e-se-resposta">
+    <p>{{ r.resumo }}</p>
+    @if (r.diferencas?.length) {
+      <table class="tabela">
+        <thead>
+          <tr>
+            <th i18n="@@eSe.onde">Onde</th>
+            <th i18n="@@eSe.conclusao">Conclusão</th>
+            <th i18n="@@eSe.antes">Antes</th>
+            <th i18n="@@eSe.depois">Depois</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (d of r.diferencas; track $index) {
+            <tr>
+              <td>{{ d.alvo }}</td>
+              <td>{{ d.campo }}</td>
+              <td>{{ d.original ?? '—' }}</td>
+              <td>
+                <strong>{{ d.simulado ?? '—' }}</strong>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+    @if (r.regrasNovas?.length) {
+      <p><span i18n="@@eSe.regrasNovas">Passariam a disparar:</span> {{ r.regrasNovas!.join(', ') }}</p>
+    }
+    @if (r.regrasRemovidas?.length) {
+      <p><span i18n="@@eSe.regrasRemovidas">Deixariam de disparar:</span> {{ r.regrasRemovidas!.join(', ') }}</p>
+    }
+    @if (r.decisaoSimulada; as s) {
+      <p>
+        <span i18n="@@eSe.elegibilidade">Elegibilidade simulada:</span>&ngsp;<span [class]="'etiqueta ' + (s.elegibilidade ?? '').toLowerCase()" data-teste="e-se-elegibilidade">{{ elegibilidade(s.elegibilidade) }}</span>
+      </p>
+    }
+  </div>
+}

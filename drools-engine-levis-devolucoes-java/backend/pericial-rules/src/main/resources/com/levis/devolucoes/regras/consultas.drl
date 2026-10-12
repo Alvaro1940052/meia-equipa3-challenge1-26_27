@@ -1,0 +1,14 @@
+package com.levis.devolucoes.regras;
+
+// Consultas usadas para ler o resultado da sessão (motor e explicações).
+
+import com.levis.devolucoes.model.decisao.Decisao;
+import com.levis.devolucoes.model.decisao.DecisaoArtigo;
+
+query "decisaoDoPedido"( String idPedido )
+    $decisao : Decisao( pedidoId == idPedido )
+end
+
+query "decisoesDosArtigos"( String idPedido )
+    $decisaoArtigo : DecisaoArtigo( pedidoId == idPedido )
+end

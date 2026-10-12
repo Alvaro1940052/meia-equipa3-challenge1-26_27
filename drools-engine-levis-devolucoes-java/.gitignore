@@ -1,0 +1,34 @@
+# Maven
+target/
+.flattened-pom.xml
+
+# IDE
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+.classpath
+.project
+.settings/
+.factorypath
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/test-results/
+frontend/playwright-report/
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Segredos
+.env
+*.local.yml
+
+# Claude Code (instruções e definições locais do assistente; não fazem parte do projeto)
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+.mcp.json

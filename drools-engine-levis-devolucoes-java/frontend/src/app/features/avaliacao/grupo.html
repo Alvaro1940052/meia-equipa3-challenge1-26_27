@@ -1,0 +1,51 @@
+@if (visivel()) {
+  <fieldset class="cartao grupo" [attr.data-grupo]="grupo().id">
+    <legend>{{ grupo().titulo }}</legend>
+    <div class="porques">
+      @for (codigo of grupo().dados; track codigo) {
+        <button
+          type="button"
+          class="ligacao"
+          (click)="store.explicarPorque(codigo)"
+          [attr.data-teste]="'porque-' + codigo"
+          i18n-title="@@grupo.porque.titulo"
+          title="Porque é que o sistema pergunta isto?"
+        >
+          <span i18n="@@grupo.porque">Porquê?</span> {{ codigo }}
+        </button>
+      }
+    </div>
+    @for (codigo of grupo().dados; track codigo) {
+      @if (store.porques()[codigo]; as estado) {
+        <lv-porque [codigo]="codigo" [estado]="estado" (fechar)="store.fecharPorque(codigo)" />
+      }
+    }
+
+    @if (grupo().repeticao; as repeticao) {
+      @for (i of itens(); track i) {
+        <div class="item" [attr.data-item]="repeticao.caminho + '[' + i + ']'">
+          <div class="item-cabecalho">
+            <strong>{{ repeticao.rotuloItem }} {{ i + 1 }}</strong>
+            @if (podeRemover()) {
+              <button type="button" class="ligacao perigo" (click)="store.remover(grupo(), i)" i18n="@@grupo.remover">Remover</button>
+            }
+          </div>
+          <div class="campos">
+            @for (campo of grupo().campos; track campo.caminho) {
+              <lv-campo [grupo]="grupo()" [campo]="campo" [indice]="i" />
+            }
+          </div>
+        </div>
+      }
+      <button type="button" class="secundario" (click)="store.adicionar(grupo())" [attr.data-adicionar]="repeticao.caminho">
+        + {{ repeticao.adicionar }}
+      </button>
+    } @else {
+      <div class="campos">
+        @for (campo of grupo().campos; track campo.caminho) {
+          <lv-campo [grupo]="grupo()" [campo]="campo" />
+        }
+      </div>
+    }
+  </fieldset>
+}

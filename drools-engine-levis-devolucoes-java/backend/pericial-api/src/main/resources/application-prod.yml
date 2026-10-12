@@ -1,0 +1,27 @@
+# Produção: todos os segredos e endereços vêm do ambiente.
+spring:
+  datasource:
+    url: ${PERICIAL_DB_URL}
+    username: ${PERICIAL_DB_UTILIZADOR}
+    password: ${PERICIAL_DB_PALAVRA_PASSE}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # O token tem de trazer as claims funcao, name, aprovado_dm e id_credencial_pos (ADR 0008)
+          issuer-uri: ${PERICIAL_OIDC_ISSUER}
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+logging:
+  structured:
+    format:
+      console: ecs
+
+pericial:
+  seguranca:
+    origens-cors: ${PERICIAL_CORS_ORIGENS}

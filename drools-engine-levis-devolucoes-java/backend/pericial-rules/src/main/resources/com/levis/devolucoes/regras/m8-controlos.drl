@@ -1,0 +1,178 @@
+package com.levis.devolucoes.regras;
+
+// M8 — Controlos e documentação (docs/02, etapa 8; docs/03, módulo 9).
+// Aplicam-se a uma transação que vai ser feita: não recusada e com tipo de transação definido.
+// Ordem: CT-001, CT-002, CT-004, CT-005, CT-006, EX-007 e, por fim, CT-007 (retenção).
+
+import com.levis.devolucoes.model.decisao.Decisao;
+import com.levis.devolucoes.model.enums.Elegibilidade;
+import com.levis.devolucoes.model.enums.Funcao;
+import com.levis.devolucoes.model.enums.Modulo;
+import com.levis.devolucoes.model.enums.NivelAprovacao;
+import com.levis.devolucoes.model.enums.TipoComprovativo;
+import com.levis.devolucoes.model.enums.TipoTransacao;
+import com.levis.devolucoes.model.enums.TipoVerificacao;
+import com.levis.devolucoes.model.pedido.PedidoDevolucao;
+
+rule "CT-001 Devolução verificada processada por pessoal autorizado"
+    @id("CT-001")
+    @modulo("M8")
+    @descricao("A Gestão da Loja, o Key Holder, ou um Lead Cashier ou Elevated Stylist aprovado pelo District Manager processam a transação com as suas próprias credenciais de POS.")
+    @condicoes("transacaoAProcessar,devolucaoVerificada,colaboradorAutorizado")
+    @conclusoes("")
+    agenda-group "M8"
+    salience 100
+when
+    $d : Decisao( terminal == false, elegibilidade != null, elegibilidade != Elegibilidade.RECUSAR,
+                  tipoTransacao != null, tipoTransacao != TipoTransacao.NENHUMA,
+                  tipoVerificacao == TipoVerificacao.VERIFICADA, disparou( "CT-001" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, colaborador != null, colaborador.autorizado == true )
+then
+    modify( $d ) {
+        registar( "CT-001", Modulo.M8,
+                  "Devolução verificada: processada por " + $p.getColaborador().getFuncao() + " autorizado, com a sua "
+                  + "própria credencial de POS." )
+    }
+end
+
+rule "CT-002 Devolução às cegas por Lead Cashier ou Elevated Stylist"
+    @id("CT-002")
+    @modulo("M8")
+    @descricao("A devolução às cegas processada por um Lead Cashier ou Elevated Stylist aprovado exige a aprovação do XStore Manager.")
+    @condicoes("transacaoAProcessar,devolucaoAsCegas,processadorLeadCashierOuElevatedStylist")
+    @conclusoes("OUT-005=XSTORE_MANAGER")
+    agenda-group "M8"
+    salience 100
+when
+    $d : Decisao( terminal == false, elegibilidade != null, elegibilidade != Elegibilidade.RECUSAR,
+                  tipoTransacao != null, tipoTransacao != TipoTransacao.NENHUMA,
+                  tipoVerificacao == TipoVerificacao.AS_CEGAS, disparou( "CT-002" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, colaborador != null,
+                          colaborador.funcao == Funcao.LEAD_CASHIER || colaborador.funcao == Funcao.ELEVATED_STYLIST )
+then
+    modify( $d ) {
+        setAprovacao( $d.getAprovacao() == NivelAprovacao.NENHUMA ? NivelAprovacao.XSTORE_MANAGER : $d.getAprovacao() ),
+        registar( "CT-002", Modulo.M8,
+                  "Devolução às cegas processada por " + $p.getColaborador().getFuncao()
+                  + ": obter a aprovação do XStore Manager." )
+    }
+end
+
+rule "CT-004 Atribuir a devolução ao Stylist da venda original"
+    @id("CT-004")
+    @modulo("M8")
+    @descricao("A devolução com recibo concluída é atribuída ao Stylist creditado com a venda original.")
+    @condicoes("transacaoAProcessar,devolucaoVerificada,stylistDaVendaConhecido")
+    @conclusoes("OUT-008")
+    agenda-group "M8"
+    salience 90
+when
+    $d : Decisao( terminal == false, elegibilidade != null, elegibilidade != Elegibilidade.RECUSAR,
+                  tipoTransacao != null, tipoTransacao != TipoTransacao.NENHUMA,
+                  tipoVerificacao == TipoVerificacao.VERIFICADA, disparou( "CT-004" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, compraOriginal != null, compraOriginal.idStylistVenda != null )
+then
+    modify( $d ) {
+        getDocumentacao().setIdStylistAtribuido( $p.getCompraOriginal().getIdStylistVenda() ),
+        registar( "CT-004", Modulo.M8,
+                  "Atribuir a devolução ao Stylist da venda original (" + $p.getCompraOriginal().getIdStylistVenda() + ")." )
+    }
+end
+
+rule "CT-005 Assinaturas do recibo de devolução"
+    @id("CT-005")
+    @modulo("M8")
+    @descricao("Obter a assinatura do cliente ou escrever \"Recusado\"; a assinatura do processador; e a da testemunha ou \"SSC\" em cobertura de loja única.")
+    @condicoes("transacaoAProcessar")
+    @conclusoes("OUT-008")
+    agenda-group "M8"
+    salience 80
+when
+    $d : Decisao( terminal == false, elegibilidade != null, elegibilidade != Elegibilidade.RECUSAR,
+                  tipoTransacao != null, tipoTransacao != TipoTransacao.NENHUMA, disparou( "CT-005" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId )
+then
+    boolean ssc = $p.getLoja() != null && $p.getLoja().isCoberturaLojaUnica();
+    String processador = $p.getColaborador() == null ? "processador" : $p.getColaborador().getId();
+    modify( $d ) {
+        getDocumentacao().setAssinaturaCliente( "Assinatura do cliente ou \"Recusado\"" ),
+        getDocumentacao().setAssinaturaProcessador( "Assinatura de " + processador ),
+        getDocumentacao().setAssinaturaTestemunha( ssc ? "SSC" : "Assinatura da testemunha" ),
+        registar( "CT-005", Modulo.M8,
+                  "Recibo de devolução: assinatura do cliente (ou \"Recusado\"), do processador e "
+                  + ( ssc ? "\"SSC\" (cobertura de loja única)." : "de uma testemunha." ) )
+    }
+end
+
+rule "CT-006 Recibo original entregue"
+    @id("CT-006")
+    @modulo("M8")
+    @descricao("Agrafar o recibo original ao exemplar da loja; se o cliente o mantiver ou se incluir outros artigos, anotar esse facto no exemplar da loja.")
+    @condicoes("assinaturasObtidas,reciboOriginalImpresso")
+    @conclusoes("OUT-008")
+    agenda-group "M8"
+    salience 70
+when
+    $d : Decisao( terminal == false, disparou( "CT-005" ) == true, disparou( "CT-006" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, comprovativo != null, comprovativo.reciboOriginal == true,
+                          comprovativo.tipo == TipoComprovativo.RECIBO_IMPRESSO )
+then
+    boolean mantem = $p.getComprovativo().isClienteMantemRecibo();
+    boolean outros = $p.getComprovativo().isIncluiOutrosArtigos();
+    String nota = mantem ? "O cliente manteve o recibo original."
+                : ( outros ? "O recibo original inclui outros artigos." : null );
+    modify( $d ) {
+        getDocumentacao().setReciboAgrafado( !mantem ),
+        getDocumentacao().setNotaRecibo( nota ),
+        registar( "CT-006", Modulo.M8,
+                  ( mantem ? "O cliente mantém o recibo original: anotar no exemplar da loja."
+                           : "Agrafar o recibo original ao exemplar da loja." )
+                  + ( !mantem && outros ? " O recibo inclui outros artigos: anotar no exemplar da loja." : "" ) )
+    }
+end
+
+rule "EX-007 Documentar a exceção aprovada"
+    @id("EX-007")
+    @modulo("M8")
+    @descricao("Documentar o motivo, o aprovador, o valor, o resultado, a preocupação do cliente e o destino do produto na cópia da loja ou no registo aprovado.")
+    @condicoes("excecaoAprovada,excecaoNaoRecusada")
+    @conclusoes("OUT-008")
+    agenda-group "M8"
+    salience 60
+when
+    $d : Decisao( terminal == false, excecaoRecusada == false, disparou( "EX-007" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, pedidoExcecao != null, pedidoExcecao.aprovada == true )
+then
+    String aprovador = $p.getPedidoExcecao().getAprovador() == null ? "(por indicar)"
+                       : $p.getPedidoExcecao().getAprovador().getNome() + " (" + $p.getPedidoExcecao().getAprovador().getFuncao() + ")";
+    String registo = "Motivo: " + $p.getPedidoExcecao().getMotivo()
+                     + "; aprovador: " + aprovador
+                     + "; valor: " + ( $d.getValorDevolucao() == null ? "(por determinar)" : $d.getValorDevolucao().toPlainString() )
+                     + "; resultado: " + $d.getTipoTransacao()
+                     + "; preocupação do cliente: " + $p.getPedidoExcecao().getPreocupacaoCliente()
+                     + "; destino do produto: ver o resultado por artigo (M9).";
+    modify( $d ) {
+        getDocumentacao().setRegistoExcecao( registo ),
+        registar( "EX-007", Modulo.M8, "Exceção aprovada documentada. " + registo )
+    }
+end
+
+rule "CT-007 Retenção dos suportes durante 90 dias"
+    @id("CT-007")
+    @modulo("M8")
+    @descricao("Conservar o exemplar da loja e as assinaturas nos ficheiros de retenção de suportes durante 90 dias; arquivar as cópias das devoluções online com os suportes diários.")
+    @condicoes("assinaturasObtidas")
+    @conclusoes("OUT-008")
+    agenda-group "M8"
+    salience 50
+when
+    $d : Decisao( terminal == false, disparou( "CT-005" ) == true, disparou( "CT-007" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, dataPedido != null )
+then
+    modify( $d ) {
+        getDocumentacao().setRetencaoAte( $p.getDataPedido().plusDays( 90 ) ),
+        registar( "CT-007", Modulo.M8,
+                  "Conservar o exemplar da loja e as assinaturas até " + $p.getDataPedido().plusDays( 90 ) + " (90 dias)"
+                  + ( $p.isCompraOnline() ? "; arquivar a cópia da devolução online com os suportes diários." : "." ) )
+    }
+end

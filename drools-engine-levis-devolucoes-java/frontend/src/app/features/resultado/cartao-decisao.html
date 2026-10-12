@@ -1,0 +1,152 @@
+@let d = decisao();
+<article class="cartao decisao" [class]="'cartao decisao ' + classe()" data-teste="cartao-decisao">
+  <header class="decisao-cabecalho">
+    <div>
+      <span class="nota">OUT-001 · <ng-container i18n="@@saida.OUT-001">Elegibilidade</ng-container></span>
+      <p class="resultado" data-saida="elegibilidade" [attr.data-valor]="d.elegibilidade">
+        {{ r.elegibilidade(d.elegibilidade) }}
+      </p>
+      <p class="nota">
+        <span i18n="@@decisao.verificacao">Verificação:</span>&ngsp;<span data-saida="tipoVerificacao" [attr.data-valor]="d.tipoVerificacao">{{ r.verificacao(d.tipoVerificacao) }}</span>
+        @if (d.terminal) {
+          · <strong data-saida="terminal" data-valor="true" i18n="@@decisao.terminal">Paragem obrigatória</strong>
+        }
+        @if (d.excecaoRecusada) {
+          · <strong data-saida="excecaoRecusada" data-valor="true" i18n="@@decisao.excecaoRecusada">Exceção recusada</strong>
+        }
+      </p>
+    </div>
+    <button type="button" class="ligacao" (click)="alternarComo('OUT-001')" data-como="OUT-001" i18n="@@como.titulo">Como?</button>
+  </header>
+  @if (aberto('OUT-001')) {
+    <lv-como-conclusao [avaliacaoId]="d.avaliacaoId!" conclusao="OUT-001" (fechar)="comoAberto.set(null)" />
+  }
+
+  <dl class="saidas">
+    <div>
+      <dt>OUT-002 · <ng-container i18n="@@saida.OUT-002">Tipo de transação</ng-container></dt>
+      <dd data-saida="tipoTransacao" [attr.data-valor]="d.tipoTransacao">{{ r.transacao(d.tipoTransacao) }}</dd>
+      <button type="button" class="ligacao" (click)="alternarComo('OUT-002')" i18n="@@como.titulo">Como?</button>
+    </div>
+    <div>
+      <dt>OUT-003 · <ng-container i18n="@@saida.OUT-003">Valor da devolução</ng-container></dt>
+      <dd data-saida="valorDevolucao" [attr.data-valor]="d.valorDevolucao">
+        {{ d.valorDevolucao === undefined || d.valorDevolucao === null ? '—' : (d.valorDevolucao | number: '1.2-2') }}
+        @if (d.baseValor) {
+          <span class="nota">({{ r.base(d.baseValor) }})</span>
+        }
+      </dd>
+      <button type="button" class="ligacao" (click)="alternarComo('OUT-003')" i18n="@@como.titulo">Como?</button>
+    </div>
+    <div>
+      <dt>OUT-004 · <ng-container i18n="@@saida.OUT-004">Meio de reembolso</ng-container></dt>
+      <dd data-saida="meioReembolso" [attr.data-valor]="d.meioReembolso">{{ r.meio(d.meioReembolso) }}</dd>
+      <button type="button" class="ligacao" (click)="alternarComo('OUT-004')" i18n="@@como.titulo">Como?</button>
+    </div>
+    <div>
+      <dt>OUT-005 · <ng-container i18n="@@saida.OUT-005">Aprovação</ng-container></dt>
+      <dd data-saida="aprovacao" [attr.data-valor]="d.aprovacao">{{ r.aprovacao(d.aprovacao) }}</dd>
+      <button type="button" class="ligacao" (click)="alternarComo('OUT-005')" i18n="@@como.titulo">Como?</button>
+    </div>
+    <div>
+      <dt>OUT-006 · <ng-container i18n="@@saida.OUT-006">Processo obrigatório</ng-container></dt>
+      <dd data-saida="processo" [attr.data-valor]="d.processo">{{ r.processo(d.processo) }}</dd>
+      <button type="button" class="ligacao" (click)="alternarComo('OUT-006')" i18n="@@como.titulo">Como?</button>
+    </div>
+  </dl>
+  @for (c of ['OUT-002', 'OUT-003', 'OUT-004', 'OUT-005', 'OUT-006']; track c) {
+    @if (aberto(c)) {
+      <lv-como-conclusao [avaliacaoId]="d.avaliacaoId!" [conclusao]="c" (fechar)="comoAberto.set(null)" />
+    }
+  }
+
+  @if (d.artigos?.length) {
+    <h3>OUT-007 · <ng-container i18n="@@decisao.porArtigo">Resultado por artigo</ng-container></h3>
+    <div class="tabela-rolavel">
+      <table class="tabela">
+        <thead>
+          <tr>
+            <th i18n="@@decisao.artigo">Artigo</th>
+            <th i18n="@@saida.OUT-001">Elegibilidade</th>
+            <th i18n="@@saida.OUT-002">Tipo de transação</th>
+            <th i18n="@@saida.OUT-003">Valor da devolução</th>
+            <th i18n="@@saida.OUT-007">Destino do produto</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (a of d.artigos; track a.artigoId) {
+            <tr [attr.data-artigo]="a.artigoId">
+              <td>{{ a.artigoId }}</td>
+              <td data-saida="elegibilidade" [attr.data-valor]="a.elegibilidade">
+                <span class="etiqueta" [class]="'etiqueta ' + (a.elegibilidade ?? '').toLowerCase()">{{ r.elegibilidade(a.elegibilidade) }}</span>
+              </td>
+              <td>{{ r.transacao(a.tipoTransacao) }}</td>
+              <td>{{ a.valorDevolucao === undefined || a.valorDevolucao === null ? '—' : (a.valorDevolucao | number: '1.2-2') }}</td>
+              <td data-saida="destino" [attr.data-valor]="a.destino">
+                {{ r.destino(a.destino) }}
+                @if (a.descontoSaldo) {
+                  <span class="nota">(−{{ a.descontoSaldo }}%)</span>
+                }
+              </td>
+              <td>
+                <button type="button" class="ligacao" (click)="alternarComo('OUT-007', a.artigoId)" i18n="@@como.titulo">Como?</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @for (a of d.artigos; track a.artigoId) {
+      @if (aberto('OUT-007', a.artigoId)) {
+        <lv-como-conclusao [avaliacaoId]="d.avaliacaoId!" conclusao="OUT-007" [artigo]="a.artigoId" (fechar)="comoAberto.set(null)" />
+      }
+    }
+  }
+
+  @if (temDocumentacao()) {
+    @let doc = d.documentacao!;
+    <h3>OUT-008 · <ng-container i18n="@@saida.OUT-008">Documentação</ng-container></h3>
+    <ul class="documentacao">
+      @if (doc.assinaturaCliente) {
+        <li>{{ doc.assinaturaCliente }}</li>
+      }
+      @if (doc.assinaturaProcessador) {
+        <li>{{ doc.assinaturaProcessador }}</li>
+      }
+      @if (doc.assinaturaTestemunha) {
+        <li>{{ doc.assinaturaTestemunha }}</li>
+      }
+      @if (doc.idStylistAtribuido) {
+        <li><span i18n="@@decisao.stylist">Stylist atribuído:</span> {{ doc.idStylistAtribuido }}</li>
+      }
+      @if (doc.reciboAgrafado) {
+        <li i18n="@@decisao.reciboAgrafado">Agrafar o recibo</li>
+      }
+      @if (doc.notaRecibo) {
+        <li>{{ doc.notaRecibo }}</li>
+      }
+      @if (doc.retencaoAte) {
+        <li><span i18n="@@decisao.retencao">Guardar os suportes até</span> {{ doc.retencaoAte | date: 'mediumDate' }}</li>
+      }
+      @if (doc.registoExcecao) {
+        <li>{{ doc.registoExcecao }}</li>
+      }
+    </ul>
+    <button type="button" class="ligacao" (click)="alternarComo('OUT-008')" i18n="@@como.titulo">Como?</button>
+    @if (aberto('OUT-008')) {
+      <lv-como-conclusao [avaliacaoId]="d.avaliacaoId!" conclusao="OUT-008" (fechar)="comoAberto.set(null)" />
+    }
+  }
+
+  @if (d.regrasAValidar?.length) {
+    <p class="alerta aviso" data-teste="regras-a-validar">
+      <strong i18n="@@decisao.aValidar">Comportamento provisório, a validar pela operação:</strong>
+      {{ d.regrasAValidar!.join(', ') }}
+    </p>
+  }
+  <p class="nota">
+    <span i18n="@@decisao.versao">Base de conhecimento</span> {{ d.versaoBaseConhecimento }} ·
+    {{ d.avaliadaEm | date: 'medium' }}
+  </p>
+</article>

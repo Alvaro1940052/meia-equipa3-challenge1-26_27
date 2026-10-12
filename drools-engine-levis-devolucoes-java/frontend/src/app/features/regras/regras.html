@@ -1,0 +1,46 @@
+<section class="pagina">
+  <h1 i18n="@@regras.titulo">Base de conhecimento</h1>
+  <div class="filtro">
+    <label>
+      <span i18n="@@regras.procurar">Procurar (ID, texto ou módulo)</span>
+      <input type="search" [ngModel]="filtro()" (ngModelChange)="filtro.set($event)" />
+    </label>
+    <label class="caixa">
+      <input type="checkbox" [ngModel]="soAValidar()" (ngModelChange)="soAValidar.set($event)" />
+      <span i18n="@@regras.soAValidar">Só as que estão a validar</span>
+    </label>
+  </div>
+
+  @if (erro(); as e) {
+    <div class="alerta erro" role="alert"><strong>{{ e.titulo }}</strong></div>
+  } @else if (regras()) {
+    <p class="nota">{{ visiveis().length }} / {{ regras()!.length }}</p>
+    <div class="tabela-rolavel">
+      <table class="tabela">
+        <thead>
+          <tr>
+            <th i18n="@@rasto.regra">Regra</th>
+            <th i18n="@@rasto.modulo">Módulo</th>
+            <th i18n="@@regras.descricao">Descrição</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of visiveis(); track r.id) {
+            <tr>
+              <td>
+                <a [routerLink]="['/regras', r.id]"><strong>{{ r.id }}</strong></a>
+                @if (r.aValidar) {
+                  <span class="etiqueta a-validar" i18n="@@comum.aValidar">a validar</span>
+                }
+              </td>
+              <td>{{ r.modulos?.join(', ') }}</td>
+              <td>{{ r.descricao }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else {
+    <p i18n="@@comum.aCarregar">A carregar…</p>
+  }
+</section>

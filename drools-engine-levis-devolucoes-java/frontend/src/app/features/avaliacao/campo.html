@@ -1,0 +1,51 @@
+@switch (campo().tipo) {
+  @case ('booleano') {
+    <label class="caixa" [for]="id()">
+      <input
+        type="checkbox"
+        [id]="id()"
+        [checked]="valor() === true"
+        (change)="alterarCaixa($event)"
+        [attr.data-caminho]="caminho()"
+      />
+      <span>{{ campo().rotulo }}</span>
+    </label>
+  }
+  @case ('booleano-opcional') {
+    <label [for]="id()">{{ campo().rotulo }}</label>
+    <select [id]="id()" [value]="texto()" (change)="alterarTexto($event)" [attr.data-caminho]="caminho()">
+      <option value="" i18n="@@campo.naoIndicado">Não indicado</option>
+      <option value="true" i18n="@@campo.sim">Sim</option>
+      <option value="false" i18n="@@campo.nao">Não</option>
+    </select>
+  }
+  @case ('opcoes') {
+    <label [for]="id()">{{ campo().rotulo }}</label>
+    <select [id]="id()" [value]="texto()" (change)="alterarTexto($event)" [attr.data-caminho]="caminho()">
+      <option value="" i18n="@@campo.escolher">— escolher —</option>
+      @for (opcao of opcoes(); track opcao[0]) {
+        <option [value]="opcao[0]" [selected]="opcao[0] === texto()">{{ opcao[1] }}</option>
+      }
+    </select>
+  }
+  @case ('texto-longo') {
+    <label [for]="id()">{{ campo().rotulo }}</label>
+    <textarea [id]="id()" rows="2" [value]="texto()" (change)="alterarTexto($event)" [attr.data-caminho]="caminho()"></textarea>
+  }
+  @default {
+    <label [for]="id()">{{ campo().rotulo }}@if (campo().obrigatorio) {<span class="obrigatorio" aria-hidden="true"> *</span>}</label>
+    <input
+      [id]="id()"
+      [type]="campo().tipo === 'data' ? 'date' : campo().tipo === 'inteiro' || campo().tipo === 'decimal' ? 'number' : 'text'"
+      [attr.step]="campo().tipo === 'decimal' ? '0.01' : campo().tipo === 'inteiro' ? '1' : null"
+      [attr.min]="campo().tipo === 'decimal' || campo().tipo === 'inteiro' ? '0' : null"
+      [value]="texto()"
+      [required]="campo().obrigatorio === true"
+      (change)="alterarTexto($event)"
+      [attr.data-caminho]="caminho()"
+    />
+  }
+}
+@if (emFalta(); as dado) {
+  <small class="aviso-falta">{{ dado.codigo }} · @if (dado.obrigatorio) {<ng-container i18n="@@campo.emFalta">necessário para decidir</ng-container>} @else {<ng-container i18n="@@campo.util">útil para completar a decisão</ng-container>}</small>
+}

@@ -1,0 +1,197 @@
+package com.levis.devolucoes.regras;
+
+// M7 — Valor da devolução (docs/02, etapa 7; docs/03, módulo 7).
+// O valor é calculado por artigo elegível, a partir da base definida em M5 ou no caminho online
+// (Decisao.baseValor). Ordem: CH-009/CH-010 (110) > EP-003/EP-004 (100, sobrepõem o valor) >
+// valor genérico OUT-003 (90, só sem base própria) > total OUT-003 (10).
+
+import com.levis.devolucoes.model.decisao.Decisao;
+import com.levis.devolucoes.model.decisao.DecisaoArtigo;
+import com.levis.devolucoes.model.enums.BaseValor;
+import com.levis.devolucoes.model.enums.CanalCompra;
+import com.levis.devolucoes.model.enums.Elegibilidade;
+import com.levis.devolucoes.model.enums.Modulo;
+import com.levis.devolucoes.model.enums.TipoLoja;
+import com.levis.devolucoes.model.enums.TipoVerificacao;
+import com.levis.devolucoes.model.pedido.PedidoDevolucao;
+import com.levis.devolucoes.model.produto.ArtigoDevolvido;
+import java.math.BigDecimal;
+import java.util.List;
+
+function BigDecimal valorDaBase( BaseValor base, ArtigoDevolvido artigo ) {
+    if ( base == BaseValor.VALOR_PAGO ) {
+        return artigo.getPrecoPago();
+    }
+    if ( base == BaseValor.PRECO_ATUAL ) {
+        return artigo.getProduto() == null ? null : artigo.getProduto().getPrecoAtual();
+    }
+    if ( base == BaseValor.VALOR_POS ) {
+        return artigo.getValorCalculadoPos();
+    }
+    return null;
+}
+
+rule "CH-009 Devolução às cegas na Outlet: preço atual após promoções"
+    @id("CH-009")
+    @modulo("M7")
+    @descricao("Na devolução ou troca às cegas na Outlet, usar o preço de venda atual após as promoções ativas da Outlet, não o PVP.")
+    @condicoes("devolucaoAsCegas,lojaOutlet,artigoElegivel")
+    @conclusoes("OUT-003")
+    agenda-group "M7"
+    salience 110
+when
+    $d  : Decisao( terminal == false, baseValor != null, tipoVerificacao == TipoVerificacao.AS_CEGAS )
+    $p  : PedidoDevolucao( id == $d.pedidoId, loja != null, loja.tipoLoja == TipoLoja.OUTLET )
+    $a  : ArtigoDevolvido( produto != null )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false, disparou( "CH-009" ) == false,
+                         elegibilidade == Elegibilidade.PERMITIR || elegibilidade == Elegibilidade.REVER )
+then
+    modify( $da ) {
+        setValorDevolucao( $a.getProduto().getPrecoAtual() ),
+        setBaseValor( BaseValor.VALOR_PROMOCIONAL ),
+        registar( "CH-009", Modulo.M7,
+                  "Devolução às cegas na Outlet: valor ao preço atual após as promoções ativas ("
+                  + $a.getProduto().getPrecoAtual() + "), não ao PVP (" + $a.getProduto().getPvpOriginal() + ")." )
+    }
+end
+
+rule "CH-010 Compra Mainline ou online com recibo devolvida na Outlet: PVP original"
+    @id("CH-010")
+    @modulo("M7")
+    @descricao("A devolução entre canais com recibo, da Mainline ou Online para a Outlet, pode ser processada ao PVP original quando permitido pelo POS e pela política [a validar: A-21].")
+    @condicoes("devolucaoVerificada,lojaOutlet,origemMainlineOuOnline,artigoElegivel")
+    @conclusoes("OUT-003")
+    agenda-group "M7"
+    salience 110
+when
+    $d  : Decisao( terminal == false, baseValor != null, tipoVerificacao == TipoVerificacao.VERIFICADA )
+    $p  : PedidoDevolucao( id == $d.pedidoId, loja != null, loja.tipoLoja == TipoLoja.OUTLET, compraOriginal != null,
+                           compraOriginal.canal == CanalCompra.MAINLINE || compraOriginal.canal == CanalCompra.LEVI_COM
+                           || compraOriginal.canal == CanalCompra.LEVI_CA )
+    $a  : ArtigoDevolvido( produto != null )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false, disparou( "CH-010" ) == false,
+                         elegibilidade == Elegibilidade.PERMITIR || elegibilidade == Elegibilidade.REVER )
+then
+    modify( $da ) {
+        setValorDevolucao( $a.getProduto().getPvpOriginal() ),
+        setBaseValor( BaseValor.PVP_ORIGINAL ),
+        registar( "CH-010", Modulo.M7,
+                  "Compra " + $p.getCompraOriginal().getCanal() + " com recibo devolvida na Outlet: valor ao PVP original ("
+                  + $a.getProduto().getPvpOriginal() + "), se o POS e a política o permitirem." )
+    }
+end
+
+rule "EP-003 Devolução às cegas numa promoção por escalões"
+    @id("EP-003")
+    @modulo("M7")
+    @descricao("Usar o número de artigos devolvidos na transação atual para determinar o valor do escalão aplicável; o valor vem do POS [a validar: A-21, A-30].")
+    @condicoes("devolucaoAsCegas,promocaoEscaloes,artigoElegivel")
+    @conclusoes("OUT-003")
+    agenda-group "M7"
+    salience 100
+when
+    $d  : Decisao( terminal == false, baseValor != null, tipoVerificacao == TipoVerificacao.AS_CEGAS )
+    $p  : PedidoDevolucao( id == $d.pedidoId, compraOriginal != null, compraOriginal.promocaoEscaloes == true )
+    $a  : ArtigoDevolvido( )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false, disparou( "EP-003" ) == false,
+                         elegibilidade == Elegibilidade.PERMITIR || elegibilidade == Elegibilidade.REVER )
+then
+    int devolvidos = 0;
+    for ( ArtigoDevolvido artigo : $p.getArtigos() ) {
+        devolvidos += artigo.getQuantidade();
+    }
+    modify( $da ) {
+        setValorDevolucao( $a.getValorCalculadoPos() ),
+        setBaseValor( BaseValor.VALOR_ESCALAO ),
+        registar( "EP-003", Modulo.M7,
+                  "Devolução às cegas numa promoção por escalões: o escalão é determinado pelos " + devolvidos
+                  + " artigos devolvidos nesta transação"
+                  + ( $a.getValorCalculadoPos() == null ? "; falta o valor do escalão calculado pelo POS." : "." ) )
+    }
+end
+
+rule "EP-004 Devolução com recibo numa promoção por escalões"
+    @id("EP-004")
+    @modulo("M7")
+    @descricao("Utilizar o reembolso calculado pelo POS com base na quantidade original comprada.")
+    @condicoes("devolucaoVerificada,promocaoEscaloes,artigoElegivel")
+    @conclusoes("OUT-003")
+    agenda-group "M7"
+    salience 100
+when
+    $d  : Decisao( terminal == false, baseValor != null, tipoVerificacao == TipoVerificacao.VERIFICADA )
+    $p  : PedidoDevolucao( id == $d.pedidoId, compraOriginal != null, compraOriginal.promocaoEscaloes == true )
+    $a  : ArtigoDevolvido( )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false, disparou( "EP-004" ) == false,
+                         elegibilidade == Elegibilidade.PERMITIR || elegibilidade == Elegibilidade.REVER )
+then
+    modify( $da ) {
+        setValorDevolucao( $a.getValorCalculadoPos() ),
+        setBaseValor( BaseValor.VALOR_POS ),
+        registar( "EP-004", Modulo.M7,
+                  "Devolução com recibo numa promoção por escalões: reembolso calculado pelo POS com base na quantidade "
+                  + "original comprada (" + $p.getCompraOriginal().getQuantidadeComprada() + ")"
+                  + ( $a.getValorCalculadoPos() == null ? "; falta o valor calculado pelo POS." : "." ) )
+    }
+end
+
+rule "OUT-003 Valor do artigo segundo a base da decisão"
+    @id("OUT-003")
+    @modulo("M7")
+    @descricao("Valor da devolução do artigo pela base definida em M5 ou no caminho online: valor original pago, preço de venda atual ou valor calculado pelo POS.")
+    @condicoes("baseValorDefinida,artigoElegivel,semBaseEspecifica")
+    @conclusoes("OUT-003")
+    agenda-group "M7"
+    salience 90
+when
+    $d  : Decisao( terminal == false, baseValor != null )
+    $a  : ArtigoDevolvido( )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false, baseValor == null,
+                         disparou( "OUT-003" ) == false,
+                         elegibilidade == Elegibilidade.PERMITIR || elegibilidade == Elegibilidade.REVER )
+then
+    BigDecimal valor = valorDaBase( $d.getBaseValor(), $a );
+    modify( $da ) {
+        setValorDevolucao( valor ),
+        setBaseValor( $d.getBaseValor() ),
+        registar( "OUT-003", Modulo.M7,
+                  "Valor do artigo: " + ( valor == null ? "por determinar" : valor.toPlainString() )
+                  + " (" + $d.getBaseValor() + ")." )
+    }
+end
+
+rule "OUT-003 Valor total da devolução"
+    @id("OUT-003")
+    @modulo("M7")
+    @descricao("Soma dos valores dos artigos elegíveis; a base do pedido passa a ser a dos artigos quando é comum a todos.")
+    @condicoes("baseValorDefinida,valoresDosArtigos")
+    @conclusoes("OUT-003")
+    agenda-group "M7"
+    salience 10
+when
+    $d       : Decisao( terminal == false, baseValor != null, disparou( "OUT-003" ) == false )
+    $artigos : List( size > 0 ) from collect(
+                   DecisaoArtigo( pedidoId == $d.pedidoId, terminal == false, valorDevolucao != null,
+                                  elegibilidade == Elegibilidade.PERMITIR || elegibilidade == Elegibilidade.REVER ) )
+then
+    BigDecimal total = BigDecimal.ZERO;
+    BaseValor base = null;
+    boolean baseComum = true;
+    for ( Object elemento : $artigos ) {
+        DecisaoArtigo artigo = (DecisaoArtigo) elemento;
+        total = total.add( artigo.getValorDevolucao() );
+        if ( base == null ) {
+            base = artigo.getBaseValor();
+        } else if ( base != artigo.getBaseValor() ) {
+            baseComum = false;
+        }
+    }
+    BaseValor baseDoPedido = baseComum && base != null ? base : $d.getBaseValor();
+    modify( $d ) {
+        setValorDevolucao( total ),
+        setBaseValor( baseDoPedido ),
+        registar( "OUT-003", Modulo.M7,
+                  "Valor total da devolução: " + total.toPlainString() + " (" + $artigos.size() + " artigo(s), base "
+                  + baseDoPedido + ")." )
+    }
+end

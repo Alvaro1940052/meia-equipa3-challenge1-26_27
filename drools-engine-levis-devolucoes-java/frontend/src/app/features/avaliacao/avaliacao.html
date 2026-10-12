@@ -1,0 +1,69 @@
+<section class="pagina">
+  <h1 i18n="@@avaliacao.titulo">Nova avaliação</h1>
+
+  <nav class="passos" i18n-aria-label="@@avaliacao.passos" aria-label="Passos da avaliação">
+    <ol>
+      @for (passo of passos; track passo.id; let i = $index) {
+        <li>
+          <button
+            type="button"
+            [class.atual]="store.passo() === i"
+            [attr.aria-current]="store.passo() === i ? 'step' : null"
+            (click)="store.irPara(i)"
+            [attr.data-passo]="passo.id"
+          >
+            <span class="numero">{{ i + 1 }}</span> {{ passo.titulo }}
+            @if (store.emFaltaPorPasso()[i]; as n) {
+              <span class="contador" i18n-title="@@avaliacao.emFaltaNoPasso" title="Dados obrigatórios em falta">{{ n }}</span>
+            }
+          </button>
+        </li>
+      }
+    </ol>
+  </nav>
+
+  <div class="assistente">
+    <form class="passo" (submit)="$event.preventDefault()">
+      <h2>{{ passoAtual().titulo }}</h2>
+      @for (grupo of passoAtual().grupos; track grupo.id) {
+        <lv-grupo [grupo]="grupo" />
+      }
+
+      @if (store.erro(); as e) {
+        <div class="alerta erro" role="alert" data-teste="erro-avaliacao">
+          <strong>{{ e.titulo }}</strong>
+          @if (e.detalhe) {
+            <p>{{ e.detalhe }}</p>
+          }
+          @if (e.erros.length) {
+            <ul>
+              @for (m of e.erros; track $index) {
+                <li>{{ m }}</li>
+              }
+            </ul>
+          }
+        </div>
+      }
+
+      <div class="acoes">
+        <button type="button" class="secundario" [disabled]="store.passo() === 0" (click)="store.irPara(store.passo() - 1)" i18n="@@avaliacao.anterior">
+          Anterior
+        </button>
+        @if (!ultimo()) {
+          <button type="button" class="secundario" (click)="store.irPara(store.passo() + 1)" i18n="@@avaliacao.seguinte">
+            Seguinte
+          </button>
+        }
+        <button type="button" class="primario" [disabled]="store.aAvaliar()" (click)="avaliar()" data-teste="avaliar">
+          @if (store.aAvaliar()) {
+            <ng-container i18n="@@avaliacao.aAvaliar">A avaliar…</ng-container>
+          } @else {
+            <ng-container i18n="@@avaliacao.avaliar">Avaliar</ng-container>
+          }
+        </button>
+      </div>
+    </form>
+
+    <lv-em-falta />
+  </div>
+</section>

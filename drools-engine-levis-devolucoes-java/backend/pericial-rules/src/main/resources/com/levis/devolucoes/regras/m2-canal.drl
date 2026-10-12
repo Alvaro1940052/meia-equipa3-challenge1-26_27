@@ -1,0 +1,95 @@
+package com.levis.devolucoes.regras;
+
+// M1 e M2 — Dados e canal de compra (docs/02, etapas 1 e 2; docs/03, módulo 2).
+// IN-001 a IN-009 são dados de entrada (sem regras DRL, ADR 0001); aqui decide-se o canal.
+
+import com.levis.devolucoes.model.decisao.Decisao;
+import com.levis.devolucoes.model.enums.CanalCompra;
+import com.levis.devolucoes.model.enums.Elegibilidade;
+import com.levis.devolucoes.model.enums.Modulo;
+import com.levis.devolucoes.model.enums.ProcessoObrigatorio;
+import com.levis.devolucoes.model.enums.TipoTransacao;
+import com.levis.devolucoes.model.pedido.PedidoDevolucao;
+
+rule "CH-008 Produto grossista"
+    @id("CH-008")
+    @modulo("M2")
+    @descricao("Recusar e encaminhar o cliente para o retalhista grossista original: as lojas Levi's não aceitam devoluções de produtos grossistas.")
+    @condicoes("canalGrossista")
+    @conclusoes("OUT-001=RECUSAR,OUT-002=NENHUMA")
+    agenda-group "M2"
+    salience 100
+when
+    $d : Decisao( terminal == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, compraOriginal != null,
+                          compraOriginal.canal == CanalCompra.GROSSISTA )
+then
+    modify( $d ) {
+        setTipoTransacao( TipoTransacao.NENHUMA ),
+        aplicar( "CH-008", Modulo.M2, Elegibilidade.RECUSAR,
+                 "Produto comprado num retalhista grossista: as lojas Levi's não aceitam a devolução. "
+                 + "Encaminhar o cliente para o retalhista original." )
+    }
+end
+
+rule "CH-007 Produto da franquia do Canadá"
+    @id("CH-007")
+    @modulo("M2")
+    @descricao("Encaminhar para o processo específico de devolução da franquia do Canadá, com o SKU da franquia e nunca um SKU genérico. Aplica-se em qualquer mercado [a validar: A-07].")
+    @condicoes("canalFranquiaCanada")
+    @conclusoes("OUT-001=ENCAMINHAR,OUT-002=NENHUMA,OUT-006=FRANQUIA_CANADA")
+    agenda-group "M2"
+    salience 100
+when
+    $d : Decisao( terminal == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, compraOriginal != null,
+                          compraOriginal.canal == CanalCompra.FRANQUIA_CANADA )
+then
+    modify( $d ) {
+        setProcesso( ProcessoObrigatorio.FRANQUIA_CANADA ),
+        setTipoTransacao( TipoTransacao.NENHUMA ),
+        aplicar( "CH-007", Modulo.M2, Elegibilidade.ENCAMINHAR,
+                 "Produto da franquia do Canadá: seguir o processo de devolução da franquia, com o SKU da franquia; "
+                 + "não substituir por um SKU genérico." )
+    }
+end
+
+rule "CH-001 Compra Mainline ou Outlet devolvida numa loja Levi's"
+    @id("CH-001")
+    @modulo("M2")
+    @descricao("Aplicar as regras de devolução verificada ou às cegas e as regras de avaliação da loja recetora: as devoluções entre canais são permitidas quando o produto é elegível.")
+    @condicoes("canalLoja")
+    @conclusoes("")
+    agenda-group "M2"
+    salience 50
+when
+    $d : Decisao( terminal == false, disparou( "CH-001" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, loja != null, compraOriginal != null,
+                          compraOriginal.canal == CanalCompra.MAINLINE || compraOriginal.canal == CanalCompra.OUTLET )
+then
+    modify( $d ) {
+        registar( "CH-001", Modulo.M2,
+                  "Compra " + $p.getCompraOriginal().getCanal() + " devolvida na loja " + $p.getLoja().getTipoLoja()
+                  + ": aplicam-se as regras de comprovativo (verificada ou às cegas) e de avaliação da loja recetora." )
+    }
+end
+
+rule "IN-003 Canal de compra desconhecido"
+    @id("IN-003")
+    @modulo("M2")
+    @descricao("Canal desconhecido: segue para a elegibilidade do produto (M3) e o comprovativo decide em M4 (docs/03) [a validar: A-01].")
+    @condicoes("canalDesconhecido")
+    @conclusoes("")
+    agenda-group "M2"
+    salience 50
+when
+    $d : Decisao( terminal == false, disparou( "IN-003" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, compraOriginal != null,
+                          compraOriginal.canal == CanalCompra.DESCONHECIDO )
+then
+    modify( $d ) {
+        registar( "IN-003", Modulo.M2,
+                  "Canal de compra desconhecido: prosseguir para a verificação do produto; o comprovativo decide "
+                  + "se a devolução é verificada ou às cegas." )
+    }
+end

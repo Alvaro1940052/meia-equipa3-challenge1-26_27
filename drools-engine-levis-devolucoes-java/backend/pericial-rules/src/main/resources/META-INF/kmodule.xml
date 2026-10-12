@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kmodule xmlns="http://www.drools.org/xsd/kmodule">
+    <configuration>
+        <!-- Reatividade por propriedade desligada (ADR 0004): as decisões são alteradas por métodos
+             como aplicar(), que o Drools não consegue associar a propriedades. Assim, cada modify
+             reavalia todos os padrões do facto; os ciclos são evitados pela guarda disparou(...). -->
+        <property key="drools.propertySpecific" value="ALLOWED"/>
+    </configuration>
+    <!-- Base de conhecimento do sistema pericial: todas as regras de com.levis.devolucoes.regras -->
+    <kbase name="pericial" packages="com.levis.devolucoes.regras" default="true">
+        <!-- Avaliação de um pedido (uma sessão por pedido) -->
+        <ksession name="sessaoPericial" type="stateful" default="true"/>
+        <!-- Simulações "E se" (Fase 5) -->
+        <ksession name="sessaoPericialStateless" type="stateless" default="true"/>
+    </kbase>
+</kmodule>

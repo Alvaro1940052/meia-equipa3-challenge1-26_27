@@ -1,0 +1,1877 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "Sistema pericial de devoluções e trocas Levi's",
+    "description" : "Decide devoluções, trocas e ajustes de preço e explica cada decisão (Como, Porquê, Porque não, E se, O que falta). O idioma das explicações segue o cabeçalho Accept-Language (pt-PT ou en).",
+    "version" : "v1"
+  },
+  "servers" : [ {
+    "url" : "/",
+    "description" : "A própria origem da aplicação"
+  } ],
+  "security" : [ {
+    "bearer-jwt" : [ ]
+  } ],
+  "paths" : {
+    "/api/v1/avaliacoes" : {
+      "get" : {
+        "tags" : [ "Avaliações" ],
+        "summary" : "Histórico de avaliações, mais recentes primeiro (gestão da loja)",
+        "operationId" : "listarAvaliacoes",
+        "parameters" : [ {
+          "name" : "loja",
+          "in" : "query",
+          "description" : "Código da loja; vazio para todas",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "pagina",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0,
+            "minimum" : 0
+          }
+        }, {
+          "name" : "tamanho",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20,
+            "maximum" : 100,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "422" : {
+            "description" : "Unprocessable Entity",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Not Found",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflict",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PaginaDtoAvaliacaoResumoResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Avaliações" ],
+        "summary" : "Avalia um pedido e devolve a decisão",
+        "description" : "O colaborador é o utilizador autenticado. Recusa o pedido (422) se faltarem dados obrigatórios; ver /dados-em-falta.",
+        "operationId" : "avaliar",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PedidoAvaliacaoRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "422" : {
+            "description" : "Unprocessable Entity",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Not Found",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflict",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "201" : {
+            "description" : "Avaliação gravada; Location aponta para ela",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DecisaoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/avaliacoes/{id}/simulacoes" : {
+      "post" : {
+        "tags" : [ "Simulações" ],
+        "summary" : "E se?",
+        "description" : "Reavalia o pedido com as alterações indicadas e mostra as diferenças.",
+        "operationId" : "simular",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SimulacaoRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "422" : {
+            "description" : "Unprocessable Entity",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Not Found",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflict",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SimulacaoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/avaliacoes/porque" : {
+      "post" : {
+        "tags" : [ "Avaliações" ],
+        "summary" : "Porquê?",
+        "description" : "Porque é que o sistema faz a pergunta indicada (ex.: IN-010) para o pedido em preenchimento. Aceita pedidos incompletos.",
+        "operationId" : "porque",
+        "parameters" : [ {
+          "name" : "dado",
+          "in" : "query",
+          "description" : "Código do dado de entrada, ex.: IN-010",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PedidoAvaliacaoRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "422" : {
+            "description" : "Unprocessable Entity",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Not Found",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflict",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ExplicacaoPorqueResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/avaliacoes/dados-em-falta" : {
+      "post" : {
+        "tags" : [ "Avaliações" ],
+        "summary" : "O que falta?",
+        "description" : "Dados de entrada em falta (perguntas) para o pedido em preenchimento, cada um com o seu \"Porquê?\". Aceita pedidos incompletos.",
+        "operationId" : "dadosEmFalta",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PedidoAvaliacaoRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "422" : {
+            "description" : "Unprocessable Entity",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Not Found",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflict",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DadosEmFaltaResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/regras" : {
+      "get" : {
+        "tags" : [ "Regras" ],
+        "summary" : "Regras da base de conhecimento",
+        "operationId" : "listarRegras",
+        "responses" : {
+          "422" : {
+            "description" : "Unprocessable Entity",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Not Found",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflict",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/RegraResumoDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/regras/{codigo}" : {
+      "get" : {
+        "tags" : [ "Regras" ],
+        "summary" : "Detalhe de uma regra (condições, conclusões e variantes)",
+        "operationId" : "detalheRegra",
+        "parameters" : [ {
+          "name" : "codigo",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "422" : {
+            "description" : "Unprocessable Entity",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Not Found",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflict",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RegraDetalheDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/avaliacoes/{id}" : {
+      "get" : {
+        "tags" : [ "Avaliações" ],
+        "summary" : "Consulta uma avaliação",
+        "operationId" : "consultarAvaliacao",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "422" : {
+            "description" : "Unprocessable Entity",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Not Found",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflict",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DecisaoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/avaliacoes/{id}/explicacoes/porque-nao" : {
+      "get" : {
+        "tags" : [ "Explicações" ],
+        "summary" : "Porque não?",
+        "description" : "Indicar exatamente um de: conclusão (ex.: OUT-001:PERMITIR), a razão de não ter sido obtida (ExplicacaoPorqueNaoConclusaoResponse); ou regra (ex.: PT-003), a razão de não ter disparado (ExplicacaoPorqueNaoResponse).",
+        "operationId" : "porqueNao",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "conclusao",
+          "in" : "query",
+          "description" : "Conclusão no formato OUT-00n:VALOR",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "regra",
+          "in" : "query",
+          "description" : "ID da regra, ex.: PT-003",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "artigo",
+          "in" : "query",
+          "description" : "Artigo, para as conclusões e regras por artigo",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "422" : {
+            "description" : "Unprocessable Entity",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Not Found",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflict",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ExplicacaoPorqueNaoConclusaoResponse"
+                  }, {
+                    "$ref" : "#/components/schemas/ExplicacaoPorqueNaoResponse"
+                  } ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/avaliacoes/{id}/explicacoes/como" : {
+      "get" : {
+        "tags" : [ "Explicações" ],
+        "summary" : "Como?",
+        "description" : "Sem conclusão: o caminho completo percorrido (ExplicacaoComoResponse). Com conclusão (ex.: OUT-001): o caminho até essa conclusão (ExplicacaoConclusaoResponse).",
+        "operationId" : "como",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "conclusao",
+          "in" : "query",
+          "description" : "Campo de saída, ex.: OUT-001",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "artigo",
+          "in" : "query",
+          "description" : "Artigo, para as conclusões por artigo",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "422" : {
+            "description" : "Unprocessable Entity",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Not Found",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflict",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ExplicacaoComoResponse"
+                  }, {
+                    "$ref" : "#/components/schemas/ExplicacaoConclusaoResponse"
+                  } ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "ProblemDetail" : {
+        "type" : "object",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "format" : "uri"
+          },
+          "title" : {
+            "type" : [ "string", "null" ]
+          },
+          "status" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "detail" : {
+            "type" : [ "string", "null" ]
+          },
+          "instance" : {
+            "type" : [ "string", "null" ],
+            "format" : "uri"
+          },
+          "properties" : {
+            "type" : [ "object", "null" ],
+            "additionalProperties" : { }
+          }
+        }
+      },
+      "ArtigoRequest" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "produto" : {
+            "$ref" : "#/components/schemas/ProdutoRequest"
+          },
+          "quantidade" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "precoPago" : {
+            "type" : "number"
+          },
+          "estado" : {
+            "$ref" : "#/components/schemas/EstadoProdutoRequest"
+          },
+          "entreCanais" : {
+            "type" : "boolean"
+          },
+          "revendivel" : {
+            "type" : "boolean"
+          },
+          "valorCalculadoPos" : {
+            "type" : "number"
+          }
+        },
+        "required" : [ "id", "produto" ]
+      },
+      "ArtigoTrocaRequest" : {
+        "type" : "object",
+        "properties" : {
+          "produto" : {
+            "$ref" : "#/components/schemas/ProdutoRequest"
+          },
+          "apenasMudaTamanho" : {
+            "type" : "boolean"
+          },
+          "precoVenda" : {
+            "type" : "number"
+          }
+        },
+        "required" : [ "produto" ]
+      },
+      "ClienteRequest" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "forneceDados" : {
+            "type" : "boolean"
+          },
+          "barreiraLinguistica" : {
+            "type" : "boolean"
+          },
+          "contestaResultado" : {
+            "type" : "boolean"
+          },
+          "agitado" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "ColaboradorDto" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "nome" : {
+            "type" : "string"
+          },
+          "funcao" : {
+            "type" : "string",
+            "enum" : [ "STYLIST", "ELEVATED_STYLIST", "LEAD_CASHIER", "KEY_HOLDER", "GESTAO_LOJA", "XSTORE_MANAGER" ]
+          },
+          "aprovadoPeloDM" : {
+            "type" : "boolean"
+          },
+          "idCredencialPOS" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "funcao", "id" ]
+      },
+      "CompraRequest" : {
+        "type" : "object",
+        "properties" : {
+          "idTransacao" : {
+            "type" : "string"
+          },
+          "canal" : {
+            "type" : "string",
+            "enum" : [ "MAINLINE", "OUTLET", "LEVI_COM", "LEVI_CA", "BACKPOCKET", "FRANQUIA_CANADA", "GROSSISTA", "DESCONHECIDO" ]
+          },
+          "dataCompra" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "dataEnvio" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "pagamento" : {
+            "$ref" : "#/components/schemas/PagamentoRequest"
+          },
+          "idStylistVenda" : {
+            "type" : "string"
+          },
+          "quantidadeComprada" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "promocaoEscaloes" : {
+            "type" : "boolean"
+          },
+          "encomendaEncontrada" : {
+            "type" : "boolean"
+          },
+          "ajustePrecoAplicado" : {
+            "type" : "boolean"
+          },
+          "compraOferta" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "ComprovativoRequest" : {
+        "type" : "object",
+        "properties" : {
+          "tipo" : {
+            "type" : "string",
+            "enum" : [ "RECIBO_IMPRESSO", "RECIBO_DIGITAL", "CONFIRMACAO_ENCOMENDA", "RECIBO_OFERTA", "CONSULTA_TRANSACAO", "FOTOGRAFIA_RECIBO", "CONSULTA_BACKPOCKET" ]
+          },
+          "confirmaCompra" : {
+            "type" : "boolean"
+          },
+          "reciboOriginal" : {
+            "type" : "boolean"
+          },
+          "clienteMantemRecibo" : {
+            "type" : "boolean"
+          },
+          "incluiOutrosArtigos" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "EstadoProdutoRequest" : {
+        "type" : "object",
+        "properties" : {
+          "condicaoUso" : {
+            "type" : "string",
+            "enum" : [ "NAO_USADO", "USADO", "LAVADO" ]
+          },
+          "etiquetas" : {
+            "type" : "string",
+            "enum" : [ "COLOCADAS", "SOLTAS", "AUSENTES" ]
+          },
+          "personalizado" : {
+            "type" : "boolean"
+          },
+          "alterado" : {
+            "type" : "boolean"
+          },
+          "embainhado" : {
+            "type" : "boolean"
+          },
+          "defeitoFabricoConfirmado" : {
+            "type" : "boolean"
+          },
+          "sujoOuInseguro" : {
+            "type" : "boolean"
+          },
+          "danificado" : {
+            "type" : "boolean"
+          },
+          "etiquetaPrecoCorreta" : {
+            "type" : "boolean"
+          },
+          "rfidCorreto" : {
+            "type" : "boolean"
+          },
+          "embalagemIntacta" : {
+            "type" : "boolean"
+          },
+          "conjuntoCompleto" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "IndicadorFraudeRequest" : {
+        "type" : "object",
+        "properties" : {
+          "descricao" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "nivelRisco" : {
+            "type" : "string",
+            "enum" : [ "BAIXO", "SIGNIFICATIVO", "CONFIRMADO" ]
+          }
+        },
+        "required" : [ "descricao", "nivelRisco" ]
+      },
+      "LojaRequest" : {
+        "type" : "object",
+        "properties" : {
+          "codigo" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "nome" : {
+            "type" : "string"
+          },
+          "mercado" : {
+            "type" : "string",
+            "enum" : [ "EUA", "CANADA" ]
+          },
+          "tipoLoja" : {
+            "type" : "string",
+            "enum" : [ "MAINLINE", "OUTLET" ]
+          },
+          "lojaBackPocket" : {
+            "type" : "boolean"
+          },
+          "coberturaLojaUnica" : {
+            "type" : "boolean"
+          },
+          "skusSortido" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            },
+            "uniqueItems" : true
+          }
+        },
+        "required" : [ "codigo" ]
+      },
+      "PagamentoRequest" : {
+        "type" : "object",
+        "properties" : {
+          "meio" : {
+            "type" : "string",
+            "enum" : [ "CREDITO", "DEBITO", "APPLE_PAY", "GOOGLE_PAY", "PAYPAL", "VENMO", "AFTERPAY", "INTERAC", "NUMERARIO", "CARTAO_OFERTA" ]
+          },
+          "valorPago" : {
+            "type" : "number"
+          },
+          "estadoConta" : {
+            "type" : "string",
+            "enum" : [ "ATIVA", "ATIVA_CARTAO_PERDIDO", "ENCERRADA" ]
+          },
+          "cartaoFisicoPresente" : {
+            "type" : "boolean"
+          },
+          "reembolsoOriginalRecusado" : {
+            "type" : "boolean"
+          },
+          "acessoAplicacaoPagamento" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "PedidoAvaliacaoRequest" : {
+        "type" : "object",
+        "description" : "Pedido apresentado pelo cliente na loja",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "description" : "Identificador do pedido; gerado se vazio"
+          },
+          "dataPedido" : {
+            "type" : "string",
+            "format" : "date",
+            "description" : "Data do pedido na loja (IN-006)"
+          },
+          "tipoPedido" : {
+            "type" : "string",
+            "description" : "Pedido do cliente (IN-005)",
+            "enum" : [ "DEVOLUCAO", "TROCA", "AJUSTE_PRECO", "DEVOLUCAO_OFERTA" ]
+          },
+          "loja" : {
+            "$ref" : "#/components/schemas/LojaRequest"
+          },
+          "cliente" : {
+            "$ref" : "#/components/schemas/ClienteRequest"
+          },
+          "compraOriginal" : {
+            "$ref" : "#/components/schemas/CompraRequest"
+          },
+          "comprovativo" : {
+            "$ref" : "#/components/schemas/ComprovativoRequest",
+            "description" : "Comprovativo apresentado; vazio se não houver (IN-004)"
+          },
+          "artigos" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ArtigoRequest"
+            },
+            "minItems" : 1
+          },
+          "artigosTroca" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ArtigoTrocaRequest"
+            }
+          },
+          "portalOnlineDisponivel" : {
+            "type" : "boolean",
+            "description" : "Portal de devoluções online disponível; consultado na BackPocket se vazio"
+          },
+          "politicaPermiteAsCegasOnline" : {
+            "type" : "boolean",
+            "description" : "A política permite a devolução online às cegas (CH-003)"
+          },
+          "pedidoExcecao" : {
+            "$ref" : "#/components/schemas/PedidoExcecaoRequest"
+          },
+          "indicadoresFraude" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/IndicadorFraudeRequest"
+            }
+          }
+        },
+        "required" : [ "artigos" ]
+      },
+      "PedidoExcecaoRequest" : {
+        "type" : "object",
+        "properties" : {
+          "motivo" : {
+            "type" : "string"
+          },
+          "resolucaoPedida" : {
+            "type" : "string",
+            "enum" : [ "REEMBOLSO", "TROCA", "TROCA_MESMO_ARTIGO", "CREDITO_LOJA", "AJUSTE_PRECO", "NENHUMA" ]
+          },
+          "exigeMeioProibido" : {
+            "type" : "boolean"
+          },
+          "exigeSkuIncorreto" : {
+            "type" : "boolean"
+          },
+          "envolveProdutoExcluido" : {
+            "type" : "boolean"
+          },
+          "contornaProcessoObrigatorio" : {
+            "type" : "boolean"
+          },
+          "concluivelNoSistema" : {
+            "type" : "boolean"
+          },
+          "aprovada" : {
+            "type" : "boolean"
+          },
+          "aprovador" : {
+            "$ref" : "#/components/schemas/ColaboradorDto"
+          },
+          "preocupacaoCliente" : {
+            "type" : "string"
+          }
+        }
+      },
+      "ProdutoRequest" : {
+        "type" : "object",
+        "properties" : {
+          "sku" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "skuReconhecidoPOS" : {
+            "type" : "boolean"
+          },
+          "marca" : {
+            "type" : "string",
+            "enum" : [ "LEVIS", "DOCKERS", "LS_SIGNATURE", "BEYOND_YOGA", "OUTRA" ]
+          },
+          "categoria" : {
+            "type" : "string",
+            "enum" : [ "VESTUARIO", "ACESSORIO", "BODYWEAR" ]
+          },
+          "grossista" : {
+            "type" : "boolean"
+          },
+          "vendidoNaLoja" : {
+            "type" : "boolean"
+          },
+          "produtoFranquia" : {
+            "type" : "boolean"
+          },
+          "pvpOriginal" : {
+            "type" : "number"
+          },
+          "precoAtual" : {
+            "type" : "number"
+          },
+          "emSaldo" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "sku" ]
+      },
+      "DecisaoResponse" : {
+        "type" : "object",
+        "description" : "Decisão: elegibilidade, transação, valor, meio, aprovação, processo, destino e documentação",
+        "properties" : {
+          "avaliacaoId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "pedidoId" : {
+            "type" : "string"
+          },
+          "avaliadaEm" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "versaoBaseConhecimento" : {
+            "type" : "string"
+          },
+          "elegibilidade" : {
+            "type" : "string",
+            "description" : "OUT-001",
+            "enum" : [ "PERMITIR", "REVER", "ENCAMINHAR", "RECUSAR" ]
+          },
+          "tipoVerificacao" : {
+            "type" : "string",
+            "enum" : [ "NAO_DETERMINADA", "VERIFICADA", "AS_CEGAS" ]
+          },
+          "tipoTransacao" : {
+            "type" : "string",
+            "description" : "OUT-002",
+            "enum" : [ "REEMBOLSO", "TROCA", "TROCA_MESMO_ARTIGO", "CREDITO_LOJA", "AJUSTE_PRECO", "NENHUMA" ]
+          },
+          "valorDevolucao" : {
+            "type" : "number",
+            "description" : "OUT-003"
+          },
+          "baseValor" : {
+            "type" : "string",
+            "enum" : [ "VALOR_PAGO", "PRECO_ATUAL", "VALOR_PROMOCIONAL", "VALOR_ESCALAO", "VALOR_POS", "PVP_ORIGINAL" ]
+          },
+          "meioReembolso" : {
+            "type" : "string",
+            "description" : "OUT-004",
+            "enum" : [ "MEIO_ORIGINAL", "CARTAO_OFERTA", "CARTAO_OFERTA_ELETRONICO", "MEIO_ALTERNATIVO", "APLICACAO_PAGAMENTO", "CREDITO_LOJA" ]
+          },
+          "aprovacao" : {
+            "type" : "string",
+            "description" : "OUT-005",
+            "enum" : [ "NENHUMA", "XSTORE_MANAGER", "RESPONSAVEL_SENIOR", "DISTRICT_AREA" ]
+          },
+          "processo" : {
+            "type" : "string",
+            "description" : "OUT-006",
+            "enum" : [ "POS", "BACKPOCKET", "AFTERPAY", "PAYPAL_VENMO", "VERIFONE_INTERAC", "FRANQUIA_CANADA", "DANO", "RISCO_BIOLOGICO" ]
+          },
+          "terminal" : {
+            "type" : "boolean"
+          },
+          "excecaoRecusada" : {
+            "type" : "boolean"
+          },
+          "documentacao" : {
+            "$ref" : "#/components/schemas/DocumentacaoResponse",
+            "description" : "OUT-008"
+          },
+          "artigos" : {
+            "type" : "array",
+            "description" : "Resultado por artigo, com o destino (OUT-007)",
+            "items" : {
+              "$ref" : "#/components/schemas/ResultadoArtigoResponse"
+            }
+          },
+          "regras" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/RegistoRegraResponse"
+            }
+          },
+          "regrasAValidar" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }
+      },
+      "DocumentacaoResponse" : {
+        "type" : "object",
+        "properties" : {
+          "assinaturaCliente" : {
+            "type" : "string"
+          },
+          "assinaturaProcessador" : {
+            "type" : "string"
+          },
+          "assinaturaTestemunha" : {
+            "type" : "string"
+          },
+          "idStylistAtribuido" : {
+            "type" : "string"
+          },
+          "reciboAgrafado" : {
+            "type" : "boolean"
+          },
+          "notaRecibo" : {
+            "type" : "string"
+          },
+          "retencaoAte" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "registoExcecao" : {
+            "type" : "string"
+          }
+        }
+      },
+      "RegistoRegraResponse" : {
+        "type" : "object",
+        "properties" : {
+          "ordem" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "codigoRegra" : {
+            "type" : "string"
+          },
+          "nomeRegra" : {
+            "type" : "string"
+          },
+          "modulo" : {
+            "type" : "string"
+          },
+          "artigoId" : {
+            "type" : "string"
+          },
+          "resultado" : {
+            "type" : "string",
+            "enum" : [ "PERMITIR", "REVER", "ENCAMINHAR", "RECUSAR" ]
+          },
+          "mensagem" : {
+            "type" : "string"
+          },
+          "aValidar" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "ResultadoArtigoResponse" : {
+        "type" : "object",
+        "properties" : {
+          "artigoId" : {
+            "type" : "string"
+          },
+          "elegibilidade" : {
+            "type" : "string",
+            "enum" : [ "PERMITIR", "REVER", "ENCAMINHAR", "RECUSAR" ]
+          },
+          "tipoTransacao" : {
+            "type" : "string",
+            "enum" : [ "REEMBOLSO", "TROCA", "TROCA_MESMO_ARTIGO", "CREDITO_LOJA", "AJUSTE_PRECO", "NENHUMA" ]
+          },
+          "valorDevolucao" : {
+            "type" : "number"
+          },
+          "baseValor" : {
+            "type" : "string",
+            "enum" : [ "VALOR_PAGO", "PRECO_ATUAL", "VALOR_PROMOCIONAL", "VALOR_ESCALAO", "VALOR_POS", "PVP_ORIGINAL" ]
+          },
+          "destino" : {
+            "type" : "string",
+            "enum" : [ "AREA_VENDAS", "SALDOS", "REETIQUETAR", "BAIXA_DANO", "RISCO_BIOLOGICO", "DEVOLUCAO_CLIENTE" ]
+          },
+          "descontoSaldo" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "aprovacao" : {
+            "type" : "string",
+            "enum" : [ "NENHUMA", "XSTORE_MANAGER", "RESPONSAVEL_SENIOR", "DISTRICT_AREA" ]
+          },
+          "terminal" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "SimulacaoRequest" : {
+        "type" : "object",
+        "description" : "Alterações a simular (caminho → novo valor)",
+        "properties" : {
+          "alteracoes" : {
+            "type" : "object",
+            "additionalProperties" : { },
+            "minProperties" : 1
+          }
+        },
+        "required" : [ "alteracoes" ]
+      },
+      "DiferencaDto" : {
+        "type" : "object",
+        "properties" : {
+          "alvo" : {
+            "type" : "string"
+          },
+          "campo" : {
+            "type" : "string"
+          },
+          "original" : {
+            "type" : "string"
+          },
+          "simulado" : {
+            "type" : "string"
+          }
+        }
+      },
+      "SimulacaoResponse" : {
+        "type" : "object",
+        "description" : "Resultado de uma simulação (E se?)",
+        "properties" : {
+          "diferencas" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/DiferencaDto"
+            }
+          },
+          "regrasNovas" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "regrasRemovidas" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "resumo" : {
+            "type" : "string"
+          },
+          "decisaoSimulada" : {
+            "$ref" : "#/components/schemas/DecisaoResponse"
+          }
+        }
+      },
+      "CondicaoDto" : {
+        "type" : "object",
+        "properties" : {
+          "nome" : {
+            "type" : "string"
+          },
+          "descricao" : {
+            "type" : "string"
+          },
+          "cumprida" : {
+            "type" : "boolean"
+          },
+          "valor" : {
+            "type" : "string"
+          },
+          "artigoId" : {
+            "type" : "string"
+          }
+        }
+      },
+      "ExplicacaoPorqueResponse" : {
+        "type" : "object",
+        "description" : "Razão de uma pergunta ao colaborador (Porquê?)",
+        "properties" : {
+          "dado" : {
+            "type" : "string"
+          },
+          "pergunta" : {
+            "type" : "string"
+          },
+          "regrasQueDependem" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "regrasEmEspera" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/RegraEmEsperaDto"
+            }
+          },
+          "resumo" : {
+            "type" : "string"
+          }
+        }
+      },
+      "RegraEmEsperaDto" : {
+        "type" : "object",
+        "properties" : {
+          "codigoRegra" : {
+            "type" : "string"
+          },
+          "nomeRegra" : {
+            "type" : "string"
+          },
+          "modulo" : {
+            "type" : "string"
+          },
+          "artigoId" : {
+            "type" : "string"
+          },
+          "conclusoes" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "condicoesDoDado" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CondicaoDto"
+            }
+          }
+        }
+      },
+      "DadoEmFaltaDto" : {
+        "type" : "object",
+        "properties" : {
+          "codigo" : {
+            "type" : "string"
+          },
+          "caminho" : {
+            "type" : "string"
+          },
+          "descricao" : {
+            "type" : "string"
+          },
+          "obrigatorio" : {
+            "type" : "boolean"
+          },
+          "porque" : {
+            "$ref" : "#/components/schemas/ExplicacaoPorqueResponse"
+          }
+        }
+      },
+      "DadosEmFaltaResponse" : {
+        "type" : "object",
+        "description" : "Dados em falta (perguntas ao colaborador), cada um com o seu Porquê",
+        "properties" : {
+          "dados" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/DadoEmFaltaDto"
+            }
+          },
+          "completo" : {
+            "type" : "boolean"
+          },
+          "resumo" : {
+            "type" : "string"
+          }
+        }
+      },
+      "RegraResumoDto" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "modulos" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "descricao" : {
+            "type" : "string"
+          },
+          "variantes" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "aValidar" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "RegraDetalheDto" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "variantes" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/VarianteRegraDto"
+            }
+          }
+        }
+      },
+      "VarianteRegraDto" : {
+        "type" : "object",
+        "properties" : {
+          "nome" : {
+            "type" : "string"
+          },
+          "modulo" : {
+            "type" : "string"
+          },
+          "descricao" : {
+            "type" : "string"
+          },
+          "condicoes" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "conclusoes" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "aValidar" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "AvaliacaoResumoResponse" : {
+        "type" : "object",
+        "properties" : {
+          "avaliacaoId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "pedidoId" : {
+            "type" : "string"
+          },
+          "avaliadaEm" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "lojaCodigo" : {
+            "type" : "string"
+          },
+          "elegibilidade" : {
+            "type" : "string",
+            "enum" : [ "PERMITIR", "REVER", "ENCAMINHAR", "RECUSAR" ]
+          },
+          "tipoTransacao" : {
+            "type" : "string",
+            "enum" : [ "REEMBOLSO", "TROCA", "TROCA_MESMO_ARTIGO", "CREDITO_LOJA", "AJUSTE_PRECO", "NENHUMA" ]
+          },
+          "valorDevolucao" : {
+            "type" : "number"
+          }
+        }
+      },
+      "PaginaDtoAvaliacaoResumoResponse" : {
+        "type" : "object",
+        "properties" : {
+          "conteudo" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/AvaliacaoResumoResponse"
+            }
+          },
+          "pagina" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "tamanho" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "totalElementos" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "totalPaginas" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
+      "ExplicacaoPorqueNaoConclusaoResponse" : {
+        "type" : "object",
+        "description" : "Razão de uma conclusão não ter sido obtida (Porque não?)",
+        "properties" : {
+          "conclusao" : {
+            "type" : "string"
+          },
+          "valor" : {
+            "type" : "string"
+          },
+          "artigoId" : {
+            "type" : "string"
+          },
+          "valorObtido" : {
+            "type" : "string"
+          },
+          "obtida" : {
+            "type" : "boolean"
+          },
+          "propostaPor" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "definidoPor" : {
+            "type" : "string"
+          },
+          "regras" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ExplicacaoPorqueNaoResponse"
+            }
+          },
+          "resumo" : {
+            "type" : "string"
+          }
+        }
+      },
+      "ExplicacaoPorqueNaoResponse" : {
+        "type" : "object",
+        "description" : "Razão de uma regra não ter disparado (Porque não?)",
+        "properties" : {
+          "codigoRegra" : {
+            "type" : "string"
+          },
+          "artigoId" : {
+            "type" : "string"
+          },
+          "causa" : {
+            "type" : "string",
+            "enum" : [ "DISPAROU", "MODULO_NAO_ALCANCADO", "CANCELADA_POR_PRECEDENCIA", "CONDICOES_FALHADAS" ]
+          },
+          "regraResponsavel" : {
+            "type" : "string"
+          },
+          "variante" : {
+            "type" : "string"
+          },
+          "condicoes" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CondicaoDto"
+            }
+          },
+          "resumo" : {
+            "type" : "string"
+          }
+        }
+      },
+      "ExplicacaoComoResponse" : {
+        "type" : "object",
+        "description" : "Caminho completo que o sistema seguiu (Como?)",
+        "properties" : {
+          "passos" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/PassoExplicacaoDto"
+            }
+          },
+          "modulosPercorridos" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "paragem" : {
+            "type" : "string"
+          },
+          "resumo" : {
+            "type" : "string"
+          }
+        }
+      },
+      "PassoExplicacaoDto" : {
+        "type" : "object",
+        "properties" : {
+          "ordem" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "modulo" : {
+            "type" : "string"
+          },
+          "codigoRegra" : {
+            "type" : "string"
+          },
+          "nomeRegra" : {
+            "type" : "string"
+          },
+          "artigoId" : {
+            "type" : "string"
+          },
+          "resultado" : {
+            "type" : "string",
+            "enum" : [ "PERMITIR", "REVER", "ENCAMINHAR", "RECUSAR" ]
+          },
+          "mensagem" : {
+            "type" : "string"
+          },
+          "aValidar" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "ExplicacaoConclusaoResponse" : {
+        "type" : "object",
+        "description" : "Caminho até uma conclusão (Como?)",
+        "properties" : {
+          "conclusao" : {
+            "type" : "string"
+          },
+          "artigoId" : {
+            "type" : "string"
+          },
+          "valores" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "string"
+            }
+          },
+          "regra" : {
+            "type" : "string"
+          },
+          "mensagem" : {
+            "type" : "string"
+          },
+          "condicoes" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CondicaoDto"
+            }
+          },
+          "caminho" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "resumo" : {
+            "type" : "string"
+          }
+        }
+      }
+    },
+    "securitySchemes" : {
+      "bearer-jwt" : {
+        "type" : "http",
+        "scheme" : "bearer",
+        "bearerFormat" : "JWT"
+      }
+    }
+  }
+}

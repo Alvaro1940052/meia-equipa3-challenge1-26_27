@@ -1,0 +1,363 @@
+package com.levis.devolucoes.regras;
+
+// M9 — Destino do produto (docs/02, etapa 8; docs/03, módulo 10) e agregação do pedido (ADR 0002).
+// Ordem: recusado → devolução ao cliente (100); bodywear BW-004 > BW-003 > BW-001/BW-002 (95-85);
+// defeito PC-006 (85); inspeção CT-008 (80); entre canais EP-007 > EP-005/EP-006 (70-60);
+// agregação OUT-001 (1). O risco biológico (PC-008) já foi definido no grupo TRANSVERSAL.
+// OUT-007 e OUT-001 correm também depois de uma recusa terminal, mas não com o pedido suspenso (ADR 0004).
+// Num ajuste de preço o artigo não é entregue: as regras de destino não se aplicam (A-14).
+
+import com.levis.devolucoes.model.decisao.Decisao;
+import com.levis.devolucoes.model.decisao.DecisaoArtigo;
+import com.levis.devolucoes.model.enums.CategoriaProduto;
+import com.levis.devolucoes.model.enums.CondicaoUso;
+import com.levis.devolucoes.model.enums.DestinoProduto;
+import com.levis.devolucoes.model.enums.Elegibilidade;
+import com.levis.devolucoes.model.enums.Modulo;
+import com.levis.devolucoes.model.enums.TipoPedido;
+import com.levis.devolucoes.model.pedido.PedidoDevolucao;
+import com.levis.devolucoes.model.produto.ArtigoDevolvido;
+import java.util.List;
+
+// ---------------------------------------------------------------------------------------------
+// Artigo recusado
+// ---------------------------------------------------------------------------------------------
+
+rule "OUT-007 Artigo recusado: devolução ao cliente"
+    @id("OUT-007")
+    @modulo("M9")
+    @descricao("Transação ou artigo recusado: o artigo é devolvido ao cliente (docs/03, módulo 10). Um artigo inseguro continua isolado [a validar: A-28].")
+    @condicoes("artigoOuPedidoRecusado,pedidoNaoSuspenso,semDestino")
+    @conclusoes("OUT-007=DEVOLUCAO_CLIENTE")
+    agenda-group "M9"
+    salience 100
+when
+    $d  : Decisao( )
+    PedidoDevolucao( id == $d.pedidoId, tipoPedido != TipoPedido.AJUSTE_PRECO )
+    $p  : PedidoDevolucao( id == $d.pedidoId, suspenso == false )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, destino == null, disparou( "OUT-007" ) == false )
+    eval( $da.getElegibilidade() == Elegibilidade.RECUSAR || $d.getElegibilidade() == Elegibilidade.RECUSAR )
+then
+    modify( $da ) {
+        setDestino( DestinoProduto.DEVOLUCAO_CLIENTE ),
+        registar( "OUT-007", Modulo.M9, "Devolução recusada: o artigo é devolvido ao cliente." )
+    }
+end
+
+// ---------------------------------------------------------------------------------------------
+// Bodywear
+// ---------------------------------------------------------------------------------------------
+
+rule "BW-004 Bodywear usado e sujo ou inseguro"
+    @id("BW-004")
+    @modulo("M9")
+    @descricao("Colocar imediatamente num saco de risco biológico, etiquetar e datar, guardar na sala de reservas, enviar e-mail ao escritório corporativo e seguir as instruções de eliminação. Prevalece sobre BW-003.")
+    @condicoes("bodywearAceite,usado,sujoOuInseguro")
+    @conclusoes("OUT-007=RISCO_BIOLOGICO")
+    agenda-group "M9"
+    salience 95
+when
+    $d  : Decisao( terminal == false, elegibilidade != Elegibilidade.RECUSAR )
+    PedidoDevolucao( id == $d.pedidoId, tipoPedido != TipoPedido.AJUSTE_PRECO )
+    $a  : ArtigoDevolvido( produto != null, produto.categoria == CategoriaProduto.BODYWEAR, estado != null,
+                           estado.condicaoUso == CondicaoUso.USADO, estado.sujoOuInseguro == true )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false,
+                         disparou( "PC-007" ) == true, disparou( "BW-004" ) == false,
+                         destino == null || destino == DestinoProduto.RISCO_BIOLOGICO )
+then
+    modify( $da ) {
+        setDestino( DestinoProduto.RISCO_BIOLOGICO ),
+        registar( "BW-004", Modulo.M9,
+                  "Bodywear usado e sujo ou inseguro: saco de risco biológico imediato, etiquetado e datado, sala de "
+                  + "reservas, e-mail ao escritório corporativo e instruções de eliminação." )
+    }
+end
+
+rule "BW-003 Bodywear com unidades em falta ou usado"
+    @id("BW-003")
+    @modulo("M9")
+    @descricao("Dar baixa por dano a todo o conjunto quando faltam unidades do conjunto original ou o produto foi usado.")
+    @condicoes("bodywearAceite,conjuntoIncompletoOuUsado,semDestino")
+    @conclusoes("OUT-007=BAIXA_DANO")
+    agenda-group "M9"
+    salience 90
+when
+    $d  : Decisao( terminal == false, elegibilidade != Elegibilidade.RECUSAR )
+    PedidoDevolucao( id == $d.pedidoId, tipoPedido != TipoPedido.AJUSTE_PRECO )
+    $a  : ArtigoDevolvido( produto != null, produto.categoria == CategoriaProduto.BODYWEAR, estado != null,
+                           estado.conjuntoCompleto == false || estado.condicaoUso == CondicaoUso.USADO )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false, destino == null,
+                         disparou( "PC-007" ) == true, disparou( "BW-003" ) == false )
+then
+    modify( $da ) {
+        setDestino( DestinoProduto.BAIXA_DANO ),
+        registar( "BW-003", Modulo.M9,
+                  "Bodywear " + ( $a.getEstado().isConjuntoCompleto() ? "usado" : "com unidades em falta" )
+                  + ": dar baixa por dano a todo o conjunto." )
+    }
+end
+
+rule "BW-001 Bodywear com embalagem intacta: inspeção confirma revenda"
+    @id("BW-001")
+    @modulo("M9")
+    @descricao("Embalagem original intacta: inspecionar totalmente e devolver à venda apenas quando for confirmado que não foi usado e é vendável.")
+    @condicoes("bodywearAceite,embalagemIntacta,naoUsado,conjuntoCompleto,revendivel")
+    @conclusoes("OUT-007=AREA_VENDAS")
+    agenda-group "M9"
+    salience 85
+when
+    $d  : Decisao( terminal == false, elegibilidade != Elegibilidade.RECUSAR )
+    PedidoDevolucao( id == $d.pedidoId, tipoPedido != TipoPedido.AJUSTE_PRECO )
+    $a  : ArtigoDevolvido( produto != null, produto.categoria == CategoriaProduto.BODYWEAR, estado != null,
+                           estado.embalagemIntacta == true, estado.conjuntoCompleto == true,
+                           estado.condicaoUso == CondicaoUso.NAO_USADO, revendivel == true )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false, destino == null,
+                         disparou( "PC-007" ) == true, disparou( "BW-001" ) == false )
+then
+    modify( $da ) {
+        setDestino( DestinoProduto.AREA_VENDAS ),
+        registar( "BW-001", Modulo.M9,
+                  "Bodywear com embalagem intacta: a inspeção confirma que não foi usado e é vendável; devolver à área de vendas." )
+    }
+end
+
+rule "BW-001 Bodywear com embalagem intacta: inspeção não confirma revenda"
+    @id("BW-001")
+    @modulo("M9")
+    @descricao("Embalagem intacta, mas a inspeção não confirma que é vendável: baixa por dano (docs/03).")
+    @condicoes("bodywearAceite,embalagemIntacta,naoUsado,conjuntoCompleto,naoRevendivel")
+    @conclusoes("OUT-007=BAIXA_DANO")
+    agenda-group "M9"
+    salience 85
+when
+    $d  : Decisao( terminal == false, elegibilidade != Elegibilidade.RECUSAR )
+    PedidoDevolucao( id == $d.pedidoId, tipoPedido != TipoPedido.AJUSTE_PRECO )
+    $a  : ArtigoDevolvido( produto != null, produto.categoria == CategoriaProduto.BODYWEAR, estado != null,
+                           estado.embalagemIntacta == true, estado.conjuntoCompleto == true,
+                           estado.condicaoUso == CondicaoUso.NAO_USADO, revendivel == false )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false, destino == null,
+                         disparou( "PC-007" ) == true, disparou( "BW-001" ) == false )
+then
+    modify( $da ) {
+        setDestino( DestinoProduto.BAIXA_DANO ),
+        registar( "BW-001", Modulo.M9,
+                  "Bodywear com embalagem intacta, mas a inspeção não confirma que é vendável: dar baixa por dano." )
+    }
+end
+
+rule "BW-001 Bodywear com embalagem intacta: inspecionar"
+    @id("BW-001")
+    @modulo("M9")
+    @descricao("Embalagem intacta e a inspeção ainda não foi feita (IN-010): inspecionar totalmente antes de decidir o destino.")
+    @condicoes("bodywearAceite,embalagemIntacta,naoUsado,conjuntoCompleto,revendivelPorAvaliar")
+    @conclusoes("")
+    agenda-group "M9"
+    salience 85
+when
+    $d  : Decisao( terminal == false, elegibilidade != Elegibilidade.RECUSAR )
+    PedidoDevolucao( id == $d.pedidoId, tipoPedido != TipoPedido.AJUSTE_PRECO )
+    $a  : ArtigoDevolvido( produto != null, produto.categoria == CategoriaProduto.BODYWEAR, estado != null,
+                           estado.embalagemIntacta == true, estado.conjuntoCompleto == true,
+                           estado.condicaoUso == CondicaoUso.NAO_USADO, revendivel == null )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false, destino == null,
+                         disparou( "PC-007" ) == true, disparou( "BW-001" ) == false )
+then
+    modify( $da ) {
+        registar( "BW-001", Modulo.M9,
+                  "Bodywear com embalagem intacta: inspecionar totalmente para sinais de uso. Devolver à venda só se "
+                  + "for confirmado que não foi usado e é vendável; caso contrário, baixa por dano." )
+    }
+end
+
+rule "BW-002 Bodywear sem embalagem, não usado e completo"
+    @id("BW-002")
+    @modulo("M9")
+    @descricao("Pendurar em saldos, marcar com 50 por cento de desconto, riscar o código de barras a vermelho e aplicar as promoções de saldo elegíveis.")
+    @condicoes("bodywearAceite,semEmbalagem,naoUsado,conjuntoCompleto")
+    @conclusoes("OUT-007=SALDOS")
+    agenda-group "M9"
+    salience 85
+when
+    $d  : Decisao( terminal == false, elegibilidade != Elegibilidade.RECUSAR )
+    PedidoDevolucao( id == $d.pedidoId, tipoPedido != TipoPedido.AJUSTE_PRECO )
+    $a  : ArtigoDevolvido( produto != null, produto.categoria == CategoriaProduto.BODYWEAR, estado != null,
+                           estado.embalagemIntacta == false, estado.conjuntoCompleto == true,
+                           estado.condicaoUso == CondicaoUso.NAO_USADO )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false, destino == null,
+                         disparou( "PC-007" ) == true, disparou( "BW-002" ) == false )
+then
+    modify( $da ) {
+        setDestino( DestinoProduto.SALDOS ),
+        setDescontoSaldo( 50 ),
+        registar( "BW-002", Modulo.M9,
+                  "Bodywear sem embalagem, não usado e completo: pendurar em saldos com 50% de desconto, riscar o "
+                  + "código de barras a vermelho e aplicar as promoções de saldo elegíveis." )
+    }
+end
+
+// ---------------------------------------------------------------------------------------------
+// Vestuário e acessórios
+// ---------------------------------------------------------------------------------------------
+
+rule "PC-006 Baixa por dano do artigo com defeito de fabrico"
+    @id("PC-006")
+    @modulo("M9")
+    @descricao("Dar baixa por dano ao artigo devolvido com defeito de fabrico confirmado.")
+    @condicoes("defeitoFabricoAceite,semDestino")
+    @conclusoes("OUT-007=BAIXA_DANO")
+    agenda-group "M9"
+    salience 85
+when
+    $d  : Decisao( terminal == false, elegibilidade != Elegibilidade.RECUSAR )
+    PedidoDevolucao( id == $d.pedidoId, tipoPedido != TipoPedido.AJUSTE_PRECO )
+    $a  : ArtigoDevolvido( produto != null, produto.categoria != CategoriaProduto.BODYWEAR,
+                           estado != null, estado.defeitoFabricoConfirmado == true )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false, destino == null,
+                         elegibilidade == Elegibilidade.PERMITIR || elegibilidade == Elegibilidade.REVER )
+then
+    modify( $da ) {
+        setDestino( DestinoProduto.BAIXA_DANO ),
+        registar( "PC-006", Modulo.M9, "Artigo com defeito de fabrico confirmado: dar baixa por dano." )
+    }
+end
+
+rule "CT-008 Inspeção antes de devolver à área de vendas"
+    @id("CT-008")
+    @modulo("M9")
+    @descricao("Inspecionar o dano, as etiquetas de preço e a precisão do RFID antes de devolver o produto à área de vendas; só o produto vendável e corretamente preparado volta ao stock.")
+    @condicoes("artigoAceite,naoBodywear,semDefeito,semDestino")
+    @conclusoes("OUT-007=BAIXA_DANO,OUT-007=REETIQUETAR,OUT-007=AREA_VENDAS")
+    agenda-group "M9"
+    salience 80
+when
+    $d  : Decisao( terminal == false, elegibilidade != Elegibilidade.RECUSAR )
+    PedidoDevolucao( id == $d.pedidoId, tipoPedido != TipoPedido.AJUSTE_PRECO )
+    $a  : ArtigoDevolvido( produto != null, produto.categoria != CategoriaProduto.BODYWEAR,
+                           estado != null, estado.defeitoFabricoConfirmado == false )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false, destino == null,
+                         disparou( "CT-008" ) == false,
+                         elegibilidade == Elegibilidade.PERMITIR || elegibilidade == Elegibilidade.REVER )
+then
+    boolean danificado = $a.getEstado().isDanificado();
+    boolean reetiquetar = !$a.getEstado().isEtiquetaPrecoCorreta() || !$a.getEstado().isRfidCorreto();
+    DestinoProduto destino;
+    String mensagem;
+    if ( danificado ) {
+        destino = DestinoProduto.BAIXA_DANO;
+        mensagem = "Inspeção: o artigo tem dano; dar baixa por dano.";
+    } else if ( $a.isEntreCanais() ) {
+        destino = null;
+        mensagem = "Inspeção sem dano" + ( reetiquetar ? "; corrigir a etiqueta de preço e o RFID" : "" )
+                   + ". Artigo entre canais: o destino segue EP-005, EP-006 ou EP-007.";
+    } else if ( reetiquetar ) {
+        destino = DestinoProduto.REETIQUETAR;
+        mensagem = "Inspeção: etiqueta de preço ou RFID incorretos; reetiquetar e corrigir o RFID antes de voltar à área de vendas.";
+    } else {
+        destino = DestinoProduto.AREA_VENDAS;
+        mensagem = "Inspeção conforme (sem dano, etiqueta de preço e RFID corretos): devolver à área de vendas.";
+    }
+    modify( $da ) {
+        setDestino( destino ),
+        registar( "CT-008", Modulo.M9, mensagem )
+    }
+end
+
+// ---------------------------------------------------------------------------------------------
+// Artigos entre canais (depois da inspeção)
+// ---------------------------------------------------------------------------------------------
+
+rule "EP-007 Artigo entre canais já em saldo"
+    @id("EP-007")
+    @modulo("M9")
+    @descricao("Colocar em saldos e aplicar as promoções de saldo elegíveis atuais: a mercadoria em saldo mantém-se em saldo. Avaliada antes de EP-006.")
+    @condicoes("entreCanais,inspecionado,emSaldo")
+    @conclusoes("OUT-007=SALDOS")
+    agenda-group "M9"
+    salience 70
+when
+    $d  : Decisao( terminal == false, elegibilidade != Elegibilidade.RECUSAR )
+    PedidoDevolucao( id == $d.pedidoId, tipoPedido != TipoPedido.AJUSTE_PRECO )
+    $a  : ArtigoDevolvido( entreCanais == true, produto != null, produto.emSaldo == true )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false, destino == null,
+                         disparou( "CT-008" ) == true, disparou( "EP-007" ) == false )
+then
+    modify( $da ) {
+        setDestino( DestinoProduto.SALDOS ),
+        registar( "EP-007", Modulo.M9,
+                  "Artigo entre canais já em saldo: colocar em saldos com as promoções de saldo elegíveis atuais." )
+    }
+end
+
+rule "EP-005 Artigo entre canais no sortido da loja recetora"
+    @id("EP-005")
+    @modulo("M9")
+    @descricao("Reprecificar ao preço de venda atual da loja recetora e devolver à área de vendas, se for vendável.")
+    @condicoes("entreCanais,inspecionado,noSortidoDaLojaRecetora,naoEmSaldo")
+    @conclusoes("OUT-007=AREA_VENDAS")
+    agenda-group "M9"
+    salience 60
+when
+    $d  : Decisao( terminal == false, elegibilidade != Elegibilidade.RECUSAR )
+    PedidoDevolucao( id == $d.pedidoId, tipoPedido != TipoPedido.AJUSTE_PRECO )
+    $p  : PedidoDevolucao( id == $d.pedidoId, loja != null )
+    $a  : ArtigoDevolvido( entreCanais == true, produto != null, produto.emSaldo == false, revendivel != false )
+    eval( $p.getLoja().estaNoSortido( $a.getProduto().getSku() ) )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false, destino == null,
+                         disparou( "CT-008" ) == true, disparou( "EP-005" ) == false )
+then
+    modify( $da ) {
+        setDestino( DestinoProduto.AREA_VENDAS ),
+        registar( "EP-005", Modulo.M9,
+                  "Artigo entre canais que está ou esteve no sortido da loja recetora: reprecificar ao preço de venda "
+                  + "atual da loja (" + $a.getProduto().getPrecoAtual() + ") e devolver à área de vendas." )
+    }
+end
+
+rule "EP-006 Artigo entre canais fora do sortido da loja recetora"
+    @id("EP-006")
+    @modulo("M9")
+    @descricao("Colocar em saldos e marcar com 20 por cento de desconto sobre o preço devolvido, combinável com as promoções elegíveis na loja.")
+    @condicoes("entreCanais,inspecionado,foraDoSortidoDaLojaRecetora,naoEmSaldo")
+    @conclusoes("OUT-007=SALDOS")
+    agenda-group "M9"
+    salience 60
+when
+    $d  : Decisao( terminal == false, elegibilidade != Elegibilidade.RECUSAR )
+    PedidoDevolucao( id == $d.pedidoId, tipoPedido != TipoPedido.AJUSTE_PRECO )
+    $p  : PedidoDevolucao( id == $d.pedidoId, loja != null )
+    $a  : ArtigoDevolvido( entreCanais == true, produto != null, produto.emSaldo == false )
+    eval( !$p.getLoja().estaNoSortido( $a.getProduto().getSku() ) )
+    $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false, destino == null,
+                         disparou( "CT-008" ) == true, disparou( "EP-006" ) == false )
+then
+    modify( $da ) {
+        setDestino( DestinoProduto.SALDOS ),
+        setDescontoSaldo( 20 ),
+        registar( "EP-006", Modulo.M9,
+                  "Artigo entre canais fora do sortido da loja recetora: colocar em saldos com 20% de desconto sobre o "
+                  + "preço devolvido" + ( $da.getValorDevolucao() == null ? "" : " (" + $da.getValorDevolucao() + ")" )
+                  + ", combinável com as promoções elegíveis na loja." )
+    }
+end
+
+// ---------------------------------------------------------------------------------------------
+// Agregação do pedido (ADR 0002)
+// ---------------------------------------------------------------------------------------------
+
+rule "OUT-001 Elegibilidade do pedido a partir dos artigos"
+    @id("OUT-001")
+    @modulo("M9")
+    @descricao("A elegibilidade do pedido é a mais severa entre a do pedido e as dos artigos; se todos os artigos forem recusados, não há transação [a validar: A-25].")
+    @condicoes("pedidoNaoSuspenso")
+    @conclusoes("OUT-001=PERMITIR,OUT-001=REVER,OUT-001=ENCAMINHAR,OUT-001=RECUSAR,OUT-002=NENHUMA")
+    agenda-group "M9"
+    salience 1
+when
+    $d       : Decisao( disparou( "OUT-001" ) == false )
+    $p       : PedidoDevolucao( id == $d.pedidoId, suspenso == false )
+    $artigos : List( ) from collect( DecisaoArtigo( pedidoId == $d.pedidoId ) )
+then
+    modify( $d ) {
+        agregarArtigos( "OUT-001", Modulo.M9, (List<DecisaoArtigo>) $artigos )
+    }
+end

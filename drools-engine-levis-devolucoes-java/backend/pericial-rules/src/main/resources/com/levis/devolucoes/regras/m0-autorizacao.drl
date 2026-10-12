@@ -1,0 +1,47 @@
+package com.levis.devolucoes.regras;
+
+// M0 — Autorização (docs/02, etapa 0; docs/03, módulo 2).
+
+import com.levis.devolucoes.model.decisao.Decisao;
+import com.levis.devolucoes.model.enums.Elegibilidade;
+import com.levis.devolucoes.model.enums.Modulo;
+import com.levis.devolucoes.model.pedido.PedidoDevolucao;
+
+rule "HS-006 Colaborador não autorizado a processar devoluções ou trocas"
+    @id("HS-006")
+    @modulo("M0")
+    @descricao("Encaminhar para a Gestão da Loja, um Key Holder, ou um Lead Cashier ou Elevated Stylist aprovado pelo District Manager. O XStore Manager é considerado autorizado [a validar: A-23].")
+    @condicoes("colaboradorNaoAutorizado")
+    @conclusoes("OUT-001=ENCAMINHAR")
+    agenda-group "M0"
+    salience 100
+when
+    $d : Decisao( terminal == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, colaborador == null || colaborador.autorizado == false )
+then
+    modify( $d ) {
+        aplicar( "HS-006", Modulo.M0, Elegibilidade.ENCAMINHAR,
+                 "Colaborador sem autorização para devoluções ou trocas: encaminhar para a Gestão da Loja, "
+                 + "um Key Holder, ou um Lead Cashier ou Elevated Stylist aprovado pelo District Manager." )
+    }
+end
+
+rule "CT-003 Mesmo colaborador do início ao fim com credenciais próprias"
+    @id("CT-003")
+    @modulo("M0")
+    @descricao("O colaborador que inicia sessão no POS conclui a transação do início ao fim; as credenciais não podem ser partilhadas.")
+    @condicoes("colaboradorAutorizado,credencialPosPropria")
+    @conclusoes("")
+    agenda-group "M0"
+    salience 90
+when
+    $d : Decisao( terminal == false, disparou( "CT-003" ) == false )
+    $p : PedidoDevolucao( id == $d.pedidoId, colaborador != null,
+                          colaborador.autorizado == true, colaborador.idCredencialPOS != null )
+then
+    modify( $d ) {
+        registar( "CT-003", Modulo.M0,
+                  "O colaborador " + $p.getColaborador().getId() + " conclui a transação do início ao fim com a "
+                  + "sua credencial de POS (" + $p.getColaborador().getIdCredencialPOS() + "), sem a partilhar." )
+    }
+end
