@@ -73,6 +73,7 @@ Documenta o desenho técnico da solução, princípios de engenharia (Clean Arch
 | **Arquitetura do Orquestrador FastAPI** | [`fastapi_orchestrator.md`](architecture/fastapi_orchestrator.md) | Backend orquestrador Python, camadas de software, ciclo de vida (*lifespan*), connection pooling com `httpx.AsyncClient` e injeção de dependências. |
 | **Arquitetura do Motor Drools** | [`drools_engine.md`](architecture/drools_engine.md) | Micro-serviço empresarial Java 21 / Spring Boot 3 / Drools 8.44 (Levi's Returns), arquitetura limpa em 7 módulos Maven, base de 98 regras DRL (M0 a M9), persistência em PostgreSQL 16 e explicabilidade pericial em 5 vias (*Como, Porquê, Porque Não, E Se, O Que Falta*). |
 | **Interações e Fluxos de Dados** | [`service_interactions.md`](architecture/service_interactions.md) | Diagramas de sequência ponta-a-ponta (Prolog e Drools Levi's), autenticação JWT dev, pipelines de dados por camada, topologia de rede Docker, resiliência e tratamento de falhas. |
+| **Análise do Motor sp_exp2** | [`sp_exp2_engine_analysis.md`](architecture/sp_exp2_engine_analysis.md) | Dissecação dos 6 blocos do motor dos docentes (`sp_exp2.pl`), ciclo forward-chaining, metaconhecimento, explicabilidade nativa e plano de adaptação pericial para retalho. |
 
 ---
 

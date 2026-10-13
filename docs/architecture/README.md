@@ -20,6 +20,7 @@ O sistema baseia-se em princípios sólidos de engenharia de software: **Clean A
 | [Arquitetura do Motor Drools (`drools_engine.md`)](drools_engine.md) | Desenho do micro-serviço Drools Engine (Levi's) | Arquitetura modular em 7 módulos Maven (Java 21 / Spring Boot 3 / Drools 8.44), Rete-OO, base de 98 regras DRL (M0 a M9), explicabilidade em 5 vias, persistência em PostgreSQL e segurança JWT. |
 | [Arquitetura do Orquestrador FastAPI (`fastapi_orchestrator.md`)](fastapi_orchestrator.md) | Desenho do backend orquestrador | Arquitetura em camadas (core, schemas, clients, services, api), gestão de ciclo de vida (*lifespan*), connection pooling com `httpx`, CORS e injeção de dependências. |
 | [Interações entre Serviços e Fluxos de Dados (`service_interactions.md`)](service_interactions.md) | Comunicação e integração ponta-a-ponta | Diagramas de sequência detalhados (Prolog e Drools Levi's), autenticação JWT dev, pipelines de dados, DNS Docker e matriz de tratamento de erros. |
+| [Análise Aprofundada do Motor sp_exp2 (`sp_exp2_engine_analysis.md`)](sp_exp2_engine_analysis.md) | Dissecação e adaptação do motor académico | Análise detalhada dos 6 blocos do `sp_exp2.pl`, ciclo de inferência, metaconhecimento, explicabilidade e roteiro de adaptação pericial para retalho. |
 
 ---
 
