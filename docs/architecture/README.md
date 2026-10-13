@@ -21,6 +21,7 @@ O sistema baseia-se em princípios sólidos de engenharia de software: **Clean A
 | [Arquitetura do Orquestrador FastAPI (`fastapi_orchestrator.md`)](fastapi_orchestrator.md) | Desenho do backend orquestrador | Arquitetura em camadas (core, schemas, clients, services, api), gestão de ciclo de vida (*lifespan*), connection pooling com `httpx`, CORS e injeção de dependências. |
 | [Interações entre Serviços e Fluxos de Dados (`service_interactions.md`)](service_interactions.md) | Comunicação e integração ponta-a-ponta | Diagramas de sequência detalhados (Prolog e Drools Levi's), autenticação JWT dev, pipelines de dados, DNS Docker e matriz de tratamento de erros. |
 | [Análise Aprofundada do Motor sp_exp2 (`sp_exp2_engine_analysis.md`)](sp_exp2_engine_analysis.md) | Dissecação e adaptação do motor académico | Análise detalhada dos 6 blocos do `sp_exp2.pl`, ciclo de inferência, metaconhecimento, explicabilidade e roteiro de adaptação pericial para retalho. |
+| [Plano Mestre de Adaptação em Prolog (`prolog_expert_system_adaptation.md`)](prolog_expert_system_adaptation.md) | Plano de implementação pericial da Levi's | Da teoria das perguntas de PPROGIA (ACM) às 71 regras da Levi's (RPAC-Team3): arquitetura dual, obtem_facto/2, precedência e explicabilidade em 5 vias. |
 
 ---
 

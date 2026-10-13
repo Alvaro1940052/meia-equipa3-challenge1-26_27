@@ -32,6 +32,7 @@ flowchart TD
 | **Guia de Primeiros Passos** | [`getting_started.md`](getting_started.md) | Instruções passo-a-passo para clonar o repositório, configurar o ambiente virtual Python, arrancar os serviços localmente (nativos ou com Docker Compose) e validar o funcionamento inicial (*smoke test*). |
 | **Estratégia e Execução de Testes** | [`testing.md`](testing.md) | Arquitetura de testes do sistema (65 testes automatizados com 100% de sucesso), detalhe dos testes PLUnit em Prolog, suíte Pytest com `ASGITransport` em FastAPI e comandos práticos de execução. |
 | **Convenções de Código e Boas Práticas** | [`coding_conventions.md`](coding_conventions.md) | Regra de ouro arquitetural (separação estrita orquestrador ≠ regras de negócio), padrões de idioma (código em inglês, documentação em pt-PT), estrutura de módulos Prolog, tipagem Pydantic v2 e padrões Git. |
+| **Plano de Implementação do Motor de Retalho** | [`retail_prolog_implementation_plan.md`](retail_prolog_implementation_plan.md) | Plano estruturado em 5 fases para adaptação do sp_exp2 com isolamento de paridade, mecânica ACM (obtem_facto/2), 71 regras da Levi's e 5 vias de explicabilidade. |
 
 ---
 

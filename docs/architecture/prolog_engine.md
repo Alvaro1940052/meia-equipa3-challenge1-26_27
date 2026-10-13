@@ -242,5 +242,6 @@ O módulo `inference_engine` em [`prolog_engine/src/core/inference/engine.pl`](.
 * [Arquitetura do Orquestrador FastAPI](fastapi_orchestrator.md) — Camada cliente que consome este serviço.
 * [Interações entre Serviços e Fluxos de Dados](service_interactions.md) — Comunicação e contratos de transporte.
 * [Análise Aprofundada do Motor Académico (sp_exp2.pl)](sp_exp2_engine_analysis.md) — Dissecação bloco a bloco do motor, ciclo de inferência e roteiro de adaptação pericial.
+* [Plano Mestre de Adaptação do Motor Prolog](prolog_expert_system_adaptation.md) — Da teoria das perguntas de PPROGIA (ACM) às 71 regras da Levi's (RPAC-Team3).
 * [Referência da API do Motor Prolog](../api/prolog_engine_api.md) — Especificação técnica dos endpoints `/evaluate` e `/inference/*`.
 * [Contentorização e Dockerfiles](../deployment/docker.md) — Configuração do contentor `swipl:latest`.

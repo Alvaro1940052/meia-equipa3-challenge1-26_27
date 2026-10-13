@@ -74,6 +74,7 @@ Documenta o desenho técnico da solução, princípios de engenharia (Clean Arch
 | **Arquitetura do Motor Drools** | [`drools_engine.md`](architecture/drools_engine.md) | Micro-serviço empresarial Java 21 / Spring Boot 3 / Drools 8.44 (Levi's Returns), arquitetura limpa em 7 módulos Maven, base de 98 regras DRL (M0 a M9), persistência em PostgreSQL 16 e explicabilidade pericial em 5 vias (*Como, Porquê, Porque Não, E Se, O Que Falta*). |
 | **Interações e Fluxos de Dados** | [`service_interactions.md`](architecture/service_interactions.md) | Diagramas de sequência ponta-a-ponta (Prolog e Drools Levi's), autenticação JWT dev, pipelines de dados por camada, topologia de rede Docker, resiliência e tratamento de falhas. |
 | **Análise do Motor sp_exp2** | [`sp_exp2_engine_analysis.md`](architecture/sp_exp2_engine_analysis.md) | Dissecação dos 6 blocos do motor dos docentes (`sp_exp2.pl`), ciclo forward-chaining, metaconhecimento, explicabilidade nativa e plano de adaptação pericial para retalho. |
+| **Plano Mestre de Adaptação Prolog** | [`prolog_expert_system_adaptation.md`](architecture/prolog_expert_system_adaptation.md) | Transposição do guia de perguntas do Prof. ACM (`MI_Perguntas_ACM.md`) para as 71 regras da Levi's (`RPAC-Team3.md`), arquitetura dual, `obtem_facto/2` e explicabilidade em 5 vias. |
 
 ---
 
@@ -115,6 +116,7 @@ Manuais para novos contribuidores, configuração do ambiente local, convençõe
 | **Primeiros Passos (Getting Started)** | [`getting_started.md`](development/getting_started.md) | Configuração do ambiente local (Python venv, SWI-Prolog, Java 21 / Maven, Docker), arranque nativo dos serviços e validação rápida (*smoke test*). |
 | **Estratégia e Execução de Testes** | [`testing.md`](development/testing.md) | Estratégia e pirâmide de testes do projeto: suíte PLUnit em Prolog, testes unitários e de integração com Pytest no orquestrador e testes JUnit 5 / Spring Boot Test no motor Drools. |
 | **Convenções de Código e Boas Práticas** | [`coding_conventions.md`](development/coding_conventions.md) | Padrões linguísticos (código em inglês, documentação em pt-PT), estrutura de módulos, tipagem estática, convenções Java/Spring Boot e práticas Git. |
+| **Plano do Motor de Retalho Prolog** | [`retail_prolog_implementation_plan.md`](development/retail_prolog_implementation_plan.md) | Plano de implementação em 5 fases para adaptação do sp_exp2 da Levi's com isolamento de paridade, mecânica ACM, 71 regras e 5 vias de explicabilidade. |
 
 ---
 
