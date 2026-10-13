@@ -24,15 +24,19 @@ from app.api.deps import (
     get_drools_service,
     get_inference_client,
     get_inference_service,
+    get_levis_client,
+    get_levis_service,
     get_orchestrator_service,
     get_prolog_client,
 )
 from app.clients.drools_client import DroolsClient
 from app.clients.inference_client import InferenceClient
+from app.clients.levis_client import LevisClient
 from app.clients.prolog_client import PrologClient
 from app.main import app
 from app.services.drools_service import DroolsService
 from app.services.inference_service import InferenceService
+from app.services.levis_service import LevisService
 from app.services.orchestrator_service import OrchestratorService
 
 pytest_plugins = ("pytest_asyncio",)
@@ -156,6 +160,129 @@ def inference_service(mock_inference_client: AsyncMock) -> InferenceService:
 
 
 @pytest.fixture
+def mock_levis_client() -> AsyncMock:
+    """Fixture providing a mock LevisClient preconfigured with successful defaults."""
+    mock = AsyncMock(spec=LevisClient)
+    mock.check_health.return_value = True
+    mock.get_health.return_value = {
+        "status": "UP",
+        "service": "drools-engine-levis",
+        "version": "1.0.0",
+        "rulesCount": 98,
+        "database": "CONNECTED",
+    }
+    mock.evaluate.return_value = {
+        "avaliacaoId": "00000000-0000-0000-0000-000000000001",
+        "pedidoId": "C01",
+        "elegibilidade": "REVER",
+        "tipoTransacao": "TROCA",
+        "valorDevolucao": 69.50,
+        "artigos": [
+            {
+                "artigoId": "A-1",
+                "aprovado": True,
+                "destino": "AREA_VENDAS",
+                "valorReembolso": 69.50,
+                "motivoRecusa": None,
+                "regrasAplicadas": ["PT-003", "PC-002"],
+            }
+        ],
+        "regras": [
+            {"codigo": "PC-002", "nome": "Etiquetas soltas", "modulo": "M3", "efeito": "REVER"},
+            {"codigo": "PT-003", "nome": "Troca normal", "modulo": "M5", "efeito": "PERMITIR"},
+        ],
+    }
+    mock.get_evaluation.return_value = {
+        "avaliacaoId": "00000000-0000-0000-0000-000000000001",
+        "pedidoId": "C01",
+        "elegibilidade": "REVER",
+        "tipoTransacao": "TROCA",
+        "valorDevolucao": 69.50,
+        "artigos": [],
+        "regras": [],
+    }
+    mock.list_evaluations.return_value = {
+        "conteudo": [
+            {
+                "avaliacaoId": "00000000-0000-0000-0000-000000000001",
+                "lojaCodigo": "US-ML-010",
+                "elegibilidade": "REVER",
+                "tipoTransacao": "TROCA",
+                "valorDevolucao": 69.50,
+            }
+        ],
+        "pagina": 0,
+        "tamanho": 20,
+        "totalElementos": 1,
+        "totalPaginas": 1,
+    }
+    mock.get_missing_data.return_value = {
+        "perguntas": [],
+        "completo": True,
+        "resumo": "Dados completos",
+    }
+    mock.get_why.return_value = {
+        "codigo": "IN-010",
+        "pergunta": "Possibilidade de revenda?",
+        "justificacao": "Necessário para avaliar condição de revenda.",
+        "regrasAfetadas": ["PC-002"],
+    }
+    mock.explain_how.return_value = {
+        "passos": [
+            {
+                "ordem": 1,
+                "codigoRegra": "CT-003",
+                "modulo": "M0",
+                "descricao": "Colaborador autorizado",
+                "premissas": [],
+                "conclusoes": ["autorizado"],
+            }
+        ],
+        "modulosPercorridos": ["M0", "M3", "M5"],
+        "resumo": "Caminho de regras disparadas com sucesso",
+    }
+    mock.explain_why_not.return_value = {
+        "conclusao": "OUT-001",
+        "valor": "PERMITIR",
+        "valorObtido": "REVER",
+        "regrasCandidatas": ["PT-003"],
+        "resumo": "A elegibilidade não foi PERMITIR porque foi REVER",
+    }
+    mock.simulate.return_value = {
+        "diferencas": [],
+        "regrasNovas": [],
+        "regrasRemovidas": [],
+        "resumo": "Simulação idêntica ao original",
+        "decisaoSimulada": {
+            "avaliacaoId": "00000000-0000-0000-0000-000000000002",
+            "pedidoId": "C01",
+            "elegibilidade": "PERMITIR",
+            "tipoTransacao": "TROCA",
+            "valorDevolucao": 69.50,
+            "artigos": [],
+            "regras": [],
+        },
+    }
+    mock.list_rules.return_value = [
+        {"id": "PT-003", "modulos": ["M5"], "descricao": "Troca normal", "variantes": 1, "aValidar": False}
+    ]
+    mock.get_rule_detail.return_value = {
+        "id": "PT-003",
+        "variantes": [],
+    }
+    mock.list_dev_collaborators.return_value = [
+        {"id": "C-1", "nome": "Key Holder", "funcao": "KEY_HOLDER", "idCredencialPOS": "POS-C-1"}
+    ]
+    return mock
+
+
+@pytest.fixture
+def levis_service(mock_levis_client: AsyncMock) -> LevisService:
+    """Fixture providing a LevisService initialized with mock LevisClient."""
+    return LevisService(levis_client=mock_levis_client)
+
+
+@pytest.fixture
 def test_app(
     mock_prolog_client: AsyncMock,
     mock_drools_client: AsyncMock,
@@ -163,6 +290,8 @@ def test_app(
     mock_inference_client: AsyncMock,
     inference_service: InferenceService,
     drools_service: DroolsService,
+    mock_levis_client: AsyncMock,
+    levis_service: LevisService,
 ) -> FastAPI:
     """Fixture providing the FastAPI application configured with mock dependencies."""
     app.dependency_overrides[get_prolog_client] = lambda: mock_prolog_client
@@ -171,6 +300,8 @@ def test_app(
     app.dependency_overrides[get_inference_client] = lambda: mock_inference_client
     app.dependency_overrides[get_inference_service] = lambda: inference_service
     app.dependency_overrides[get_drools_service] = lambda: drools_service
+    app.dependency_overrides[get_levis_client] = lambda: mock_levis_client
+    app.dependency_overrides[get_levis_service] = lambda: levis_service
 
     # Also assign to state for robust resolution
     app.state.prolog_client = mock_prolog_client
@@ -179,6 +310,8 @@ def test_app(
     app.state.inference_client = mock_inference_client
     app.state.inference_service = inference_service
     app.state.drools_service = drools_service
+    app.state.levis_client = mock_levis_client
+    app.state.levis_service = levis_service
 
     return app
 
@@ -192,6 +325,8 @@ async def async_client(
     mock_inference_client: AsyncMock,
     inference_service: InferenceService,
     drools_service: DroolsService,
+    mock_levis_client: AsyncMock,
+    levis_service: LevisService,
 ) -> AsyncGenerator[AsyncClient, None]:
     """Fixture providing an asynchronous HTTP client configured for testing FastAPI endpoints."""
     transport = ASGITransport(app=test_app)
@@ -212,6 +347,10 @@ async def async_client(
         delattr(test_app.state, "inference_service")
     if hasattr(test_app.state, "drools_service"):
         delattr(test_app.state, "drools_service")
+    if hasattr(test_app.state, "levis_client"):
+        delattr(test_app.state, "levis_client")
+    if hasattr(test_app.state, "levis_service"):
+        delattr(test_app.state, "levis_service")
 
 
 

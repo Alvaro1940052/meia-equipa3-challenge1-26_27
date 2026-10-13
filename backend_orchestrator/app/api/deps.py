@@ -6,10 +6,13 @@ from fastapi import Depends, Request
 
 from app.clients.drools_client import DroolsClient
 from app.clients.inference_client import InferenceClient
+from app.clients.levis_client import LevisClient
 from app.clients.prolog_client import PrologClient
 from app.services.drools_service import DroolsService
 from app.services.inference_service import InferenceService
+from app.services.levis_service import LevisService
 from app.services.orchestrator_service import OrchestratorService
+
 
 
 def get_prolog_client(request: Request) -> PrologClient:
@@ -70,5 +73,23 @@ def get_inference_service(
         return request.app.state.inference_service
 
     return InferenceService(inference_client=inference_client)
+
+
+def get_levis_client(request: Request) -> LevisClient:
+    """Provide LevisClient instance, reusing the application state instance if available."""
+    if hasattr(request.app.state, "levis_client") and request.app.state.levis_client is not None:
+        return request.app.state.levis_client
+    return LevisClient()
+
+
+def get_levis_service(
+    request: Request,
+    levis_client: LevisClient = Depends(get_levis_client),
+) -> LevisService:
+    """Provide LevisService instance, reusing the application state instance if available."""
+    if hasattr(request.app.state, "levis_service") and request.app.state.levis_service is not None:
+        return request.app.state.levis_service
+    return LevisService(levis_client=levis_client)
+
 
 

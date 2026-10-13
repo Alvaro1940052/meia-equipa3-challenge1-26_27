@@ -49,50 +49,52 @@ flowchart TD
 
     subgraph InferenceEngines ["Motores de Inferência Periciais"]
         Prolog["Micro-serviço SWI-Prolog (Porta 8080)\nREST API Daemon Contentorizado\nMotor Lógico Dedutivo & Explicabilidade"]
-        Drools["Micro-serviço Drools (Porta 8082 Host / 8080 Contentor)\nJava 21 / Spring Boot 3 / Drools 8.44\nMotor Rete-OO / Regras de Produção"]
+        Drools["Micro-serviço Drools Levi's (Porta 8082)\nJava 21 / Spring Boot 3 / Drools 8.44\n98 Regras DRL (M0 a M9) & PostgreSQL 16"]
     end
 
-    Frontend <-->|"HTTP / JSON\nPOST /api/v1/evaluate"| FastAPI
-    FastAPI <-->|"HTTP / JSON\nPOST /evaluate"| Prolog
-    FastAPI <-->|"HTTP / REST\nPOST /api/v1/inference/evaluate"| Drools
+    Frontend <-->|HTTP JSON /api/v1/*| FastAPI
+    FastAPI <-->|HTTP JSON /evaluate| Prolog
+    FastAPI <-->|REST + JWT /api/v1/avaliacoes| Drools
 ```
 
-* **Frontend:** Ponto de interação do utilizador, comunicando exclusivamente com a API pública do backend orquestrador.
-* **Backend Orquestrador (FastAPI):** Valida schemas de entrada/saída (DTOs Pydantic v2), gere timeouts e pools de ligação HTTP assíncronos (`httpx`), e agrega justificações. **Regra de Ouro:** O orquestrador não embute regras de negócio de retalho.
-* **Motor SWI-Prolog (Implementado):** Daemon HTTP multi-threaded com Clean Architecture (`api/` vs `core/`), focado na inferência dedutiva e geração explicativa de diagnósticos.
-* **Motor Java Drools (Implementado):** Micro-serviço baseado em Java 21, Spring Boot 3 e Apache KIE Drools 8.44. Avalia cenários clínicos através de regras de produção compiladas no algoritmo Rete-OO, com rastreabilidade completa das regras disparadas (`firedRules`).
+* **Frontend:** Ponto de interação do utilizador (Dashboard Next.js na porta 3000), comunicando exclusivamente com a API pública do backend orquestrador.
+* **Backend Orquestrador (FastAPI na porta 8000):** Valida schemas de entrada/saída (DTOs Pydantic v2), gere timeouts e pools de ligação HTTP assíncronos (`httpx`), expõe a API unificada `/api/v1/levis/*` e agrega justificações. **Regra de Ouro:** O orquestrador não embute regras de negócio de retalho.
+* **Motor SWI-Prolog (Porta 8080):** Daemon HTTP multi-threaded com Clean Architecture (`api/` vs `core/`), focado na inferência dedutiva e causalidade (*How/Why Not*).
+* **Motor Java Drools Levi's (Porta 8082):** Micro-serviço empresarial multi-módulo em Java 21, Spring Boot 3 e Apache KIE Drools 8.44. Avalia as 98 regras de produção oficiais de devoluções e trocas da marca Levi's em módulos M0 a M9, com persistência relacional em PostgreSQL 16 e explicabilidade em 5 vias (*Como, Porquê, Porque Não, E Se, O Que Falta*).
 
 ### 2.1 Mapeamento de Portas e Serviços
 
-| Micro-serviço | Nome do Contentor | Runtime | Porta Interna | Porta Host | Finalidade Principal |
+| Micro-serviço | Diretório / Componente | Runtime | Porta Interna | Porta Host | Finalidade Principal |
 |:---|:---|:---|:---:|:---:|:---|
-| **Backend Orquestrador** | `expert-backend-orchestrator` | Python 3.11 / FastAPI | `8000` | `8000` | Gateway público, agregação e orquestração |
-| **Motor Prolog** | `expert-prolog-engine` | SWI-Prolog 9.x | `8080` | `8080` | Inferência dedutiva e causalidade (*How/Why Not*) |
-| **Motor Drools** | `expert-drools-engine` | Java 21 / Spring Boot 3 | `8080` | `8082` | Regras de produção Rete-OO e auditoria clínica |
+| **Dashboard Web** | `dashboard/` | Next.js 14 / React | `3000` | `3000` | Centro de diagnóstico pericial interativo |
+| **Backend Orquestrador** | `backend_orchestrator/` | Python 3.11 / FastAPI | `8000` | `8000` | Gateway público, agregação e orquestração |
+| **Motor Prolog** | `prolog_engine/` | SWI-Prolog 9.x | `8080` | `8080` | Inferência dedutiva e causalidade (*How/Why Not*) |
+| **Motor Drools Levi's** | `drools-engine-levis-devolucoes-java/` | Java 21 / Spring Boot 3 | `8082` | `8082` | 98 regras DRL Levi's (M0 a M9) e explicabilidade |
+| **Base de Dados PostgreSQL** | Contentor Docker `levis-postgres` | PostgreSQL 16 | `5432` | `5432` | Histórico de avaliações e auditoria relacional |
 
 ---
 
-## 3. Guia de Início Rápido (Quick Start em 3 Comandos)
+## 3. Guia de Início Rápido (Quick Start)
 
-O ecossistema está totalmente contentorizado e pronto para execução via **Docker Compose**:
+Pode arrancar toda a stack com um único comando:
 
 ```bash
-# 1. Compilar as imagens e iniciar todo o ecossistema em segundo plano (3 contentores)
-docker compose up --build -d
+# 1. Iniciar toda a stack unificada (Postgres, Drools Levi's, Prolog, FastAPI e Dashboard)
+./start_all.sh
 
 # 2. Verificar a saúde dos serviços
 curl -X GET http://localhost:8000/health
-curl -X GET http://localhost:8082/api/v1/inference/health
+curl -X GET http://localhost:8000/api/v1/levis/cenarios-exemplo
 
-# 3. Executar uma inferência de teste (POC) com retorno de justificação
+# 3. Executar uma avaliação de teste Levi's no motor Drools (Cenário 1)
+curl -X POST http://localhost:8000/api/v1/levis/avaliar \
+  -H "Content-Type: application/json" \
+  -d @drools-engine-levis-devolucoes-java/backend/pericial-rules/src/test/resources/cenarios/cenario-01.json
+
+# 4. Executar uma inferência de teste declarativa no motor Prolog
 curl -X POST http://localhost:8000/api/v1/evaluate \
   -H "Content-Type: application/json" \
   -d '{"scenario": "test", "value": 42}'
-
-# 4. Executar uma avaliação clínica no motor Drools
-curl -X POST http://localhost:8082/api/v1/inference/evaluate \
-  -H "Content-Type: application/json" \
-  -d '{"bloodEar": "yes", "earAche": "yes"}'
 ```
 
 A documentação interativa Swagger UI fica imediatamente acessível em: **[http://localhost:8000/docs](http://localhost:8000/docs)** (ou ReDoc em **[http://localhost:8000/redoc](http://localhost:8000/redoc)**).

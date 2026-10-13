@@ -10,7 +10,17 @@ export const ENDPOINTS = {
   INFERENCE_RESET: "/api/v1/inference/reset",
   DROOLS_EVALUATE: "/api/v1/drools/evaluate",
   DROOLS_HEALTH: "/api/v1/drools/health",
+  // Levi's Drools Engine Endpoints
+  LEVIS_AVALIAR: "/api/v1/levis/avaliar",
+  LEVIS_AVALIACOES: "/api/v1/levis/avaliacoes",
+  LEVIS_CENARIOS: "/api/v1/levis/cenarios-exemplo",
+  LEVIS_REGRAS: "/api/v1/levis/regras",
+  LEVIS_DADOS_EM_FALTA: "/api/v1/levis/dados-em-falta",
+  LEVIS_PORQUE: "/api/v1/levis/porque",
+  LEVIS_HEALTH: "/api/v1/levis/health",
 };
+
+export { LEVIS_OFFICIAL_SCENARIOS } from "./levisScenarios";
 
 export interface PocPreset {
   id: string;

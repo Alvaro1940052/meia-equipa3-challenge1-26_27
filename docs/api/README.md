@@ -22,13 +22,13 @@ flowchart TD
 
     subgraph "Camada de Inferência (Interna)"
         Prolog["Motor SWI-Prolog\n(prolog_engine :8080)"]
-        Drools["Motor Drools\n(drools_engine :8082 host / :8080 cont)"]
+        Drools["Motor Drools Levi's\n(pericial-api :8082)"]
     end
 
-    Client -->|"POST /api/v1/evaluate\nGET /health"| FastAPI
+    Client -->|"POST /api/v1/levis/avaliar\nPOST /api/v1/evaluate\nGET /health"| FastAPI
     FastAPI --- Swagger
     FastAPI -->|"POST /evaluate (JSON síncrono)"| Prolog
-    FastAPI -->|"POST /api/v1/inference/evaluate\nGET /api/v1/inference/health"| Drools
+    FastAPI -->|"POST /api/v1/avaliacoes (REST + JWT)\nGET /api/v1/avaliacoes/.../explicacoes/*"| Drools
 ```
 
 ---
@@ -37,10 +37,10 @@ flowchart TD
 
 | Documento | Ficheiro | Descrição e Propósito |
 |:---|:---|:---|
-| **API Pública v1 do Orquestrador** | [`orchestrator_api_v1.md`](orchestrator_api_v1.md) | Especificação completa da API REST do FastAPI: endpoints `/health` e `/api/v1/evaluate`, exemplos cURL/PowerShell, payloads de aprovação/rejeição e matriz de erros HTTP. |
-| **API Interna do Motor Prolog** | [`prolog_engine_api.md`](prolog_engine_api.md) | Especificação do contrato HTTP interno do micro-serviço SWI-Prolog: endpoints `/evaluate` e `/inference/*`, contratos POC e proposta para o domínio de retalho. |
-| **API Interna do Motor Drools** | [`drools_engine_api.md`](drools_engine_api.md) | Especificação da API REST do motor Drools (Java 21 / Spring Boot 3): endpoints `/api/v1/inference/health` e `/api/v1/inference/evaluate`, matriz de evidências clínicas, cenários diagnósticos e erros padronizados. |
-| **Modelos de Dados, Schemas e DTOs** | [`schemas.md`](schemas.md) | Catálogo exaustivo de todos os modelos Pydantic v2 e DTOs Java / Spring Boot: contratos REST, validações `@Pattern`, normalização defensiva e factos de domínio. |
+| **API Pública v1 do Orquestrador** | [`orchestrator_api_v1.md`](orchestrator_api_v1.md) | Especificação completa da API REST do FastAPI: endpoints `/api/v1/levis/*` (avaliações, explicabilidade, simulações, regras), `/api/v1/evaluate` (Prolog), exemplos cURL/PowerShell e matriz de erros HTTP. |
+| **API Interna do Motor Prolog** | [`prolog_engine_api.md`](prolog_engine_api.md) | Especificação do contrato HTTP interno do micro-serviço SWI-Prolog: endpoints `/evaluate` e `/inference/*`, contratos POC e evolução para contratos de retalho. |
+| **API Interna do Motor Drools** | [`drools_engine_api.md`](drools_engine_api.md) | Especificação da API REST interna do motor Drools (Java 21 / Spring Boot 3): endpoints do motor de devoluções Levi's (`/api/v1/avaliacoes`, `/explicacoes/*`, `/simulacoes`, `/regras`) e arquivo histórico da POC clínica. |
+| **Modelos de Dados, Schemas e DTOs** | [`schemas.md`](schemas.md) | Catálogo exaustivo de todos os modelos Pydantic v2 e DTOs Java / Spring Boot: contratos da Levi's (`PedidoAvaliacaoRequest`, `DecisaoResponse`), validações Bean Validation e factos de domínio. |
 
 ---
 
@@ -50,9 +50,17 @@ flowchart TD
 
 | Método | Endpoint | Acesso | Descrição |
 |:---|:---|:---:|:---|
-| `GET` | `/health` | Público | Verificação de estado operacional e sondagem de conectividade ao Prolog. |
-| `GET` | `/api/v1/health` | Público | Alias versionado do endpoint de diagnóstico de saúde. |
-| `POST` | `/api/v1/evaluate` | Público | Submissão de cenários para inferência lógica com retorno explicativo (*Why/Why not*). |
+| `GET` | `/health` / `/api/v1/health` | Público | Verificação de estado operacional e sondagem de conectividade aos motores. |
+| `POST` | `/api/v1/levis/avaliar` | Público | Avaliação completa de devoluções/trocas Levi's no motor Drools (98 regras DRL). |
+| `GET` | `/api/v1/levis/avaliacoes/{id}` | Público | Consulta de histórico de avaliação por UUID persistido em PostgreSQL. |
+| `GET` | `/api/v1/levis/avaliacoes/{id}/explicacoes/como` | Público | Explicação causal *Como?* (regras disparadas e módulos percorridos). |
+| `GET` | `/api/v1/levis/avaliacoes/{id}/explicacoes/porque-nao` | Público | Análise contrafactual *Porque não?* (condições que falharam para desfechos alternativos). |
+| `GET` | `/api/v1/levis/avaliacoes/{id}/explicacoes/porque` | Público | Justificação *Porquê?* das questões requeridas ao operador de caixa. |
+| `GET` | `/api/v1/levis/avaliacoes/{id}/explicacoes/o-que-falta` | Público | Identificação de atributos em falta para desbloquear aprovação. |
+| `POST` | `/api/v1/levis/avaliacoes/{id}/simulacoes` | Público | Simulador inline *E se?* (*What-if*) sem persistência na base de dados. |
+| `GET` | `/api/v1/levis/regras` | Público | Catálogo das 98 regras ativas na base de conhecimento Drools. |
+| `GET` | `/api/v1/levis/cenarios-exemplo` | Público | Lista dos 10 cenários de teste reais pré-formatados da Levi's. |
+| `POST` | `/api/v1/evaluate` | Público | Submissão de cenários ao motor declarativo SWI-Prolog com retorno explicativo. |
 | `GET` | `/docs` | Navegador | Interface Swagger UI OpenAPI 3.1 interativa. |
 | `GET` | `/redoc` | Navegador | Interface de documentação técnica ReDoc. |
 
@@ -68,12 +76,16 @@ flowchart TD
 | `POST` | `/inference/whynot` | **Interno** | Explicação de ausência de derivação (*Why Not*). |
 | `POST` | `/inference/reset` | **Interno** | Reposição e limpeza da sessão do motor pericial. |
 
-### 3.3 Motor de Inferência (Drools Engine — Porta 8082 Host / 8080 Contentor)
+### 3.3 Motor de Inferência Drools Levi's (Java 21 / Spring Boot 3 — Porta 8082)
 
 | Método | Endpoint | Acesso | Descrição |
 |:---|:---|:---:|:---|
-| `GET` | `/api/v1/inference/health` | **Interno** | Verificação de disponibilidade, KieBase ativa e contagem de regras compiladas. |
-| `POST` | `/api/v1/inference/evaluate` | **Interno** | Avaliação dedutiva de 13 sintomas de hemorragia, dedução de hipóteses e diagnóstico final com `firedRules`. |
+| `POST` | `/api/v1/avaliacoes` | **Interno (JWT)** | Avaliação pericial Drools com persistência no PostgreSQL e auditoria de regras. |
+| `GET` | `/api/v1/avaliacoes/{id}/explicacoes/como` | **Interno (JWT)** | Devolve o rasto sequencial das regras disparadas para a avaliação. |
+| `GET` | `/api/v1/avaliacoes/{id}/explicacoes/porque-nao` | **Interno (JWT)** | Devolve análise contrafactual de antecedentes não cumpridos. |
+| `POST` | `/api/v1/avaliacoes/{id}/simulacoes` | **Interno (JWT)** | Executa simulação *What-if* sobre o pedido em memória. |
+| `GET` | `/api/v1/regras` | **Interno (JWT)** | Catálogo e metadados das 98 regras DRL ativas. |
+| `POST` | `/api/v1/dev/tokens` | **Interno (Dev)** | Emissão imediata de tokens JWT de teste para desenvolvimento. |
 
 ---
 

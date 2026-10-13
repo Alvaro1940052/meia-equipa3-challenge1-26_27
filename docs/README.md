@@ -19,16 +19,16 @@ O principal requisito não-funcional do sistema é a **Explicabilidade Nativa** 
 A documentação está organizada em seis áreas temáticas perfeitamente delimitadas e desacopladas:
 
 ```mermaid
-graph TD
+flowchart TD
     DOCS["docs/ (Índice Geral)"]
 
     subgraph Areas ["Secções Temáticas"]
-        DOM["domain/<br/>Domínio & Conhecimento"]
-        ARCH["architecture/<br/>Arquitetura do Sistema"]
-        API["api/<br/>Referência de APIs & Schemas"]
-        DEP["deployment/<br/>Deploy & Operações"]
-        DEV["development/<br/>Guias de Desenvolvimento"]
-        HIST["history/<br/>Arquivo & Planos Históricos"]
+        DOM["domain/<br>Domínio & Conhecimento"]
+        ARCH["architecture/<br>Arquitetura do Sistema"]
+        API["api/<br>Referência de APIs & Schemas"]
+        DEP["deployment/<br>Deploy & Operações"]
+        DEV["development/<br>Guias de Desenvolvimento"]
+        HIST["history/<br>Arquivo & Planos Históricos"]
     end
 
     DOCS --> DOM
@@ -38,10 +38,10 @@ graph TD
     DOCS --> DEV
     DOCS --> HIST
 
-    DOM -.->|"Regras e Desfechos"| ARCH
-    ARCH -.->|"Contratos de Serviços"| API
-    DEP -.->|"Orquestração de Contentores"| ARCH
-    DEV -.->|"Testes e Padrões"| ARCH
+    DOM -.->|Regras e Desfechos| ARCH
+    ARCH -.->|Contratos de Serviços| API
+    DEP -.->|Orquestração de Contentores| ARCH
+    DEV -.->|Testes e Padrões| ARCH
 ```
 
 ---
@@ -71,8 +71,8 @@ Documenta o desenho técnico da solução, princípios de engenharia (Clean Arch
 | **Visão Global do Sistema** | [`system_overview.md`](architecture/system_overview.md) | Arquitetura macro em micro-serviços, princípios de desenho ("Regra de Ouro"), stack tecnológica (Prolog, FastAPI, Drools), segmentação dos motores periciais, feature toggles e portas de rede. |
 | **Arquitetura do Motor Prolog** | [`prolog_engine.md`](architecture/prolog_engine.md) | Micro-serviço SWI-Prolog, Clean Architecture, isolando o motor de domínio de retalho (`rules.pl`) e o motor de exemplo dos professores (`sp_exp2.pl` / Moodle) com explicabilidade causal (*How* / *Why Not*). |
 | **Arquitetura do Orquestrador FastAPI** | [`fastapi_orchestrator.md`](architecture/fastapi_orchestrator.md) | Backend orquestrador Python, camadas de software, ciclo de vida (*lifespan*), connection pooling com `httpx.AsyncClient` e injeção de dependências. |
-| **Arquitetura do Motor Drools** | [`drools_engine.md`](architecture/drools_engine.md) | Micro-serviço Java 21 / Spring Boot 3 / Drools 8.44, arquitetura em camadas, KieContainer (estratégia dual), base de regras de hemorragia (`haemorrhage_rules.drl`), isolamento entre modelos e DTOs, e explicabilidade via `firedRules`. |
-| **Interações e Fluxos de Dados** | [`service_interactions.md`](architecture/service_interactions.md) | Diagramas de sequência ponta-a-ponta, pipelines de dados (FastAPI $\rightarrow$ Prolog e FastAPI $\rightarrow$ Drools), DNS interno Docker, resiliência e tratamento de falhas. |
+| **Arquitetura do Motor Drools** | [`drools_engine.md`](architecture/drools_engine.md) | Micro-serviço empresarial Java 21 / Spring Boot 3 / Drools 8.44 (Levi's Returns), arquitetura limpa em 7 módulos Maven, base de 98 regras DRL (M0 a M9), persistência em PostgreSQL 16 e explicabilidade pericial em 5 vias (*Como, Porquê, Porque Não, E Se, O Que Falta*). |
+| **Interações e Fluxos de Dados** | [`service_interactions.md`](architecture/service_interactions.md) | Diagramas de sequência ponta-a-ponta (Prolog e Drools Levi's), autenticação JWT dev, pipelines de dados por camada, topologia de rede Docker, resiliência e tratamento de falhas. |
 
 ---
 
@@ -83,10 +83,10 @@ Especificação exaustiva de endpoints, contratos JSON, modelos Pydantic, DTOs J
 
 | Documento | Ficheiro | Descrição e Propósito |
 |:---|:---|:---|
-| **API Pública v1 do Orquestrador** | [`orchestrator_api_v1.md`](api/orchestrator_api_v1.md) | Endpoints públicos do FastAPI: avaliação do retalho (`POST /api/v1/evaluate`) e motor de exemplo dos professores (`/api/v1/inference/*` sob a tag Swagger `Academic Example Engine`), feature toggle `INFERENCE_ENGINE_ENABLED` e erros HTTP. |
+| **API Pública v1 do Orquestrador** | [`orchestrator_api_v1.md`](api/orchestrator_api_v1.md) | Endpoints públicos do FastAPI: motor pericial Drools Levi's (`/api/v1/levis/*`), avaliação declarativa Prolog (`POST /api/v1/evaluate`), motor de exemplo dos professores (`/api/v1/inference/*`), schemas de resposta e matriz de erros HTTP. |
 | **API Interna do Motor Prolog** | [`prolog_engine_api.md`](api/prolog_engine_api.md) | Interface HTTP interna do daemon SWI-Prolog: endpoint de retalho (`POST /evaluate`), endpoints do motor de exemplo dos professores (`POST/GET /inference/*`), contratos da POC e evolução para contratos de retalho. |
-| **API Interna do Motor Drools** | [`drools_engine_api.md`](api/drools_engine_api.md) | Interface REST interna do motor Drools: health check (`GET /api/v1/inference/health`), avaliação clínica de hemorragias (`POST /api/v1/inference/evaluate`), contratos de DTOs, matriz de erros HTTP e exemplos práticos. |
-| **Modelos de Dados e Schemas** | [`schemas.md`](api/schemas.md) | Catálogo de modelos Pydantic v2 (DTOs Python) e contratos DTOs Java / Spring Boot: modelos de retalho, motor académico Prolog e contratos clínicos do motor Drools (`EvidencesRequestDto`, `EvaluationResponseDto`, etc.). |
+| **API Interna do Motor Drools** | [`drools_engine_api.md`](api/drools_engine_api.md) | Interface REST interna do motor Drools: endpoints de avaliação de retalho da Levi's (`/api/v1/avaliacoes`, `/explicacoes/*`, `/simulacoes`), contratos de DTOs, segurança JWT e arquivo histórico da POC clínica. |
+| **Modelos de Dados e Schemas** | [`schemas.md`](api/schemas.md) | Catálogo de modelos Pydantic v2 (DTOs Python) e contratos DTOs Java / Spring Boot: modelos de retalho da Levi's (`PedidoAvaliacaoRequest`, `DecisaoResponse`), motor académico Prolog e contratos legados. |
 
 ---
 
@@ -129,6 +129,7 @@ Arquivo imutável com os planos de implementação faseados e relatórios de exe
 | **Plano da Documentação Profissional** | [`documentation_implementation_plan.md`](history/documentation_implementation_plan.md) | Roteiro de reorganização e criação da estrutura hierárquica e profissional da documentação técnica. |
 | **Plano do Motor de Inferência Pericial** | [`inference_engine_implementation_plan.md`](history/inference_engine_implementation_plan.md) | Roteiro de 5 fases concluídas: integração modular do motor pedagógico dos professores `sp_exp2.pl` do Moodle (`vehicles`), rotas Prolog, proxy FastAPI, suíte PLUnit + Pytest e documentação. |
 | **Plano do Motor Drools** | [`drools_implementation_plan.md`](history/drools_implementation_plan.md) | Roteiro de 6 fases concluídas: setup Spring Boot 3, configuração KieContainer, modelos de domínio, base de regras DRL de hemorragia, API REST, testes e contentorização Docker. |
+| **Plano de Integração Drools Levi's** | [`drools_levis_integration_plan.md`](history/drools_levis_integration_plan.md) | Roteiro mestre de 9 fases para integrar o motor de retalho Levi's (Java 21 / Drools 8.44 / PostgreSQL) no orquestrador FastAPI e Dashboard Next.js. |
 
 ---
 

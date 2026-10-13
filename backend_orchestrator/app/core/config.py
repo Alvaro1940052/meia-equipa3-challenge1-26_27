@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     PROLOG_TIMEOUT_SECONDS: float = 5.0
     DROOLS_ENGINE_URL: str = "http://localhost:8082"
     DROOLS_TIMEOUT_SECONDS: float = 5.0
+    LEVIS_DROOLS_URL: str = "http://localhost:8082"
+    LEVIS_TIMEOUT_SECONDS: float = 10.0
     INFERENCE_ENGINE_ENABLED: bool = True  # Feature toggle for the academic example engine (sp_exp2.pl from Moodle)
     CORS_ORIGINS: List[str] = [
         "http://localhost:3000",

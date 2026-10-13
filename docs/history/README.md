@@ -31,21 +31,21 @@ Aqui residem os planos de implementação faseados originais, os critérios de v
 O diagrama abaixo ilustra como o trabalho documentado nos planos históricos migrou e foi formalizado na atual estrutura de documentação técnica profissional:
 
 ```mermaid
-graph LR
+flowchart LR
     subgraph PlanosHistoricos ["Planos de Execução (Histórico)"]
-        H_PL["prolog_implementation_plan.md<br/>(POC Prolog Fases 1-4)"]
-        H_PY["fastapi_implementation_plan.md<br/>(Orquestrador FastAPI Fases 1-6)"]
-        H_DOC["documentation_implementation_plan.md<br/>(Documentação Fases 0-7)"]
-        H_INF["inference_engine_implementation_plan.md<br/>(Motor de Inferência Fases 1-5)"]
-        H_DRL["drools_implementation_plan.md<br/>(Motor Drools Fases 1-6)"]
+        H_PL["prolog_implementation_plan.md<br>(POC Prolog Fases 1-4)"]
+        H_PY["fastapi_implementation_plan.md<br>(Orquestrador FastAPI Fases 1-6)"]
+        H_DOC["documentation_implementation_plan.md<br>(Documentação Fases 0-7)"]
+        H_INF["inference_engine_implementation_plan.md<br>(Motor de Inferência Fases 1-5)"]
+        H_DRL["drools_implementation_plan.md<br>(Motor Drools Fases 1-6)"]
     end
 
     subgraph DocsAtivos ["Documentação Técnica Ativa"]
-        ARCH["docs/architecture/<br/>Visão Global e Micro-serviços"]
-        API["docs/api/<br/>Endpoints REST e Schemas"]
-        DEP["docs/deployment/<br/>Docker e Docker Compose"]
-        DEV["docs/development/<br/>Setup, Testes e Convenções"]
-        DOM["docs/domain/<br/>Negócio, Perito e Explicabilidade"]
+        ARCH["docs/architecture/<br>Visão Global e Micro-serviços"]
+        API["docs/api/<br>Endpoints REST e Schemas"]
+        DEP["docs/deployment/<br>Docker e Docker Compose"]
+        DEV["docs/development/<br>Setup, Testes e Convenções"]
+        DOM["docs/domain/<br>Negócio, Perito e Explicabilidade"]
     end
 
     H_PL --> ARCH

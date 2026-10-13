@@ -5,34 +5,36 @@
 
 ## 1. Visão Geral
 
-A camada de orquestração do sistema é exposta através de uma API REST desenvolvida em **FastAPI** (Python 3.11+). Esta API funciona como ponto de contacto único para clientes externos e interfaces web (*Frontends*), ocultando a complexidade dos motores de inferência subjacentes (SWI-Prolog e Drools).
+A camada de orquestração do sistema é exposta através de uma API REST desenvolvida em **FastAPI** (Python 3.11+). Esta API funciona como ponto de contacto único para clientes externos, dashboards web e interfaces de ponto de venda (*Frontends* e terminais POS), ocultando a complexidade dos motores de inferência subjacentes:
+* **Motor SWI-Prolog (:8080):** Dedução lógica declarativa e inferência causal (*How / Why Not*).
+* **Motor Drools Levi's (:8082):** Motor empresarial de regras de produção Rete-OO (Java 21 / Spring Boot 3 / Apache KIE Drools 8.44) com 98 regras DRL para triagem oficial de devoluções e trocas da marca Levi's, persistência em PostgreSQL e explicabilidade em 5 vias.
 
 ```mermaid
-flowchart LR
-    Client["Cliente / Frontend\n(Postman, SPA, cURL)"]
-    Orch["FastAPI Orchestrator\n:8000"]
-    Prolog["Motor SWI-Prolog\n:8080"]
+flowchart TD
+    Client["Cliente Externo / Dashboard Next.js (:3000)"]
+    Orch["FastAPI Orchestrator (:8000)"]
+    Prolog["Motor SWI-Prolog (:8080)"]
+    Drools["Motor Drools Levi's (:8082)"]
+    Postgres[("PostgreSQL 16 (:5432)")]
 
-    Client -->|"POST /api/v1/evaluate\nGET /health"| Orch
-    Orch -->|"POST /evaluate (JSON)"| Prolog
-    Prolog -->|"Decisão + Justificações"| Orch
-    Orch -->|"EvaluationResponse (Canónico)"| Client
+    Client -->|POST /api/v1/levis/avaliar| Orch
+    Client -->|POST /api/v1/evaluate| Orch
+
+    Orch -->|HTTP JSON| Prolog
+    Orch -->|REST + JWT Dev| Drools
+    Drools -->|JPA / Flyway| Postgres
 ```
 
 ### 1.1 Configuração Base e URLs
 
 | Ambiente | Host / Base URL | Descrição |
 |:---|:---|:---|
-| **Desenvolvimento Local (Host)** | `http://localhost:8000` | Acesso direto quando executado no host da máquina |
+| **Desenvolvimento Local (Host)** | `http://localhost:8000` | Acesso direto quando executado no host |
+| **Produção / Domínio Público** | `https://challenge1.smbitsolutions.pt` | Instância pública com SSL/TLS |
 | **Rede Docker Compose** | `http://orchestrator:8000` | Acesso inter-contentor dentro da rede `retail-network` |
-| **Documentação Interativa (Swagger)** | `http://localhost:8000/docs` | Interface OpenAPI interativa para testes no browser |
+| **Documentação Interativa (Swagger UI)** | `http://localhost:8000/docs` | Interface OpenAPI interativa sob as tags dedicadas |
 | **Documentação Alternativa (ReDoc)** | `http://localhost:8000/redoc` | Interface de documentação técnica detalhada |
 | **Especificação OpenAPI JSON** | `http://localhost:8000/openapi.json` | Schema JSON nativo OpenAPI 3.1 |
-
-### 1.2 Políticas Globais da API
-* **Autenticação:** Aberta (nesta fase de desenvolvimento / POC).
-* **Formatos Suportados:** `application/json` obrigatório em pedidos com *body*.
-* **CORS:** Configurado para suportar os domínios definidos na variável `CORS_ORIGINS` (por omissão: `http://localhost:3000`, `http://localhost:5173`, `http://localhost:8000`).
 
 ---
 
@@ -40,400 +42,155 @@ flowchart LR
 
 ### 2.1 `GET /health` e `GET /api/v1/health`
 
-Verifica a saúde operacional do serviço orquestrador e testa ativamente a conectividade com o motor de inferência SWI-Prolog.
-
-> [!NOTE]
-> Este endpoint está registado tanto na raiz (`/health`) para compatibilidade com *healthchecks* do Docker Compose, como no router v1 (`/api/v1/health`).
+Verifica a saúde operacional do serviço orquestrador e testa ativamente a conectividade com os motores de inferência.
 
 * **Método HTTP:** `GET`
 * **Caminho:** `/health` ou `/api/v1/health`
 * **Autenticação:** Nenhuma
-* **Headers Recomendados:**
-  * `Accept: application/json`
-
-#### 2.1.1 Resposta de Sucesso — Motor Conectado (`200 OK`)
-
-Retornado quando o orquestrador está saudável e consegue contactar com sucesso o endpoint `/evaluate` do SWI-Prolog.
-
+* **Resposta de Sucesso (`200 OK`):**
 ```json
 {
   "status": "healthy",
   "prolog_engine": "connected",
-  "timestamp": "2026-09-27T20:00:00.123456Z"
+  "timestamp": "2026-10-13T15:00:00.123456Z"
 }
 ```
 
-#### 2.1.2 Resposta de Diagnóstico — Motor Desconectado (`200 OK`)
+---
 
-Quando o orquestrador está em execução mas o motor Prolog não responde ou a conexão falha, o serviço reporta o estado em JSON com HTTP 200 para permitir diagnóstico sem derrubar o orquestrador.
+## 3. Endpoints do Motor Pericial de Devoluções Levi's (Drools)
 
-```json
-{
-  "status": "healthy",
-  "prolog_engine": "disconnected",
-  "timestamp": "2026-09-27T20:00:05.654321Z"
-}
-```
+Tag Swagger: **`Levi's Returns Expert Engine (Drools)`**  
+Prefixo de Rota: **`/api/v1/levis`**
 
-#### 2.1.3 Campos da Resposta
+Estes endpoints expõem a base pericial de retalho da Levi's, integrando avaliação de cenários, motor de explicabilidade em 5 vias (*Como*, *Porquê*, *Porque Não*, *E Se*, *O Que Falta*), catálogo de regras e cenários de teste pré-formatados.
 
-| Campo | Tipo | Descrição |
+### 3.1 Resumo dos Endpoints da Levi's
+
+| Método | Caminho | Resumo e Propósito |
 |:---|:---|:---|
-| `status` | `string` | Estado do orquestrador FastAPI (sempre `"healthy"` se o serviço responder). |
-| `prolog_engine` | `string` | Estado de ligação ao motor de regras: `"connected"` ou `"disconnected"`. |
-| `timestamp` | `string` (ISO-8601 UTC) | Data e hora em que a verificação de saúde foi executada. |
-
-#### 2.1.4 Exemplos de Execução
-
-**Em Bash / cURL:**
-```bash
-curl -X GET http://localhost:8000/health \
-  -H "Accept: application/json"
-```
-
-**Em PowerShell (Windows — `curl.exe`):**
-```powershell
-curl.exe -X GET http://localhost:8000/health -H "Accept: application/json"
-```
-
-**Em PowerShell (Windows — `Invoke-RestMethod`):**
-```powershell
-(Invoke-RestMethod -Uri http://localhost:8000/health -Method Get) | ConvertTo-Json
-```
+| `POST` | `/api/v1/levis/avaliar` | Submete um pedido de devolução/troca ao Drools e devolve o veredito completo. |
+| `GET` | `/api/v1/levis/avaliacoes/{id}` | Recupera uma avaliação persistida por UUID no PostgreSQL. |
+| `GET` | `/api/v1/levis/avaliacoes` | Lista o histórico de avaliações com suporte a paginação e ordenação. |
+| `GET` | `/api/v1/levis/avaliacoes/{id}/explicacoes/como` | Explicação causal **Como?**: rasto ordenado das regras disparadas e módulos. |
+| `GET` | `/api/v1/levis/avaliacoes/{id}/explicacoes/como/{codigo}` | Detalhes de disparo e fundamentação de uma regra específica. |
+| `GET` | `/api/v1/levis/avaliacoes/{id}/explicacoes/porque-nao` | Análise contrafactual **Porque não?**: por que razão outros desfechos não foram atingidos. |
+| `GET` | `/api/v1/levis/avaliacoes/{id}/explicacoes/porque-nao/{codigo}` | Análise contrafactual para um código de conclusão específico. |
+| `GET` | `/api/v1/levis/avaliacoes/{id}/explicacoes/porque` | Explicação **Porquê?**: justifica as perguntas feitas ao operador de caixa. |
+| `GET` | `/api/v1/levis/avaliacoes/{id}/explicacoes/o-que-falta` | Análise **O que falta?**: indica dados omissos para desbloquear aprovação. |
+| `POST` | `/api/v1/levis/avaliacoes/{id}/simulacoes` | Simulador **E se?** (*What-If*): avalia variações hipotéticas sem alterar a base de dados. |
+| `GET` | `/api/v1/levis/regras` | Lista o catálogo das 98 regras ativas na base de conhecimento. |
+| `GET` | `/api/v1/levis/regras/{codigo}` | Detalhe exaustivo de uma regra DRL pelo seu código (ex.: `PT-003`). |
+| `GET` | `/api/v1/levis/colaboradores` | Lista de colaboradores de loja pré-configurados para contexto operacional. |
+| `GET` | `/api/v1/levis/cenarios-exemplo` | Lista os 10 cenários de teste oficiais da Levi's com payloads prontos. |
+| `GET` | `/api/v1/levis/cenarios-exemplo/{numero}` | Devolve um cenário de teste específico (1 a 10) pelo número de índice. |
 
 ---
 
-## 3. Endpoints de Avaliação de Regras
+### 3.2 Avaliar Pedido (`POST /api/v1/levis/avaliar`)
 
-### 3.1 `POST /api/v1/evaluate`
+Submete um pedido para inferência Drools. O endpoint aceita tanto o objeto `PedidoAvaliacaoRequest` direto como o objeto completo de um cenário de teste (`CenarioExemploResponse`), facilitando testes imediatos.
 
-Recebe os factos de um cenário de devolução ou teste, valida a conformidade dos dados através dos modelos Pydantic e encaminha o pedido para o motor de inferência configurado (atualmente SWI-Prolog). Retorna uma decisão determinística acompanhada de uma **cadeia de justificação explicativa** (*Why / Why not*).
-
-* **Método HTTP:** `POST`
-* **Caminho:** `/api/v1/evaluate`
-* **Headers Obrigatórios:**
-  * `Content-Type: application/json`
-  * `Accept: application/json`
-
----
-
-### 3.2 Estrutura do Pedido (Request Body)
-
-O corpo do pedido deve respeitar o schema [`ScenarioInput`](schemas.md#2-schemas-do-poc-atual-appschemasscenariopy):
-
+#### Exemplo de Pedido (`POST /api/v1/levis/avaliar`):
 ```json
 {
-  "scenario": "test",
-  "value": 42
-}
-```
-
-| Campo | Tipo | Obrigatório | Restrições | Descrição |
-|:---|:---|:---:|:---|:---|
-| `scenario` | `string` | **Sim** | Mínimo 1 caractere | Identificador do tipo de cenário a avaliar (ex.: `"test"`). |
-| `value` | `integer` / `number` | **Sim** | Numérico válido | Valor numérico submetido às regras de inferência lógica. |
-
----
-
-### 3.3 Estrutura da Resposta Canónica (`EvaluationResponse`)
-
-A resposta do endpoint segue sempre o modelo [`EvaluationResponse`](schemas.md#1-schemas-canónicos-de-resposta-appschemascommonpy):
-
-```json
-{
-  "status": "success",
-  "decision": "approved",
-  "justification": [
-    "Value is 42",
-    "Dummy rule matched"
-  ],
-  "engine": "prolog",
-  "timestamp": "2026-09-27T19:35:00.000000Z",
-  "message": null
-}
-```
-
-| Campo | Tipo | Descrição |
-|:---|:---|:---|
-| `status` | `string` | Indicador do resultado do processamento: `"success"` ou `"error"`. |
-| `decision` | `string` (Enum) | Decisão tomada: `"approved"`, `"rejected"`, `"store_credit_only"`, `"manager_override"` ou `"error"`. |
-| `justification` | `array[string]` | Lista ordenada de justificações lógicas que fundamentam a decisão (*Explainability*). |
-| `engine` | `string` (Enum) | Motor de inferência que gerou a decisão: `"prolog"`, `"drools"` ou `"aggregated"`. |
-| `timestamp` | `string` (ISO-8601 UTC) | Carimbo temporal UTC de geração da resposta. |
-| `message` | `string` / `null` | Mensagem operacional adicional (em caso de diagnóstico ou erro). |
-
----
-
-## 4. Endpoints do Motor de Exemplo dos Professores (`sp_exp2.pl` do Moodle — `/api/v1/inference/*`)
-
-Quando a variável de ambiente `INFERENCE_ENGINE_ENABLED` está definida como `true` (valor por defeito), o orquestrador regista e expõe os endpoints REST para o **motor de inferência pedagógico dos professores (`sp_exp2.pl`)** fornecido no Moodle (`prolog_engine/Ficheiros de Apoio Sistemas Periciais_ sp_exp1.pl, sp_exp2.pl e base de conhecimento-20260928/`), agrupados sob a tag Swagger **`Academic Example Engine (sp_exp2 / Moodle)`**.
-
-Estes endpoints realizam o proxy assíncrono para o micro-serviço SWI-Prolog sobre a base de conhecimento de teste de veículos (`vehicles`, adaptada de `veiculos2.txt`), mantendo-se rigorosamente separados do endpoint de avaliação de retalho ([Secção 3 — `POST /api/v1/evaluate`](#3-endpoints-de-avaliação-de-regras)).
-
-> [!NOTE]
-> **Feature Toggle:** Se `INFERENCE_ENGINE_ENABLED=false`, o router deste motor de exemplo não é montado no agregador v1 e todos os caminhos `/api/v1/inference/*` devolvem automaticamente `HTTP 404 Not Found`. O endpoint de retalho `/api/v1/evaluate` continua a funcionar normalmente.
-
-### 4.1 `POST /api/v1/inference/load`
-Carrega e compila uma base de conhecimento pericial no motor Prolog.
-
-* **Método:** `POST`
-* **Caminho:** `/api/v1/inference/load`
-* **Schema de Pedido:** [`LoadKnowledgeBaseRequest`](schemas.md#61-loadknowledgebaserequest-e-loadknowledgebaseresponse)
-  ```json
-  {
-    "knowledge_base": "vehicles"
-  }
-  ```
-* **Schema de Resposta (`200 OK`):** [`LoadKnowledgeBaseResponse`](schemas.md#61-loadknowledgebaserequest-e-loadknowledgebaseresponse)
-  ```json
-  {
-    "status": "success",
-    "message": "Knowledge base 'vehicles' loaded successfully",
-    "initial_facts_count": 3
-  }
-  ```
-
----
-
-### 4.2 `POST /api/v1/inference/run`
-Executa o ciclo dedutivo forward-chaining sobre os factos ativos na memória de trabalho.
-
-* **Método:** `POST`
-* **Caminho:** `/api/v1/inference/run`
-* **Schema de Resposta (`200 OK`):** [`RunEngineResponse`](schemas.md#62-runengineresponse-e-derivedfactschema)
-  ```json
-  {
-    "status": "success",
-    "initial_facts_count": 3,
-    "derived_facts_count": 2,
-    "total_facts": 5,
-    "derived_facts": [
-      {
-        "id": 4,
-        "fact": "classe(meu_veiculo,pesado)",
-        "rule_id": 6,
-        "justified_by": [2]
-      },
-      {
-        "id": 5,
-        "fact": "pesado(meu_veiculo,camiao)",
-        "rule_id": 2,
-        "justified_by": [3, 4]
-      }
-    ]
-  }
-  ```
-
----
-
-### 4.3 `GET /api/v1/inference/facts`
-Obtém o conjunto completo de factos presentes na memória de trabalho.
-
-* **Método:** `GET`
-* **Caminho:** `/api/v1/inference/facts`
-* **Schema de Resposta (`200 OK`):** [`GetFactsResponse`](schemas.md#63-getfactsresponse-e-factschema)
-  ```json
-  {
-    "status": "success",
-    "facts_count": 5,
-    "facts": [
-      {"id": 1, "fact": "lotacao(meu_veiculo,3)"},
-      {"id": 2, "fact": "peso(meu_veiculo,4500)"},
-      {"id": 3, "fact": "tipo(meu_veiculo,mercadorias)"},
-      {"id": 4, "fact": "classe(meu_veiculo,pesado)"},
-      {"id": 5, "fact": "pesado(meu_veiculo,camiao)"}
-    ]
-  }
-  ```
-
----
-
-### 4.4 `POST /api/v1/inference/how`
-Constrói a cadeia causal de justificação recursiva para um facto específico (*How*).
-
-* **Método:** `POST`
-* **Caminho:** `/api/v1/inference/how`
-* **Schema de Pedido:** [`ExplainHowRequest`](schemas.md#64-explainhowrequest-e-explainhowresponse)
-  ```json
-  {
-    "fact_id": 4
-  }
-  ```
-* **Schema de Resposta (`200 OK`):** [`ExplainHowResponse`](schemas.md#64-explainhowrequest-e-explainhowresponse)
-  ```json
-  {
-    "status": "success",
-    "fact_id": 4,
-    "explanation": [
-      "Fact 4 -> classe(meu_veiculo,pesado) concluded by rule 6",
-      "Based on facts: [2]",
-      "Fact 2 -> peso(meu_veiculo,4500) was an initial fact"
-    ]
-  }
-  ```
-
----
-
-### 4.5 `POST /api/v1/inference/whynot`
-Investiga por que razão um facto alvo não foi deduzido pelas regras (*Why Not*).
-
-* **Método:** `POST`
-* **Caminho:** `/api/v1/inference/whynot`
-* **Schema de Pedido:** [`ExplainWhynotRequest`](schemas.md#65-explainwhynotrequest-e-explainwhynotresponse)
-  ```json
-  {
-    "fact": "classe(meu_veiculo,ligeiro)"
-  }
-  ```
-* **Schema de Resposta (`200 OK`):** [`ExplainWhynotResponse`](schemas.md#65-explainwhynotrequest-e-explainwhynotresponse)
-  ```json
-  {
-    "status": "success",
-    "fact": "classe(meu_veiculo,ligeiro)",
-    "explanation": [
-      "Investigating why 'classe(meu_veiculo,ligeiro)' was not concluded:",
-      "Rule 7 could conclude 'classe(meu_veiculo,ligeiro)':",
-      "  Failed premise: avalia(peso(meu_veiculo,=<,3500))"
-    ]
-  }
-  ```
-
----
-
-### 4.6 `POST /api/v1/inference/reset`
-Repõe a memória de trabalho do motor pericial num estado limpo.
-
-* **Método:** `POST`
-* **Caminho:** `/api/v1/inference/reset`
-* **Schema de Resposta (`200 OK`):** [`ResetEngineResponse`](schemas.md#66-resetengineresponse)
-  ```json
-  {
-    "status": "success",
-    "message": "Inference engine session reset"
-  }
-  ```
-
----
-
-## 5. Cenários de Utilização e Exemplos Práticos
-
-### 5.1 Cenário 1: Aprovação de Regra (`value = 42`)
-
-Demonstra o disparo com sucesso de uma regra no motor Prolog que satisfaz os critérios de aprovação.
-
-#### Pedido (Payload JSON):
-```json
-{
-  "scenario": "test",
-  "value": 42
-}
-```
-
-#### Comandos de Invocação:
-
-**Bash / Linux / macOS:**
-```bash
-curl -X POST http://localhost:8000/api/v1/evaluate \
-  -H "Content-Type: application/json" \
-  -d '{"scenario": "test", "value": 42}'
-```
-
-**PowerShell (Windows — `curl.exe`):**
-```powershell
-curl.exe -X POST http://localhost:8000/api/v1/evaluate `
-  -H "Content-Type: application/json" `
-  -d '{\"scenario\": \"test\", \"value\": 42}'
-```
-
-**PowerShell (Windows — `Invoke-RestMethod`):**
-```powershell
-$body = @{ scenario = "test"; value = 42 } | ConvertTo-Json
-Invoke-RestMethod -Uri http://localhost:8000/api/v1/evaluate -Method Post -ContentType "application/json" -Body $body
-```
-
-#### Resposta Esperada (`HTTP 200 OK`):
-```json
-{
-  "status": "success",
-  "decision": "approved",
-  "justification": [
-    "Value is 42",
-    "Dummy rule matched"
-  ],
-  "engine": "prolog",
-  "timestamp": "2026-09-27T19:35:00.123456Z",
-  "message": null
-}
-```
-
----
-
-### 5.2 Cenário 2: Rejeição com Explicabilidade (*Why Not*) (`value = 15`)
-
-Quando o valor não cumpre a regra de aprovação, o motor aplica a regra de salvaguarda (*fallback*) e produz a cadeia de justificação correspondente.
-
-#### Pedido (Payload JSON):
-```json
-{
-  "scenario": "test",
-  "value": 15
-}
-```
-
-#### Comandos de Invocação:
-
-**Bash / Linux / macOS:**
-```bash
-curl -X POST http://localhost:8000/api/v1/evaluate \
-  -H "Content-Type: application/json" \
-  -d '{"scenario": "test", "value": 15}'
-```
-
-**PowerShell (Windows — `curl.exe`):**
-```powershell
-curl.exe -X POST http://localhost:8000/api/v1/evaluate `
-  -H "Content-Type: application/json" `
-  -d '{\"scenario\": \"test\", \"value\": 15}'
-```
-
-#### Resposta Esperada (`HTTP 200 OK`):
-```json
-{
-  "status": "success",
-  "decision": "rejected",
-  "justification": [
-    "Value is not 42",
-    "Default fallback rule applied"
-  ],
-  "engine": "prolog",
-  "timestamp": "2026-09-27T19:35:10.654321Z",
-  "message": null
-}
-```
-
----
-
-### 5.3 Cenário 3: Erro de Validação de Dados (`HTTP 422 Unprocessable Entity`)
-
-Se o cliente enviar tipos incompatíveis (ex.: `value` como string não numérica) ou omitir campos obrigatórios, o FastAPI interseta o pedido antes de invocar o Prolog.
-
-#### Pedido Inválido (Exemplo: `value` inválido):
-```json
-{
-  "scenario": "test",
-  "value": "quarenta-e-dois"
-}
-```
-
-#### Resposta de Erro do Pydantic (`HTTP 422`):
-```json
-{
-  "detail": [
+  "tipoPedido": "DEVOLUCAO",
+  "canal": "LOJA_FISICA",
+  "tipoLoja": "MAINLINE",
+  "dataPedido": "2026-10-13",
+  "colaborador": {
+    "id": "COLAB-001",
+    "nome": "Dustin Hopper",
+    "cargo": "COLABORADOR",
+    "lojaId": "STORE-101"
+  },
+  "comprovativo": {
+    "tipo": "RECIBO_ORIGINAL",
+    "numeroRecibo": "REC-98213",
+    "dataCompra": "2026-09-14",
+    "valido": true
+  },
+  "artigos": [
     {
-      "type": "int_parsing",
-      "loc": ["body", "value"],
-      "msg": "Input should be a valid integer, unable to parse string as an integer",
-      "input": "quarenta-e-dois"
+      "sku": "501-ORIGINAL-FIT-001",
+      "categoria": "JEANS",
+      "precoPago": 120.00,
+      "precoAtual": 120.00,
+      "estado": "NOVO",
+      "etiqueta": "SOLTA",
+      "personalizado": false,
+      "pecaIntima": false
+    }
+  ],
+  "pagamentos": [
+    {
+      "meio": "CARTAO_CREDITO",
+      "valor": 120.00
+    }
+  ]
+}
+```
+
+#### Exemplo de Resposta de Sucesso (`HTTP 200 OK`):
+```json
+{
+  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "dataAvaliacao": "2026-10-13T15:20:00Z",
+  "elegibilidade": "REVER",
+  "motivoRecusa": null,
+  "valorReembolso": 120.00,
+  "meioLiquidacao": "VALE_COMPRAS",
+  "requerAprovacaoGerente": true,
+  "artigos": [
+    {
+      "sku": "501-ORIGINAL-FIT-001",
+      "elegivel": true,
+      "destino": "AREA_VENDA",
+      "valorAprovado": 120.00,
+      "justificacao": "Etiqueta solta requer verificação física e reaplicação antes de reposição."
+    }
+  ],
+  "regrasAcionadas": [
+    "M0-001 Autenticação do colaborador",
+    "M2-001 Canal loja física validado",
+    "M3-010 Etiqueta solta requer revisão gerencial",
+    "M4-002 Comprovativo apresentado no 29º dia",
+    "M7-005 Meio de liquidação ajustado para vale"
+  ],
+  "perguntasPendentes": []
+}
+```
+
+#### Valores Possíveis para Campos Críticos:
+* **`elegibilidade`:** `PERMITIR`, `RECUSAR`, `REVER`, `ENCAMINHAR`.
+* **`meioLiquidacao`:** `ORIGINAL`, `VALE_COMPRAS`, `DINHEIRO`, `CARTAO_CREDITO`, `AFTERPAY`, `PAYPAL`, `SEM_REEMBOLSO`.
+* **`destino` do artigo:** `AREA_VENDA`, `RISCO_BIOLOGICO`, `DEFEITO_FABRICO`, `DANIFICADO`, `ARMAZEM_CENTRAL`.
+
+---
+
+### 3.3 Explicabilidade: Como? (`GET /api/v1/levis/avaliacoes/{id}/explicacoes/como`)
+
+Retorna a cadeia cronológica de deduções que fundamentaram o veredito.
+
+#### Exemplo de Resposta (`HTTP 200 OK`):
+```json
+{
+  "avaliacaoId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "totalRegrasDisparadas": 5,
+  "passos": [
+    {
+      "ordem": 1,
+      "regraId": "M0-001",
+      "modulo": "M0-AUTORIZACAO",
+      "descricao": "Colaborador autenticado com permissão de registo de devoluções.",
+      "efeito": "Sessão validada"
+    },
+    {
+      "ordem": 3,
+      "regraId": "M3-010",
+      "modulo": "M3-ELEGIBILIDADE",
+      "descricao": "Artigo com etiquetas soltas exige inspeção do gerente de loja.",
+      "efeito": "Decisão marcada como REVER"
     }
   ]
 }
@@ -441,47 +198,116 @@ Se o cliente enviar tipos incompatíveis (ex.: `value` como string não numéric
 
 ---
 
-### 5.4 Cenário 4: Erro de Rejeição pelo Motor Lógico (`HTTP 400 Bad Request`)
+### 3.4 Explicabilidade: Porque Não? (`GET /api/v1/levis/avaliacoes/{id}/explicacoes/porque-nao`)
 
-Se o motor Prolog rejeitar o payload por dados semânticos inválidos ou contrato violado internamente, o orquestrador captura `PrologResponseError` e converte em HTTP 400.
+Explica por que razão conclusões mais favoráveis (como `PERMITIR` imediato ou `REEMBOLSO_DINHEIRO`) não foram atingidas, identificando os antecedentes que falharam:
 
-#### Resposta de Erro (`HTTP 400 Bad Request`):
+#### Exemplo de Resposta (`HTTP 200 OK`):
 ```json
 {
-  "detail": "Prolog engine returned an error response: Invalid scenario type"
+  "avaliacaoId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "conclusoesNaoAtingidas": [
+    {
+      "conclusaoAlvo": "PERMITIR",
+      "regraCandidata": "PT-003",
+      "descricao": "Devolução automática até 30 dias com etiquetas intactas",
+      "condicoesFalhadas": [
+        "Artigo.etiqueta == INTACTA (Valor atual: SOLTA)"
+      ]
+    }
+  ]
 }
 ```
 
 ---
 
-### 5.5 Cenário 5: Motor Prolog Indisponível ou Timeout (`HTTP 503 Service Unavailable`)
+### 3.5 Simulação Contrafactual *E Se?* (`POST /api/v1/levis/avaliacoes/{id}/simulacoes`)
 
-Se o contentor Prolog estiver desligado, inacessível na rede ou a inferência exceder o tempo limite configurado (`PROLOG_TIMEOUT_SECONDS = 5.0`), o cliente HTTP assíncrono dispara uma exceção tratada elegantemente.
+Permite a um operador testar alterações pontuais sobre o pedido avaliado (por exemplo, assumir que a etiqueta foi encontrada intacta ou que o gerente autorizou a exceção) para verificar a decisão resultante **sem alterar a base de dados**.
 
-#### Resposta de Erro (`HTTP 503 Service Unavailable`):
+#### Exemplo de Pedido (`POST /api/v1/levis/avaliacoes/{id}/simulacoes`):
 ```json
 {
-  "detail": "Failed to connect to Prolog engine at http://localhost:8080: [Errno 111] Connection refused"
+  "alteracoesArtigos": [
+    {
+      "sku": "501-ORIGINAL-FIT-001",
+      "etiqueta": "INTACTA"
+    }
+  ]
+}
+```
+
+#### Exemplo de Resposta (`HTTP 200 OK`):
+```json
+{
+  "avaliacaoOriginalId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "elegibilidadeOriginal": "REVER",
+  "elegibilidadeSimulada": "PERMITIR",
+  "diferencas": [
+    "A elegibilidade passou de REVER para PERMITIR.",
+    "A aprovação gerencial deixou de ser necessária.",
+    "O meio de liquidação mudou para CARTAO_CREDITO (meio original)."
+  ]
 }
 ```
 
 ---
 
-## 6. Matriz de Códigos de Estado HTTP
+### 3.6 Catálogo de Cenários de Teste (`GET /api/v1/levis/cenarios-exemplo`)
+
+Devolve os 10 cenários de teste reais compilados a partir da base de conhecimento da Levi's, prontos para execução imediata no Dashboard ou via API:
+
+1. **Cenário 1:** Troca ao 29.º dia com etiquetas soltas (`REVER`).
+2. **Cenário 2:** Devolução com recibo e etiquetas intactas dentro de 30 dias (`PERMITIR`).
+3. **Cenário 3:** Devolução fora do prazo de 30 dias com recibo (`REVER` / Vale de loja).
+4. **Cenário 4:** Artigo personalizado embainhado (`RECUSAR`).
+5. **Cenário 5:** Devolução sem comprovativo (*blind return*) dentro do limite (`REVER`).
+6. **Cenário 6:** Artigo com defeito de fabrico comprovado (`PERMITIR` / Destino Defeito).
+7. **Cenário 7:** Compra online devolvida em loja física Mainline (`PERMITIR`).
+8. **Cenário 8:** Ajuste de preço no 10.º dia dentro do limite de 14 dias (`PERMITIR`).
+9. **Cenário 9:** Bodywear / peça íntima sem embalagem selada (`RECUSAR` / Risco Biológico).
+10. **Cenário 10:** Devolução paga por Afterpay com estorno digital (`PERMITIR`).
+
+---
+
+## 4. Endpoints do Motor SWI-Prolog (`/api/v1/evaluate` e `/api/v1/inference/*`)
+
+### 4.1 `POST /api/v1/evaluate` (Motor de Retalho Declarativo)
+Submete um cenário ao motor SWI-Prolog (`rules.pl`).
+
+* **Payload Exemplo:** `{"scenario": "test", "value": 42}`
+* **Resposta Exemplo (`200 OK`):**
+```json
+{
+  "status": "success",
+  "decision": "approved",
+  "justification": [
+    "Value matches the expected threshold of 42",
+    "Item tags are marked as intact"
+  ],
+  "engine": "prolog",
+  "timestamp": "2026-10-13T15:00:00Z"
+}
+```
+
+---
+
+## 5. Matriz Global de Códigos de Estado HTTP
 
 | Código HTTP | Significado | Causa Principal | Formato da Resposta |
 |:---|:---|:---|:---|
-| **`200 OK`** | Sucesso | Inferência concluída com sucesso (decisão `"approved"`, `"rejected"`, etc.) ou healthcheck operacional. | Schema `EvaluationResponse` ou `HealthResponse` |
-| **`400 Bad Request`** | Pedido Inválido | O motor de inferência reportou erro de processamento semântico (`PrologResponseError`). | `{"detail": "..."}` |
-| **`404 Not Found`** | Rota Inexistente / Desativada | Rota não reconhecida ou `INFERENCE_ENGINE_ENABLED=false` para rotas `/inference/*`. | `{"detail": "Not Found"}` |
-| **`422 Unprocessable Entity`** | Validação Falhou | O payload não respeita os tipos ou restrições dos modelos Pydantic (`ScenarioInput`, `LoadKnowledgeBaseRequest`, etc.). | Matriz de erros padrão do FastAPI / Pydantic |
-| **`503 Service Unavailable`** | Motor Inacessível | O orquestrador não conseguiu comunicar com o Prolog (`PrologConnectionError` ou `PrologTimeoutError`). | `{"detail": "..."}` |
+| **`200 OK`** | Sucesso | Avaliação processada com sucesso, consulta de histórico ou simulação concluída. | Schema tipado correspondente (`DecisaoResponse`, `SimulacaoResponse`, etc.) |
+| **`400 Bad Request`** | Pedido Inválido | Violação semântica ou Bean Validation no motor Drools. | `{"detail": "..."}` |
+| **`404 Not Found`** | Recurso Inexistente | UUID de avaliação inexistente ou código de regra não encontrado. | `{"detail": "Not Found"}` |
+| **`422 Unprocessable Entity`** | Validação Falhou | Campos obrigatórios em falta no JSON (ex.: `tipoPedido` ou lista de `artigos` vazia). | Matriz de erros nativa Pydantic v2 |
+| **`502 Bad Gateway`** | Falha de Terceiros | Erro interno ou exceção não tratada devolvida pelo Drools ou PostgreSQL. | `{"detail": "..."}` |
+| **`503 Service Unavailable`** | Motor Inacessível | O orquestrador não conseguiu contactar o motor Drools ou SWI-Prolog (porta fechada ou timeout). | `{"detail": "Service Unavailable: ..."}` |
 
 ---
 
-## 7. Documentos Relacionados
+## 6. Documentos Relacionados
 
-* [Catálogo de Schemas Pydantic](schemas.md) — Definição exaustiva de todos os modelos de dados e DTOs.
-* [API Interna do Motor Prolog](prolog_engine_api.md) — Contrato direto do micro-serviço SWI-Prolog.
-* [Arquitetura do Orquestrador](../architecture/fastapi_orchestrator.md) — Implementação das camadas e serviços FastAPI.
-* [Fluxos e Interação entre Serviços](../architecture/service_interactions.md) — Diagrama de sequência ponta-a-ponta e tratamento de exceções.
+* [Catálogo de Schemas Pydantic](schemas.md) — Definição dos modelos `PedidoAvaliacaoRequest`, `DecisaoResponse`, etc.
+* [Arquitetura do Motor Drools Levi's](../architecture/drools_engine.md) — Funcionamento dos 7 módulos e 98 regras.
+* [Interações entre Serviços](../architecture/service_interactions.md) — Diagramas de sequência ponta-a-ponta e resolução de portas.
+* [Histórico e Plano de Integração](../history/drools_levis_integration_plan.md) — Especificação original de todas as fases.

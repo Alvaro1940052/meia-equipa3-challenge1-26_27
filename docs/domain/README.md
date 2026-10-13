@@ -24,7 +24,7 @@ O objetivo primordial consiste em traduzir a experiência operacional e as heur�
 ## 3. Relação com as Restantes Secções do Sistema
 
 ```mermaid
-graph TD
+flowchart TD
     subgraph Dominio ["docs/domain/"]
         BC["business_context.md"]
         EK["expert_knowledge.md"]
@@ -32,11 +32,11 @@ graph TD
     end
 
     subgraph Arquitetura ["docs/architecture/"]
-        ARCH["system_overview.md<br/>prolog_engine.md"]
+        ARCH["system_overview.md<br>prolog_engine.md"]
     end
 
     subgraph API ["docs/api/"]
-        SCHEMAS["schemas.md<br/>orchestrator_api_v1.md"]
+        SCHEMAS["schemas.md<br>orchestrator_api_v1.md"]
     end
 
     subgraph Implementacao ["Código Fonte"]
@@ -44,9 +44,9 @@ graph TD
         PY["backend_orchestrator/app/schemas/retail.py"]
     end
 
-    Dominio -->|"Define regras e desfechos"| Arquitetura
-    Dominio -->|"Modela entidades e justificações"| API
-    Dominio -->|"Especificação conceptual"| Implementacao
+    Dominio -->|Define regras e desfechos| Arquitetura
+    Dominio -->|Modela entidades e justificações| API
+    Dominio -->|Especificação conceptual| Implementacao
 ```
 
 ---

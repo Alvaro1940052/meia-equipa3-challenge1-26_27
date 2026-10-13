@@ -47,7 +47,26 @@ services:
     networks:
       - retail-network
 
+  levis-postgres:
+    image: postgres:16-alpine
+    container_name: levis-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: pericial
+      POSTGRES_USER: pericial
+      POSTGRES_PASSWORD: pericial
+    volumes:
+      - levis_postgres_data:/var/lib/postgresql/data
+    networks:
+      - retail-network
+
 networks:
   retail-network:
     driver: bridge
+
+volumes:
+  levis_postgres_data:
+    driver: local
 

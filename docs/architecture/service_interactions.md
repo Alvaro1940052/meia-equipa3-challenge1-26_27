@@ -7,17 +7,17 @@
 
 Num sistema distribuído de inteligência artificial pericial, a integridade da comunicação entre o orquestrador e os motores de regras é fundamental. 
 
-O sistema integra dois motores simbólicos independentes:
-1. **Motor SWI-Prolog (`prolog-engine`):** Lógica declarativa de primeira ordem para cenários de retalho e metaconhecimento forward-chaining.
-2. **Motor Drools (`drools-engine`):** Regras de produção Rete-OO em Java/Spring Boot para diagnóstico diferencial clínico de hemorragias.
+O ecossistema integra dois motores simbólicos independentes para diagnóstico e triagem no retalho:
+1. **Motor SWI-Prolog (`prolog_engine` :8080):** Lógica declarativa de primeira ordem para cenários de retalho e metaconhecimento com encadeamento causal (*How / Why Not*).
+2. **Motor Drools Levi's (`drools-engine-levis-devolucoes-java` / `pericial-api` :8082):** Regras de produção Rete-OO em Java 21 / Spring Boot 3 para o caso de uso real de Devoluções e Trocas da **Levi Strauss & Co.** (98 regras DRL nos módulos M0 a M9), com persistência relacional em PostgreSQL 16 (`levis-postgres` :5432) e explicabilidade multi-via.
 
-Este documento detalha o ciclo de vida completo das transações ponta-a-ponta de ambos os motores, as transformações de dados através das fronteiras de camada, a infraestrutura de rede Docker e as matrizes de tratamento de exceções.
+Este documento detalha o ciclo de vida completo das transações ponta-a-ponta de ambos os motores, os fluxos de autenticação JWT, as transformações de dados através das fronteiras de camada, a infraestrutura de rede Docker e as matrizes de tratamento de exceções.
 
 ---
 
 ## 2. Diagramas de Sequência Ponta-a-Ponta (End-to-End)
 
-### 2.1 Ciclo de Vida do Pedido com Motor SWI-Prolog (Retalho / Domínio Pericial)
+### 2.1 Ciclo de Vida do Pedido com Motor SWI-Prolog (Retalho / Domínio Declarativo)
 
 O diagrama abaixo descreve a interação completa desde o pedido de avaliação de devolução submetido pelo cliente/frontend até à resposta final sintetizada:
 
@@ -56,7 +56,7 @@ sequenceDiagram
     activate PrologSrv
 
     rect rgb(255, 255, 240)
-        note over PrologSrv: 4. Despacho & http_read_json_dict/3<br/>Conversão JSON -> Prolog Dict
+        note over PrologSrv: 4. Despacho & http_read_json_dict/3<br>Conversão JSON para Prolog Dict
     end
 
     PrologSrv->>PrologCore: evaluate_scenario(+Dict, -Decision, -ExplanationList)
@@ -76,7 +76,7 @@ sequenceDiagram
     deactivate Client
 
     rect rgb(245, 250, 245)
-        note over Service: 7. Mapeamento & Síntese<br/>_map_prolog_response -> EvaluationResponse<br/>Adiciona timestamp UTC e engine="prolog"
+        note over Service: 7. Mapeamento & Síntese<br>_map_prolog_response para EvaluationResponse<br>Adiciona timestamp UTC e engine="prolog"
     end
 
     Service-->>FastAPIRouter: Instância tipada EvaluationResponse
@@ -86,97 +86,130 @@ sequenceDiagram
     deactivate FastAPIRouter
 ```
 
-### 2.2 Ciclo de Vida do Pedido com Motor Drools (Diagnóstico Clínico de Hemorragias)
+---
 
-O diagrama abaixo ilustra a cadeia de processamento quando um pedido de avaliação clínica é submetido ao endpoint `/api/v1/drools/evaluate`:
+### 2.2 Ciclo de Vida do Pedido com Motor Drools Levi's (Devoluções e Trocas de Retalho)
+
+O diagrama abaixo ilustra a cadeia completa de processamento do motor Drools Levi's, incluindo a obtenção de token JWT dev, submissão de factos ao motor KIE, execução das 98 regras, persistência em PostgreSQL e extração de justificações:
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Cliente as Cliente / Frontend
-    participant FastAPIRouter as FastAPI Router (/api/v1/drools/evaluate)
-    participant Service as DroolsService
-    participant Client as DroolsClient (httpx)
-    participant DroolsCtrl as Drools Controller (:8080 / :8082)
-    participant DroolsSrv as InferenceServiceImpl
+    actor Cliente as Operador / Dashboard (:3000)
+    participant FastAPIRouter as FastAPI Router (/api/v1/levis/avaliar)
+    participant LevisService as LevisService (FastAPI)
+    participant LevisClient as LevisClient (httpx)
+    participant DroolsApi as AvaliacaoController (pericial-api :8082)
+    participant PericialSvc as PericialServiceImpl (Spring)
     participant KieSession as Drools KieSession (Working Memory)
+    participant Postgres as PostgreSQL (:5432)
 
-    Cliente->>FastAPIRouter: POST /api/v1/drools/evaluate (JSON Payload)
+    Cliente->>FastAPIRouter: POST /api/v1/levis/avaliar (Pedido JSON)
     activate FastAPIRouter
 
     rect rgb(240, 245, 255)
-        note over FastAPIRouter: 1. Validação Pydantic v2 (DroolsEvidencesSchema)<br/>Campos inválidos geram HTTP 422 Unprocessable Entity
+        note over FastAPIRouter: 1. Validação Pydantic v2 (PedidoAvaliacaoRequest)<br/>Incompatibilidades geram HTTP 422
     end
 
-    FastAPIRouter->>Service: evaluate(evidences_schema)
-    activate Service
+    FastAPIRouter->>LevisService: evaluate(pedido)
+    activate LevisService
 
-    Service->>Client: evaluate(payload)
-    activate Client
+    LevisService->>LevisClient: evaluate(pedido_dict)
+    activate LevisClient
 
-    rect rgb(250, 245, 255)
-        note over Client: 2. Serialização JSON & Pool HTTPX<br/>Timeout configurado (DROOLS_TIMEOUT_SECONDS, omissão 5.0s)
+    rect rgb(255, 245, 230)
+        note over LevisClient: 2. Gestão de Token JWT (Dev Profile)<br>Se sem token ou expirado:<br>POST /api/v1/dev/tokens emite Bearer token
     end
 
-    Client->>DroolsCtrl: HTTP POST /api/v1/inference/evaluate (JSON sobre rede Docker)
-    activate DroolsCtrl
+    LevisClient->>DroolsApi: POST /api/v1/avaliacoes (Headers: Authorization & Accept-Language)
+    activate DroolsApi
 
     rect rgb(255, 255, 240)
-        note over DroolsCtrl: 3. Bean Validation (@Valid EvidencesRequestDto)<br/>Violação @Pattern gera 400 Bad Request via GlobalExceptionHandler
+        note over DroolsApi: 3. Bean Validation (@Valid PedidoAvaliacaoDto)<br>Violações geram HTTP 400 Bad Request
     end
 
-    DroolsCtrl->>DroolsSrv: evaluate(requestDto)
-    activate DroolsSrv
+    DroolsApi->>PericialSvc: avaliar(pedidoDto)
+    activate PericialSvc
 
     rect rgb(245, 250, 245)
-        note over DroolsSrv: 4. Normalização defensiva: requestDto.toDomain()<br/>Mapeamento seguro para facto de domínio Evidences
+        note over PericialSvc: 4. Mapeamento DTO para Factos de Domínio<br>Instanciação de Pedido, Artigo(s), Comprovativo, Decisao
     end
 
-    DroolsSrv->>KieSession: kieClasspathContainer.newKieSession("haemorrhageKSession")
+    PericialSvc->>KieSession: Criar KieSession stateful & registar listener
     activate KieSession
-    DroolsSrv->>KieSession: insert(evidences)
-    DroolsSrv->>KieSession: fireAllRules(listener com tracking de regras)
+    PericialSvc->>KieSession: insert(Pedido), insert(Artigos), insert(Comprovativo), insert(Decisao)
+    PericialSvc->>KieSession: fireAllRules() através dos agenda-groups (M0 -> M9)
 
     rect rgb(245, 245, 255)
-        note over KieSession: 5. Execução da rede Rete-OO (haemorrhage_rules.drl)<br/>Classificação (r1/r2), Diagnósticos (r3-r12), Fallback (r13)<br/>Inserção de factos Hypothesis e Conclusion
+        note over KieSession: 5. Execução do algoritmo Rete-OO (98 regras DRL)<br/>- M0: Permissões de operador<br/>- M2: Canal de venda<br/>- M3: Elegibilidade física e etiquetas<br/>- M4/M5: Comprovativo e prazos<br/>- M6: Desfecho (PERMITIR/RECUSAR/REVER/ENCAMINHAR)<br/>- M7: Valor e meio de reembolso<br/>- M8: Controlos e limites anti-fraude<br/>- M9: Destino do artigo (Vendas/Biohazard/Armazém)
     end
 
-    DroolsSrv->>KieSession: getObjects(Conclusion.class, Hypothesis.class)
-    KieSession-->>DroolsSrv: Factos deduzidos + lista firedRules
-    DroolsSrv->>KieSession: dispose()
+    KieSession-->>PericialSvc: Decisao preenchida + Rasto de regras disparadas
+    PericialSvc->>KieSession: dispose()
     deactivate KieSession
 
-    rect rgb(255, 255, 240)
-        note over DroolsSrv: 6. Construção do EvaluationResponseDto<br/>primaryDiagnosis, conclusions, hypothesis, firedRules
-    end
+    PericialSvc->>Postgres: Salvar AvaliacaoEntity (JPA Repository)
+    activate Postgres
+    Postgres-->>PericialSvc: Confirmado (UUID gerado)
+    deactivate Postgres
 
-    DroolsSrv-->>DroolsCtrl: EvaluationResponseDto
-    deactivate DroolsSrv
+    PericialSvc-->>DroolsApi: DecisaoResponseDto
+    deactivate PericialSvc
 
-    DroolsCtrl-->>Client: HTTP 200 OK (JSON Estruturado)
-    deactivate DroolsCtrl
+    DroolsApi-->>LevisClient: HTTP 200/201 DecisaoResponseDto
+    deactivate DroolsApi
 
-    Client-->>Service: Dict com resposta deserializada
-    deactivate Client
+    LevisClient-->>LevisService: Dicionário tipado
+    deactivate LevisClient
 
-    rect rgb(245, 250, 245)
-        note over Service: 7. Validação e síntese Pydantic<br/>DroolsEvaluationResponse.model_validate(raw_result)
-    end
+    LevisService-->>FastAPIRouter: Modelo Pydantic DecisaoResponse
+    deactivate LevisService
 
-    Service-->>FastAPIRouter: Instância tipada DroolsEvaluationResponse
-    deactivate Service
-
-    FastAPIRouter-->>Cliente: HTTP 200 OK (JSON Canónico com Diagnóstico e Rastreabilidade)
+    FastAPIRouter-->>Cliente: HTTP 200 OK (Decisão Completa com UUID, Auditoria e Destino)
     deactivate FastAPIRouter
+```
+
+---
+
+### 2.3 Fluxo de Explicabilidade em Tempo Real (*Como?* e *Porque Não?*)
+
+Quando o utilizador ou o operador de caixa solicita esclarecimentos sobre o porquê de uma decisão:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Cliente as Operador / Dashboard (:3000)
+    participant FastAPI as FastAPI Router (/api/v1/levis/avaliacoes/{id}/explicacoes/...)
+    participant LevisClient as LevisClient (httpx)
+    participant DroolsExpl as ExplicacaoController (:8082)
+    participant ExplService as ExplicacaoServiceImpl
+    participant Postgres as PostgreSQL (:5432)
+
+    Cliente->>FastAPI: GET /api/v1/levis/avaliacoes/{id}/explicacoes/como
+    activate FastAPI
+    FastAPI->>LevisClient: explain_how(avaliacao_id)
+    activate LevisClient
+    LevisClient->>DroolsExpl: GET /api/v1/avaliacoes/{id}/explicacoes/como (Bearer JWT)
+    activate DroolsExpl
+    DroolsExpl->>ExplService: explicarComo(id)
+    activate ExplService
+    ExplService->>Postgres: Carregar avaliação e rasto de regras
+    Postgres-->>ExplService: Dados da avaliação persistida
+    ExplService-->>DroolsExpl: ExplicacaoComoDto (passos, regras, módulos)
+    deactivate ExplService
+    DroolsExpl-->>LevisClient: HTTP 200 OK
+    deactivate DroolsExpl
+    LevisClient-->>FastAPI: Dict ExplicacaoComo
+    deactivate LevisClient
+    FastAPI-->>Cliente: HTTP 200 OK (Linha temporal e raciocínio causal)
+    deactivate FastAPI
 ```
 
 ---
 
 ## 3. Pipelines de Transformação de Dados por Camada
 
-### 3.1 Pipeline do Motor SWI-Prolog (Retalho)
-
-A informação de devoluções sofre transformações sucessivas entre a camada FastAPI e o motor Prolog:
+### 3.1 Pipeline do Motor SWI-Prolog (Retalho Declarativo)
 
 | Etapa | Fronteira / Componente | Formato de Dados | Exemplo / Representação |
 |:---:|:---|:---|:---|
@@ -185,129 +218,101 @@ A informação de devoluções sofre transformações sucessivas entre a camada 
 | **3** | Serviço Orquestrador | Dicionário Python | `{"scenario": "test", "value": 42}` |
 | **4** | Cliente HTTPX | JSON Serializado | Bytes em stream HTTP `POST /evaluate` |
 | **5** | Camada HTTP Prolog | *Prolog Dict* com tag | `json{scenario: "test", value: 42}` |
-| **6** | Camada Core Prolog | Termos Nativos Prolog | `Decision = approved`, `ExplanationList = ["Value is 42", ...]` |
-| **7** | Resposta do Prolog | JSON Serializado | `{"status": "success", "decision": "approved", "justification": [...]}` |
+| **6** | Camada Core Prolog | Termos Nativos Prolog | `Decision = approved`, `ExplanationList = [...]` |
+| **7** | Resposta do Prolog | JSON Serializado | `{"status": "success", "decision": "approved", ...}` |
 | **8** | Retorno ao Orquestrador | Dicionário Python | `{"status": "success", "decision": "approved", ...}` |
-| **9** | Saída Canónica | Modelo `EvaluationResponse` | `EvaluationResponse(status='success', decision=DecisionEnum.APPROVED, ...)` |
+| **9** | Saída Canónica | Modelo `EvaluationResponse` | `EvaluationResponse(status='success', ...)` |
 | **10**| Resposta ao Cliente | JSON Canónico Final | Serialização JSON compatível com Swagger OpenAPI |
 
-### 3.2 Pipeline do Motor Drools (Diagnóstico de Hemorragias)
-
-O pipeline de avaliação clínica do Drools Engine assegura a separação estrita entre transporte REST e factos na Working Memory:
+### 3.2 Pipeline do Motor Drools Levi's (Retalho Especializado)
 
 | Etapa | Fronteira / Componente | Formato de Dados | Exemplo / Representação |
 |:---:|:---|:---|:---|
-| **1** | Entrada no FastAPI | JSON Textual (HTTP Stream) | `{"bloodEar": "yes", "earAche": "yes"}` |
-| **2** | Camada de Rota FastAPI | Schema Pydantic | `DroolsEvidencesSchema(bloodEar='yes', earAche='yes')` |
-| **3** | Cliente HTTPX (`DroolsClient`) | JSON Serializado | Bytes em stream HTTP `POST /api/v1/inference/evaluate` |
-| **4** | Controller Spring Boot | DTO Jakarta Validation | `EvidencesRequestDto(bloodEar="yes", earAche="yes", ...)` |
-| **5** | Método de Conversão | Facto de Domínio Normalizado | `requestDto.toDomain() -> Evidences(bloodEar="yes", ...)` |
-| **6** | Working Memory (Drools) | Factos em Memória (Rete-OO) | `kieSession.insert(evidences)` |
-| **7** | Execução de Regras | Dedução de Hipóteses e Conclusões | `Hypothesis("upper type")`, `Conclusion("Otorrhagia")` |
-| **8** | Construção da Resposta | DTO Spring Boot | `EvaluationResponseDto(status="SUCCESS", primaryDiagnosis="Otorrhagia", ...)` |
-| **9** | Retorno ao Orquestrador | JSON Serializado / Dict Python | `{"status": "SUCCESS", "primaryDiagnosis": "Otorrhagia", ...}` |
-| **10**| Modelo Canónico FastAPI | Schema `DroolsEvaluationResponse` | Pydantic validado com rastreabilidade `firedRules` |
-| **11**| Resposta ao Cliente | JSON Canónico Final | Serialização JSON compatível com Swagger OpenAPI |
+| **1** | Entrada no FastAPI | JSON Textual (HTTP Stream) | `{"tipoPedido": "DEVOLUCAO", "canal": "LOJA_FISICA", "artigos": [...]}` |
+| **2** | Camada de Rota FastAPI | Schema Pydantic v2 | `PedidoAvaliacaoRequest(tipoPedido='DEVOLUCAO', ...)` |
+| **3** | Cliente HTTPX (`LevisClient`) | JSON com Headers JWT | `POST /api/v1/avaliacoes` + `Authorization: Bearer <jwt>` |
+| **4** | Controller Spring Boot | Record Java com Jakarta Validation | `PedidoAvaliacaoDto(tipoPedido, canal, artigos, ...)` |
+| **5** | Camada de Domínio Java | Factos de Domínio Puros | `Pedido`, `Artigo`, `Comprovativo`, `Decisao` |
+| **6** | Working Memory (Drools 8.44) | Factos em Memória (Rete-OO) | `kSession.insert(pedido)`, disparo por `agenda-group` |
+| **7** | Execução de Regras | Dedução e Modificação de Factos | `PT-003`, `PT-020`, `modify($dec) { setElegibilidade(...) }` |
+| **8** | Persistência Relacional | Entidade JPA / Hibernate | `AvaliacaoEntity` gravada no PostgreSQL com ID UUID |
+| **9** | Resposta da API Spring | DTO Java Imutável | `DecisaoResponseDto(id, elegibilidade, valorReembolso, ...)` |
+| **10**| Retorno ao Orquestrador | Dict Python Deserializado | `{"id": "...", "elegibilidade": "PERMITIR", ...}` |
+| **11**| Resposta Canónica FastAPI | Schema Pydantic `DecisaoResponse` | Objeto validado com destino de artigos e rastreabilidade |
 
 ---
 
 ## 4. Topologia de Rede e Resolução DNS
 
-No ambiente operacional com **Docker Compose**, todos os micro-serviços comunicam através da rede interna virtualizada em modo bridge (`retail-network`):
+No ambiente operacional com **Docker Compose**, todos os serviços comunicam através da rede interna virtualizada em modo bridge (`retail-network`):
 
 ```mermaid
-graph LR
-    subgraph Host ["Máquina Anfitriã (Host)"]
-        CLIENT["Cliente Externo (Browser / curl / PowerShell)"]
+flowchart TD
+    subgraph Host ["Ambiente Host / Clientes Externos"]
+        BROWSER["Navegador / Dashboard (:3000)"]
+        ADMIN["Administrador / curl / Testes"]
     end
 
-    subgraph DockerNet ["Rede Bridge: retail-network"]
-        ORCH["Contentor: retail-backend-orchestrator<br/>(backend_orchestrator :8000)"]
-        PROLOG["Contentor: retail-prolog-engine<br/>(prolog_engine :8080)"]
-        DROOLS["Contentor: expert-drools-engine<br/>(drools_engine :8080)"]
+    subgraph DockerBridge ["Rede Bridge: retail-network"]
+        ORCH["retail-backend-orchestrator<br>(FastAPI :8000)"]
+        PROLOG["retail-prolog-engine<br>(SWI-Prolog :8080)"]
+        DROOLS["drools-engine-levis<br>(pericial-api :8082)"]
+        POSTGRES["levis-postgres<br>(PostgreSQL 16 :5432)"]
     end
 
-    CLIENT -->|"localhost:8000"| ORCH
-    CLIENT -->|"localhost:8080 (opcional)"| PROLOG
-    CLIENT -->|"localhost:8082 (opcional)"| DROOLS
+    BROWSER -->|HTTP :8000 /api/v1/levis/*| ORCH
+    ADMIN -->|HTTP :8000/docs| ORCH
 
-    ORCH -->|"http://prolog-engine:8080 (DNS interno)"| PROLOG
-    ORCH -->|"http://drools-engine:8080 (DNS interno)"| DROOLS
+    ORCH -->|http://prolog-engine:8080| PROLOG
+    ORCH -->|http://drools-engine-levis:8082| DROOLS
+    DROOLS -->|jdbc:postgresql://levis-postgres:5432/levis_db| POSTGRES
 ```
 
-### Resolução de Nomes e Encaminhamento:
-* No ficheiro [`docker-compose.yml`](../../docker-compose.yml), os serviços de inferência estão registados com os identificadores DNS `prolog-engine` e `drools-engine`.
-* O Docker Engine fornece um servidor DNS interno (`127.0.0.11`) que resolve automaticamente os nomes dos serviços para os respetivos endereços IP dinâmicos atribuídos na rede `retail-network`.
-* O orquestrador é configurado através das variáveis de ambiente:
-  ```bash
-  PROLOG_ENGINE_URL=http://prolog-engine:8080
-  DROOLS_ENGINE_URL=http://drools-engine:8080
-  ```
-* Em ambiente de desenvolvimento local fora do Docker, as variáveis recorrem aos seguintes valores por omissão:
-  ```bash
-  PROLOG_ENGINE_URL=http://localhost:8080
-  DROOLS_ENGINE_URL=http://localhost:8082
-  ```
+### Configuração de URLs e Portas por Ambiente:
+
+| Variável de Ambiente | Valor em Docker Compose | Valor Local (Host) | Descrição |
+|:---|:---|:---|:---|
+| `PORT` | `8000` | `8000` | Porta do orquestrador FastAPI. |
+| `PROLOG_ENGINE_URL` | `http://prolog-engine:8080` | `http://localhost:8080` | Endpoint do daemon SWI-Prolog. |
+| `DROOLS_ENGINE_URL` | `http://drools-engine-levis:8082` | `http://localhost:8082` | Endpoint do micro-serviço Drools Levi's. |
+| `SPRING_DATASOURCE_URL`| `jdbc:postgresql://levis-postgres:5432/levis_db` | `jdbc:postgresql://localhost:5432/levis_db` | Conexão JDBC para persistência PostgreSQL. |
 
 ---
 
 ## 5. Matriz de Códigos de Erro e Tratamento de Exceções
 
-O orquestrador atua como um escudo protetor para o cliente externo, intercetando anomalias em qualquer um dos motores de inferência e traduzindo-as em códigos HTTP normativos:
+O orquestrador interceta falhas dos motores de regras e traduz-as em respostas HTTP normativas:
 
 | Cenário de Erro | Componente / Causa Raiz | Deteção / Exceção Interna | Código HTTP Devolvido | Payload de Erro / Descrição |
 |:---|:---|:---|:---:|:---|
-| **JSON de Entrada Inválido (Prolog)** | Sintaxe JSON corrompida ou campos em falta na rota de retalho | Pydantic `ValidationError` | `422 Unprocessable Entity` | Detalhe dos campos com falha de validação |
-| **JSON de Entrada Inválido (Drools)** | Sintaxe JSON corrompida ou tipos errados na rota Drools | Pydantic `ValidationError` | `422 Unprocessable Entity` | Detalhe dos campos com falha de validação |
-| **Violação de Validação Bean (Drools)** | Valor diferente de `"yes"` ou `"no"` num campo clínico | `MethodArgumentNotValidException` no Drools $\rightarrow$ `DroolsResponseError` no Orquestrador | `400 Bad Request` | `{"detail": "Validation failed: bloodEar must be 'yes' or 'no'..."}` |
-| **JSON Malformado no Motor Drools** | Payload HTTP malformado na entrada do Drools Engine | `HttpMessageNotReadableException` no Drools $\rightarrow$ `DroolsResponseError` | `400 Bad Request` | `{"detail": "Malformed JSON request payload"}` |
-| **Motor Prolog Desligado** | Contentor offline, falha de porta ou DNS | `httpx.ConnectError` $\rightarrow$ `PrologConnectionError` | `503 Service Unavailable` | `{"detail": "Could not connect to Prolog engine at 'http://prolog-engine:8080'..."}` |
-| **Motor Drools Desligado** | Contentor offline, JVM a arrancar ou porta 8080 indisponível | `httpx.ConnectError` $\rightarrow$ `DroolsConnectionError` | `503 Service Unavailable` | `{"detail": "Could not connect to Drools engine at 'http://drools-engine:8080'..."}` |
-| **Timeout de Inferência (Prolog)** | Resposta excede `PROLOG_TIMEOUT_SECONDS` (omissão 5.0s) | `httpx.TimeoutException` $\rightarrow$ `PrologTimeoutError` | `503 Service Unavailable` | `{"detail": "Prolog engine timed out after 5.0s during evaluation..."}` |
-| **Timeout de Inferência (Drools)** | Avaliação excede `DROOLS_TIMEOUT_SECONDS` (omissão 5.0s) | `httpx.TimeoutException` $\rightarrow$ `DroolsTimeoutError` | `503 Service Unavailable` | `{"detail": "Drools engine timed out after 5.0s during evaluation..."}` |
-| **Erro Interno no Motor Prolog** | Erro de sintaxe na rota ou execução Prolog | `httpx.HTTPStatusError` $\rightarrow$ `PrologResponseError` | `400 Bad Request` | `{"detail": "Invalid JSON payload: malformed syntax..."}` |
-| **Erro Interno no Motor Drools** | Exceção não tratada na execução do KieSession | `Exception` no Drools $\rightarrow$ `DroolsResponseError` | `400 Bad Request` | `{"detail": "Drools engine returned HTTP 500: Internal server error"}` |
+| **JSON de Entrada Inválido (Prolog)** | Sintaxe corrompida ou campos em falta na rota de retalho | Pydantic `ValidationError` | `422 Unprocessable Entity` | Detalhe dos campos com falha de validação |
+| **JSON de Entrada Inválido (Levi's)** | Payload sem `tipoPedido` ou sem artigos | Pydantic `ValidationError` | `422 Unprocessable Entity` | `"O pedido de avaliação exige 'tipoPedido' e pelo menos um artigo em 'artigos'."` |
+| **Violação Bean Validation (Drools)** | Violação de formato no Spring Boot (`@Valid`) | `LevisResponseError` (HTTP 400 da API Drools) | `400 Bad Request` | Mensagem detalhada de violação Bean Validation |
+| **Motor Prolog Desligado** | Daemon Prolog offline ou porta 8080 inacessível | `httpx.ConnectError` $\rightarrow$ `PrologConnectionError` | `503 Service Unavailable` | `"Could not connect to Prolog engine at '...'"` |
+| **Motor Drools Levi's Desligado** | Processo `pericial-api` offline ou porta 8082 inacessível | `httpx.ConnectError` $\rightarrow$ `LevisConnectionError` | `503 Service Unavailable` | `"Could not connect to Levi's Drools engine at '...'"` |
+| **Timeout de Inferência (Prolog)** | Resposta excede `PROLOG_TIMEOUT_SECONDS` (omissão 5.0s) | `httpx.TimeoutException` $\rightarrow$ `PrologTimeoutError` | `503 Service Unavailable` | `"Prolog engine timed out after 5.0s during evaluation"` |
+| **Timeout de Inferência (Levi's)** | Inferência excede `DROOLS_TIMEOUT_SECONDS` (omissão 8.0s) | `httpx.TimeoutException` $\rightarrow$ `LevisTimeoutError` | `503 Service Unavailable` | `"Levi's Drools engine timed out during evaluation"` |
+| **Erro de Gateway (Drools 500)** | Falha interna no Drools ou PostgreSQL | `LevisResponseError` (status $\ge$ 500) | `502 Bad Gateway` | Erro amigável sem exposição de rastos internos |
 
 ---
 
-## 6. Coexistência Multi-Motor e Ponto de Extensão para Avaliação Comparativa
+## 6. Coexistência Multi-Motor e Comparação de Desfechos
 
-Com a integração do micro-serviço Drools Engine, o sistema opera num modelo **multi-motor pericial**:
+Com a integração do micro-serviço Drools Levi's, o sistema consolida o seu compromisso de arquitetura multi-paradigma:
 
-1. **Rotas Dedicadas por Paradigma:**
+1. **Rotas Dedicadas por Motor:**
    - `/api/v1/evaluate` e `/api/v1/inference/*` comunicam com o motor declarativo **SWI-Prolog**.
-   - `/api/v1/drools/evaluate` e `/api/v1/drools/health` comunicam com o motor de regras de produção **Drools**.
-2. **Ponto de Extensão para Agregação e Comparação Cruzada:**
-   A camada de serviço do orquestrador (`OrchestratorService`) está desenhada de modo a permitir um padrão *Fan-Out / Fan-In* assíncrono para cenários em que ambos os motores processem o mesmo domínio:
-
-```mermaid
-flowchart TD
-    REQ["Entrada: ScenarioInput"] --> FORK["OrchestratorService (Fan-Out)"]
-    
-    FORK -->|"asyncio.gather"| P_CALL["PrologClient.evaluate()"]
-    FORK -->|"asyncio.gather"| D_CALL["DroolsClient.evaluate()"]
-    
-    P_CALL --> P_RESP["Resposta Prolog (Decisão + Justificação)"]
-    D_CALL --> D_RESP["Resposta Drools (Diagnóstico + Regras Disparadas)"]
-    
-    P_RESP --> AGG["Módulo de Agregação e Comparação Cruzada (Fan-In)"]
-    D_RESP --> AGG
-    
-    AGG --> FINAL["EvaluationResponse (EngineSourceEnum.AGGREGATED)<br/>Decisão Concordante + Diagnóstico Cruzado"]
-```
-
-Graças ao desacoplamento garantido pelos clientes HTTP assíncronos (`PrologClient`, `DroolsClient`), a introdução de novos motores ou a agregação de decisões não acarreta alterações estruturais nos contratos dos clientes externos.
+   - `/api/v1/levis/*` comunica com o motor de produção **Drools Levi's**.
+2. **Comparação Cruzada de Desfechos:**
+   A arquitetura permite submeter o mesmo cenário de retalho a ambos os motores para confrontar a dedução lógica declarativa com a inferência baseada em regras de produção Rete-OO, garantindo máxima fiabilidade na auditoria de políticas comerciais de retalho.
 
 ---
 
 ## 7. Documentos Relacionados
 
 * [Visão Global da Arquitetura do Sistema](system_overview.md) — Diagrama e princípios globais do ecossistema.
+* [Arquitetura do Motor Drools](drools_engine.md) — Módulos, regras DRL e persistência do Drools Levi's.
 * [Arquitetura do Motor Prolog](prolog_engine.md) — Processamento interno e Clean Architecture no SWI-Prolog.
-* [Arquitetura do Motor Drools](drools_engine.md) — Arquitetura interna, Working Memory e regras DRL no Drools Engine.
 * [Arquitetura do Orquestrador FastAPI](fastapi_orchestrator.md) — Camadas internas, lifespan e connection pooling em Python.
-* [Referência da API do Motor Drools](../api/drools_engine_api.md) — Especificação técnica dos endpoints do Drools Engine.
-* [Referência da API do Motor Prolog](../api/prolog_engine_api.md) — Especificação técnica dos endpoints do SWI-Prolog.
-* [Referência da API Pública v1](../api/orchestrator_api_v1.md) — Especificação detalhada dos endpoints do orquestrador.
+* [Referência da API Pública v1](../api/orchestrator_api_v1.md) — Especificação detalhada dos endpoints `/api/v1/levis/*`.
 * [Orquestração com Docker Compose](../deployment/docker_compose.md) — Topologia de rede, variáveis e contentores.
-
