@@ -330,7 +330,7 @@ cd /root/meia-equipa3-challenge1-26_27/backend_orchestrator
 
 #### Critério de Aceitação da Fase 5
 * Todos os testes passam (`passed`) sem avisos de depreciação ou erros.
-* ✅ **Concluída com Sucesso**: 12 testes dedicados em `test_levis_endpoints.py` (e 129 testes no total da suite do orquestrador) a passar a 100%.
+*  **Concluída com Sucesso**: 12 testes dedicados em `test_levis_endpoints.py` (e 129 testes no total da suite do orquestrador) a passar a 100%.
 
 ---
 
@@ -358,7 +358,7 @@ Transformar o Dashboard web ([`dashboard/`](file:///root/meia-equipa3-challenge1
 #### Critério de Aceitação da Fase 6
 * O dashboard compila com sucesso (`npm run build`).
 * Ao aceder localmente (`http://localhost:3000`) ou via domínio público (`https://challenge1.smbitsolutions.pt`), a nova funcionalidade permite selecionar qualquer um dos 10 cenários e visualizar as decisões e explicações em menos de 1 segundo.
-* ✅ **Concluída com Sucesso**: Aba prioritária "Devoluções Levi's (Drools)" implementada com seletor instantâneo dos 10 cenários oficiais, visualizador de elegibilidade operacional (PERMITIR/RECUSAR/REVER/ENCAMINHAR), tabela de artigos por destino físico e painéis interativos de explicabilidade em 4 vias (Como?, Porque não?, Porquê?, E se?). Build e execução validados com sucesso.
+*  **Concluída com Sucesso**: Aba prioritária "Devoluções Levi's (Drools)" implementada com seletor instantâneo dos 10 cenários oficiais, visualizador de elegibilidade operacional (PERMITIR/RECUSAR/REVER/ENCAMINHAR), tabela de artigos por destino físico e painéis interativos de explicabilidade em 4 vias (Como?, Porque não?, Porquê?, E se?). Build e execução validados com sucesso.
 
 ---
 
@@ -387,8 +387,8 @@ Garantir que a stack completa arranca de forma fiável, unificada e persistente 
    * Passo 4: Validação de saúde com `curl` a todos os serviços.
 
 #### Critério de Aceitação da Fase 7
-* Executar `./stop_all.sh && ./start_all.sh` reinicia a stack sem erros, com saída `✅ Tudo operacional!`.
-* ✅ **Concluída com Sucesso**: Scripts `stop_all.sh` e `start_all.sh` atualizados e validados. O encerramento termina ordenadamente `pericial-api`, `drools-engine`, `uvicorn`, `next-server` e `swipl`, libertando as portas e mantendo o PostgreSQL ativo. O arranque valida a base de dados PostgreSQL, compila e inicializa o `pericial-api` (:8082), compila e inicia o Dashboard (:3000), arranca o Prolog (:8080) e FastAPI (:8000), e executa a verificação de saúde com sucesso devolvendo `✅ Tudo operacional!`.
+* Executar `./stop_all.sh && ./start_all.sh` reinicia a stack sem erros, com saída ` Tudo operacional!`.
+*  **Concluída com Sucesso**: Scripts `stop_all.sh` e `start_all.sh` atualizados e validados. O encerramento termina ordenadamente `pericial-api`, `drools-engine`, `uvicorn`, `next-server` e `swipl`, libertando as portas e mantendo o PostgreSQL ativo. O arranque valida a base de dados PostgreSQL, compila e inicializa o `pericial-api` (:8082), compila e inicia o Dashboard (:3000), arranca o Prolog (:8080) e FastAPI (:8000), e executa a verificação de saúde com sucesso devolvendo ` Tudo operacional!`.
 
 ---
 
@@ -405,7 +405,7 @@ Alinhar a documentação técnica oficial em [`docs/`](file:///root/meia-equipa3
 
 #### Critério de Aceitação da Fase 8
 * Todos os ficheiros técnicos de arquitetura e APIs encontram-se atualizados e consistentes.
-* ✅ **Concluída com Sucesso**: Documentação técnica atualizada em `docs/README.md`, `docs/architecture/drools_engine.md`, `docs/architecture/service_interactions.md`, `docs/architecture/README.md`, `docs/api/orchestrator_api_v1.md`, `docs/api/README.md` e no `README.md` da raiz. O motor Drools Levi's (7 módulos Maven, 98 regras DRL nos módulos M0 a M9, explicabilidade em 5 vertentes, ciclo de vida com autenticação JWT dev e persistência em PostgreSQL) e toda a família de endpoints `/api/v1/levis/*` encontram-se rigorosamente documentados.
+*  **Concluída com Sucesso**: Documentação técnica atualizada em `docs/README.md`, `docs/architecture/drools_engine.md`, `docs/architecture/service_interactions.md`, `docs/architecture/README.md`, `docs/api/orchestrator_api_v1.md`, `docs/api/README.md` e no `README.md` da raiz. O motor Drools Levi's (7 módulos Maven, 98 regras DRL nos módulos M0 a M9, explicabilidade em 5 vertentes, ciclo de vida com autenticação JWT dev e persistência em PostgreSQL) e toda a família de endpoints `/api/v1/levis/*` encontram-se rigorosamente documentados.
 
 ---
 

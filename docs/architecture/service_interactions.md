@@ -1,5 +1,5 @@
 # Interações entre Serviços e Fluxos de Dados
-### *Comunicação Inter-Serviços, Resolução DNS e Pipeline de Dados Ponta-a-Ponta*
+### *Sistema Pericial de Diagnóstico para Devoluções e Trocas no Retalho*
 
 ---
 
@@ -8,79 +8,76 @@
 Num sistema distribuído de inteligência artificial pericial, a integridade da comunicação entre o orquestrador e os motores de regras é fundamental. 
 
 O ecossistema integra dois motores simbólicos independentes para diagnóstico e triagem no retalho:
-1. **Motor SWI-Prolog (`prolog_engine` :8080):** Lógica declarativa de primeira ordem para cenários de retalho e metaconhecimento com encadeamento causal (*How / Why Not*).
+1. **Motor SWI-Prolog (`prolog_engine` :8080):** Lógica declarativa de primeira ordem que inclui o **Motor Pericial de Retalho da Levi's** (71 regras normativas em 9 famílias, interrogação dialógica ACM, 5 vias de explicabilidade e simulação contrafactual em sandbox) e o motor académico de veículos preservado sob o Princípio do Isolamento por Paridade.
 2. **Motor Drools Levi's (`drools-engine-levis-devolucoes-java` / `pericial-api` :8082):** Regras de produção Rete-OO em Java 21 / Spring Boot 3 para o caso de uso real de Devoluções e Trocas da **Levi Strauss & Co.** (98 regras DRL nos módulos M0 a M9), com persistência relacional em PostgreSQL 16 (`levis-postgres` :5432) e explicabilidade multi-via.
 
-Este documento detalha o ciclo de vida completo das transações ponta-a-ponta de ambos os motores, os fluxos de autenticação JWT, as transformações de dados através das fronteiras de camada, a infraestrutura de rede Docker e as matrizes de tratamento de exceções.
+Este documento detalha o ciclo de vida completo das transações ponta-a-ponta de ambos os motores, os fluxos dialógicos e contrafactuais, as transformações de dados através das fronteiras de camada, o mapeamento semântico de decisões e as matrizes de tratamento de exceções.
 
 ---
 
 ## 2. Diagramas de Sequência Ponta-a-Ponta (End-to-End)
 
-### 2.1 Ciclo de Vida do Pedido com Motor SWI-Prolog (Retalho / Domínio Declarativo)
+### 2.1 Avaliação Canónica em Lote com Motor Prolog (`POST /api/v1/retail/evaluate`)
 
-O diagrama abaixo descreve a interação completa desde o pedido de avaliação de devolução submetido pelo cliente/frontend até à resposta final sintetizada:
+O diagrama abaixo descreve a interação completa de avaliação em lote desde a submissão do cenário pelo cliente/frontend até à resposta final sintetizada:
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Cliente as Cliente / Frontend POS
-    participant FastAPIRouter as FastAPI Router (/api/v1/evaluate)
-    participant Service as OrchestratorService
+    participant FastAPIRouter as FastAPI Router (/api/v1/retail/evaluate)
     participant Client as PrologClient (httpx)
     participant PrologSrv as Motor SWI-Prolog (:8080)
-    participant PrologCore as Prolog Core Rules (rules.pl)
+    participant Disp as Rotas Retalho (retail_routes.pl)
+    participant RetailEngine as Motor Retalho (retail_engine/engine.pl)
+    participant Rules as Regras Levi's (retail_rules.pl)
 
-    Cliente->>FastAPIRouter: POST /api/v1/evaluate (JSON Payload)
+    Cliente->>FastAPIRouter: POST /api/v1/retail/evaluate (JSON Payload)
     activate FastAPIRouter
 
     rect rgb(240, 245, 255)
-        note over FastAPIRouter: 1. Validação Pydantic v2 (ScenarioInput)<br/>Falha gera HTTP 422 Unprocessable Entity
+        note over FastAPIRouter: 1. Validação de formato e injeção do PrologClient
     end
 
-    FastAPIRouter->>Service: evaluate_scenario(scenario_input)
-    activate Service
-
-    rect rgb(245, 250, 245)
-        note over Service: 2. Conversão do modelo Pydantic<br/>payload = scenario_input.model_dump()
-    end
-
-    Service->>Client: evaluate(payload)
+    FastAPIRouter->>Client: evaluate_retail(payload)
     activate Client
 
     rect rgb(250, 245, 255)
-        note over Client: 3. Serialização JSON & Connection Pool<br/>Timeout configurado (ex.: 5.0s)
+        note over Client: 2. Serialização JSON & Connection Pool<br/>Timeout configurado (ex.: 5.0s)
     end
 
-    Client->>PrologSrv: HTTP POST /evaluate (JSON sobre Docker network)
+    Client->>PrologSrv: HTTP POST /retail/evaluate (JSON sobre Docker network)
     activate PrologSrv
 
-    rect rgb(255, 255, 240)
-        note over PrologSrv: 4. Despacho & http_read_json_dict/3<br>Conversão JSON para Prolog Dict
-    end
-
-    PrologSrv->>PrologCore: evaluate_scenario(+Dict, -Decision, -ExplanationList)
-    activate PrologCore
-    note over PrologCore: 5. Dedução lógica declarativa pura
-    PrologCore-->>PrologSrv: Decision, ExplanationList
-    deactivate PrologCore
+    PrologSrv->>Disp: Despacho para handle_retail_evaluate/1
+    activate Disp
 
     rect rgb(255, 255, 240)
-        note over PrologSrv: 6. Serialização via reply_json_dict/1
+        note over Disp: 3. http_read_json_dict/3 e normalização<br/>Converte atributos JSON em termos de facto
     end
 
-    PrologSrv-->>Client: HTTP 200 OK {"status": "success", "decision": "...", "justification": [...]}
+    Disp->>RetailEngine: evaluate_facts(+FactList, -ResultDict)
+    activate RetailEngine
+    RetailEngine->>RetailEngine: reset_session e asserção de factos
+    RetailEngine->>Rules: arranca_motor/1 (avaliação de precedência e 71 regras)
+    activate Rules
+    Rules-->>RetailEngine: Desfecho deduzido e justificação causal
+    deactivate Rules
+    RetailEngine-->>Disp: ResultDict (status, decision, justification, rules_fired)
+    deactivate RetailEngine
+
+    Disp->>PrologSrv: reply_json_dict(ResultDict, 200 OK)
+    deactivate Disp
+
+    PrologSrv-->>Client: HTTP 200 OK {"status": "success", "decision": "permitir", ...}
     deactivate PrologSrv
 
-    Client-->>Service: Dict com resposta desestruturada do Prolog
+    Client-->>FastAPIRouter: Dict com resposta estruturada do Prolog
     deactivate Client
 
     rect rgb(245, 250, 245)
-        note over Service: 7. Mapeamento & Síntese<br>_map_prolog_response para EvaluationResponse<br>Adiciona timestamp UTC e engine="prolog"
+        note over FastAPIRouter: 4. Mapeamento Semântico e Síntese<br/>Traduz desfecho para o enum canónico (approved, etc.)
     end
-
-    Service-->>FastAPIRouter: Instância tipada EvaluationResponse
-    deactivate Service
 
     FastAPIRouter-->>Cliente: HTTP 200 OK (JSON Canónico com Explicabilidade)
     deactivate FastAPIRouter
@@ -88,7 +85,108 @@ sequenceDiagram
 
 ---
 
-### 2.2 Ciclo de Vida do Pedido com Motor Drools Levi's (Devoluções e Trocas de Retalho)
+### 2.2 Fluxo Dialógico Interativo ACM (`POST /api/v1/retail/interactive`)
+
+Quando um cenário é submetido com atributos omissos, o motor de retalho aciona a mecânica dialógica ACM baseada em `obtem_facto/2` e `perguntavel/1`:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Operador as Operador de Caixa / Cliente
+    participant FastAPIRouter as FastAPI Router (/api/v1/retail/interactive)
+    participant Client as PrologClient (httpx)
+    participant PrologSrv as Motor SWI-Prolog (:8080)
+    participant RetailEngine as Motor Retalho (engine.pl)
+    participant ACM as Diálogo Interativo (interactive.pl)
+
+    Operador->>FastAPIRouter: POST /api/v1/retail/interactive (cenário parcial)
+    activate FastAPIRouter
+    FastAPIRouter->>Client: interactive_retail(payload)
+    activate Client
+    Client->>PrologSrv: POST /retail/interactive
+    activate PrologSrv
+
+    PrologSrv->>RetailEngine: run_interactive(ResultDict)
+    activate RetailEngine
+
+    rect rgb(255, 255, 240)
+        note over RetailEngine: 1. Dedução com obtem_facto/2<br/>Deteta atributo não asserido na memória de trabalho
+    end
+
+    alt Atributo é perguntável (perguntavel/1)
+        RetailEngine->>ACM: formatar_pergunta(Atributo, PerguntaDict)
+        activate ACM
+        ACM-->>RetailEngine: Pergunta estruturada (id, texto em pt-PT, opções)
+        deactivate ACM
+        RetailEngine-->>PrologSrv: ResultDict (status: "question", question: {...})
+        PrologSrv-->>Client: HTTP 200 OK (status: "question")
+        Client-->>FastAPIRouter: Resposta de pergunta pendente
+        FastAPIRouter-->>Operador: Exibe questão e opções ao utilizador
+    else Todos os factos conhecidos ou regra terminal
+        RetailEngine-->>PrologSrv: ResultDict (status: "completed", decision: "...", ...)
+        PrologSrv-->>Client: HTTP 200 OK (status: "completed")
+        Client-->>FastAPIRouter: Resultado final concluído
+        FastAPIRouter-->>Operador: Apresenta diagnóstico e justificações
+    end
+
+    deactivate RetailEngine
+    deactivate PrologSrv
+    deactivate Client
+    deactivate FastAPIRouter
+```
+
+---
+
+### 2.3 Simulação Contrafactual What-If em Sandbox (`POST /api/v1/retail/whatif`)
+
+O endpoint de simulação *What-If* permite avaliar cenários hipotéticos sem poluir o estado da sessão de trabalho, tirando partido de transações em memória protegidas por `setup_call_cleanup/3`:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Operador as Operador / Analista
+    participant FastAPIRouter as FastAPI Router (/api/v1/retail/whatif)
+    participant Client as PrologClient (httpx)
+    participant PrologSrv as Motor SWI-Prolog (:8080)
+    participant RetailEngine as Motor Retalho (engine.pl)
+
+    Operador->>FastAPIRouter: POST /api/v1/retail/whatif (add_facts, remove_facts)
+    activate FastAPIRouter
+    FastAPIRouter->>Client: whatif_retail(payload)
+    activate Client
+    Client->>PrologSrv: POST /retail/whatif
+    activate PrologSrv
+
+    PrologSrv->>RetailEngine: what_if(+AddFacts, +RemoveFacts, -ResultDict)
+    activate RetailEngine
+
+    rect rgb(245, 245, 255)
+        note over RetailEngine: 1. Transação protegida (setup_call_cleanup/3)<br/>Captura snapshot da decisão base (baseline_decision)
+    end
+
+    rect rgb(255, 250, 240)
+        note over RetailEngine: 2. Aplica deltas hipotéticos em memória volátil<br/>Executa nova inferência -> simulated_decision
+    end
+
+    rect rgb(240, 255, 245)
+        note over RetailEngine: 3. Reversão automática e determinística<br/>Restaura os factos originais sem poluição
+        note over RetailEngine: 4. Calcula impacto:<br/>decision_changed = true/false<br/>impact_summary detalhado
+    end
+
+    RetailEngine-->>PrologSrv: ResultDict (baseline_decision, simulated_decision, decision_changed, impact_summary)
+    deactivate RetailEngine
+
+    PrologSrv-->>Client: HTTP 200 OK (Simulação Concluída)
+    deactivate PrologSrv
+    Client-->>FastAPIRouter: Dict com comparativo contrafactual
+    deactivate Client
+    FastAPIRouter-->>Operador: HTTP 200 OK (Delta de Decisão e Análise de Impacto)
+    deactivate FastAPIRouter
+```
+
+---
+
+### 2.4 Ciclo de Vida do Pedido com Motor Drools Levi's (Devoluções e Trocas de Retalho)
 
 O diagrama abaixo ilustra a cadeia completa de processamento do motor Drools Levi's, incluindo a obtenção de token JWT dev, submissão de factos ao motor KIE, execução das 98 regras, persistência em PostgreSQL e extração de justificações:
 
@@ -171,7 +269,7 @@ sequenceDiagram
 
 ---
 
-### 2.3 Fluxo de Explicabilidade em Tempo Real (*Como?* e *Porque Não?*)
+### 2.5 Fluxo de Explicabilidade em Tempo Real (Drools: *Como?* e *Porque Não?*)
 
 Quando o utilizador ou o operador de caixa solicita esclarecimentos sobre o porquê de uma decisão:
 
@@ -213,16 +311,28 @@ sequenceDiagram
 
 | Etapa | Fronteira / Componente | Formato de Dados | Exemplo / Representação |
 |:---:|:---|:---|:---|
-| **1** | Entrada no FastAPI | JSON Textual (HTTP Stream) | `{"scenario": "test", "value": 42}` |
-| **2** | Camada de Rota | Instância Pydantic | `ScenarioInput(scenario='test', value=42)` |
-| **3** | Serviço Orquestrador | Dicionário Python | `{"scenario": "test", "value": 42}` |
-| **4** | Cliente HTTPX | JSON Serializado | Bytes em stream HTTP `POST /evaluate` |
-| **5** | Camada HTTP Prolog | *Prolog Dict* com tag | `json{scenario: "test", value: 42}` |
-| **6** | Camada Core Prolog | Termos Nativos Prolog | `Decision = approved`, `ExplanationList = [...]` |
-| **7** | Resposta do Prolog | JSON Serializado | `{"status": "success", "decision": "approved", ...}` |
-| **8** | Retorno ao Orquestrador | Dicionário Python | `{"status": "success", "decision": "approved", ...}` |
-| **9** | Saída Canónica | Modelo `EvaluationResponse` | `EvaluationResponse(status='success', ...)` |
-| **10**| Resposta ao Cliente | JSON Canónico Final | Serialização JSON compatível com Swagger OpenAPI |
+| **1** | Entrada no FastAPI | JSON Textual (HTTP Stream) | `{"has_receipt": true, "days_since_purchase": 14, ...}` |
+| **2** | Camada de Rota | Dicionário Python / Schema | Payload tipado via `Body(...)` |
+| **3** | Cliente HTTPX (`PrologClient`) | JSON Serializado | Bytes em stream HTTP `POST /retail/evaluate` |
+| **4** | Camada HTTP Prolog | *Prolog Dict* com tag | `json{has_receipt: true, days_since_purchase: 14}` |
+| **5** | Camada Core Prolog | Termos Nativos Prolog | `[facto(has_receipt, true), facto(days_since_purchase, 14)]` |
+| **6** | Dedução Normativa | 71 Regras da Levi's | Disparo prioritário de `PT-003` (Troca normal) |
+| **7** | Resposta do Prolog | JSON Serializado | `{"status": "success", "decision": "permitir", "justification": [...]}` |
+| **8** | Retorno ao Orquestrador | Dicionário Python | `{"status": "success", "decision": "permitir", ...}` |
+| **9** | Mapeamento Semântico | Enum Canónico | Conversão de `"permitir"` para `DecisionEnum.APPROVED` |
+| **10**| Resposta Canónica Final | JSON Canónico OpenAPI | Payload estruturado com rasto de regras e explicabilidade |
+
+### 3.1.1 Mapeamento Semântico de Decisões no Orquestrador
+
+O orquestrador FastAPI (`app/services/orchestrator_service.py`) implementa uma estratégia resiliente de normalização semântica, mapeando átomos em português emitidos pelo motor Prolog para o modelo canónico `DecisionEnum`:
+
+| Átomo / Resposta Prolog | Enum Canónico FastAPI (`DecisionEnum`) | Semântica de Negócio no Retalho |
+|:---|:---|:---|
+| `"permitir"`, `"aprovado"`, `"approved"` | `DecisionEnum.APPROVED` | Devolução ou troca plenamente elegível para processamento. |
+| `"recusar"`, `"rejeitado"`, `"rejected"` | `DecisionEnum.REJECTED` | Devolução rejeitada por violação de política ou condição física. |
+| `"rever"`, `"encaminhar"`, `"manager_override"` | `DecisionEnum.MANAGER_OVERRIDE` | Requer intervenção, autorização ou decisão de um gerente de loja. |
+| `"vale_loja"`, `"credito_loja"`, `"store_credit_only"` | `DecisionEnum.STORE_CREDIT_ONLY` | Elegível exclusivamente para crédito em cartão ou vale de loja. |
+| `"error"` (ou status `error`) | `DecisionEnum.ERROR` | Erro técnico, payload malformado ou inconsistência operacional. |
 
 ### 3.2 Pipeline do Motor Drools Levi's (Retalho Especializado)
 
@@ -298,11 +408,13 @@ O orquestrador interceta falhas dos motores de regras e traduz-as em respostas H
 
 ## 6. Coexistência Multi-Motor e Comparação de Desfechos
 
-Com a integração do micro-serviço Drools Levi's, o sistema consolida o seu compromisso de arquitetura multi-paradigma:
+Com a implementação integral do motor pericial de retalho em Prolog e a integração do micro-serviço Drools Levi's, o sistema consolida o seu compromisso de arquitetura multi-paradigma:
 
 1. **Rotas Dedicadas por Motor:**
-   - `/api/v1/evaluate` e `/api/v1/inference/*` comunicam com o motor declarativo **SWI-Prolog**.
-   - `/api/v1/levis/*` comunica com o motor de produção **Drools Levi's**.
+   - `/api/v1/retail/*` comunica com o motor pericial de retalho **SWI-Prolog** (71 regras Levi's, ACM e 5 vias de explicabilidade).
+   - `/api/v1/evaluate` disponibiliza chaveamento automático ou por query param (`?mode=retail`, `academic`, `dual`).
+   - `/api/v1/inference/*` comunica com o motor académico **SWI-Prolog** (veículos `sp_exp2.pl`).
+   - `/api/v1/levis/*` comunica com o motor de produção **Drools Levi's** (98 regras DRL em Java 21).
 2. **Comparação Cruzada de Desfechos:**
    A arquitetura permite submeter o mesmo cenário de retalho a ambos os motores para confrontar a dedução lógica declarativa com a inferência baseada em regras de produção Rete-OO, garantindo máxima fiabilidade na auditoria de políticas comerciais de retalho.
 
@@ -311,8 +423,11 @@ Com a integração do micro-serviço Drools Levi's, o sistema consolida o seu co
 ## 7. Documentos Relacionados
 
 * [Visão Global da Arquitetura do Sistema](system_overview.md) — Diagrama e princípios globais do ecossistema.
+* [Arquitetura do Motor Prolog](prolog_engine.md) — Clean Architecture interna, isolamento por paridade e ciclo de vida do micro-serviço SWI-Prolog.
 * [Arquitetura do Motor Drools](drools_engine.md) — Módulos, regras DRL e persistência do Drools Levi's.
-* [Arquitetura do Motor Prolog](prolog_engine.md) — Processamento interno e Clean Architecture no SWI-Prolog.
 * [Arquitetura do Orquestrador FastAPI](fastapi_orchestrator.md) — Camadas internas, lifespan e connection pooling em Python.
-* [Referência da API Pública v1](../api/orchestrator_api_v1.md) — Especificação detalhada dos endpoints `/api/v1/levis/*`.
+* [Base de Conhecimento e Heurísticas do Perito](../domain/expert_knowledge.md) — As 71 regras normativas e 7 níveis de precedência.
+* [Modelo de Explicabilidade](../domain/explainability.md) — As 5 vias de explicabilidade pericial em Prolog vs. Drools.
+* [Referência da API Pública v1](../api/orchestrator_api_v1.md) — Especificação detalhada dos endpoints `/api/v1/retail/*` e `/api/v1/levis/*`.
+* [Referência da API do Motor Prolog](../api/prolog_engine_api.md) — Especificação técnica dos endpoints `/retail/*` e `/inference/*`.
 * [Orquestração com Docker Compose](../deployment/docker_compose.md) — Topologia de rede, variáveis e contentores.

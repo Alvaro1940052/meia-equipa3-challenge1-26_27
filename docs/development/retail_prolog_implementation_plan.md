@@ -57,14 +57,14 @@ prolog_engine/
 │   │   ├── server.pl                 # Gestão do daemon HTTP (thread_httpd)
 │   │   ├── routes.pl                 # Endpoints legados (POC /evaluate)
 │   │   ├── inference_routes.pl       # Endpoints do motor académico (/inference/*)
-│   │   └── retail_routes.pl          # 🆕 Endpoints do motor pericial de retalho (/retail/*)
+│   │   └── retail_routes.pl          # Endpoints do motor pericial de retalho (/retail/*)
 │   ├── core/
 │   │   ├── rules.pl                  # Regras simples da POC inicial
-│   │   ├── inference/                # 🔒 MOTOR ACADÉMICO DOS PROFESSORES (sp_exp2 preservado)
+│   │   ├── inference/                # Motor Académico dos Professores (sp_exp2 preservado)
 │   │   │   ├── engine.pl             # Motor sp_exp2 desacoplado de terminal
 │   │   │   └── kb/
 │   │   │       └── vehicles.pl       # Base de veículos (veiculos2.txt)
-│   │   └── retail_engine/            # 🚀 NOVO: MOTOR PERICIAL DE RETALHO ADAPTADO
+│   │   └── retail_engine/            # Motor Pericial de Retalho Adaptado (Levi's)
 │   │       ├── engine.pl             # Motor evoluído (obtem_facto, 5 vias, what-if sandbox)
 │   │       ├── interactive.pl        # Gestor de diálogo, perguntas dinâmicas e 'porquê?'
 │   │       └── kb/
@@ -72,9 +72,9 @@ prolog_engine/
 │   └── main.pl                       # Bootstrapping e registo condicional de módulos
 └── tests/
     ├── test_inference_engine.pl      # Testes de regressão do motor académico (8 testes)
-    ├── test_retail_rules.pl          # 🆕 Testes unitários das 71 regras de retalho
-    ├── test_retail_interactive.pl    # 🆕 Testes do diálogo dinâmico e tratamento 'não sei'
-    └── test_retail_explainability.pl # 🆕 Testes das 5 vias de explicabilidade
+    ├── test_retail_rules.pl          # Testes unitários das 71 regras de retalho
+    ├── test_retail_interactive.pl    # Testes do diálogo dinâmico e tratamento 'não sei'
+    └── test_retail_explainability.pl # Testes das 5 vias de explicabilidade
 ```
 
 ---
@@ -138,60 +138,79 @@ gantt
 
 ---
 
-### FASE 3: Motor Core Adaptado com a Mecânica de ACM
+### FASE 3: Motor Core Adaptado com a Mecânica de ACM [CONCLUÍDA]
 * **Objetivo:** Implementar o algoritmo proposto pelo Professor ACM em [`MI_Perguntas_ACM.md`](../material_aulas/MI_Perguntas_ACM.md), capacitando o motor para interrogar ativamente o operador perante dados omissos.
+* **Estado:** **100% Concluído e Validado** (12/12 testes em [`tests/test_retail_interactive.pl`](../../prolog_engine/tests/test_retail_interactive.pl) aprovados sem falhas).
 * **Tarefas Concretas:**
-  1. **Predicado `obtem_facto/2`:**
-     * Substituir a pesquisa estática `facto(N, X)` no `verifica_condicoes/2`.
-     * Intercetar premissas ausentes: se `perguntavel(X)` e `\+ ja_perguntado(X)`, ativar a interface de interrogação.
-  2. **Gestão de Sessão e Prevenção de Loops:**
-     * Registar `assertz(ja_perguntado(X))` antes de submeter a questão para prevenir repetições indesejadas.
-     * Tratar respostas `"não sei"` (*nao_sei*): registar a interrogação sem asserir o facto positivo, permitindo que a regra falhe graciosamente e o motor procure caminhos alternativos sem assumir falsidade lógica.
-  3. **Rastreabilidade da Regra Ativa e Resposta "Porquê?":**
-     * Armazenar contextualmente `regra_ativa(RegraID, Objetivo)` durante o ciclo `dispara_regras`.
-     * Se o operador responder `"porquê?"`, recuperar os metadados da regra e exibir a justificação de negócio que fundamenta o pedido daquele atributo específico.
-  4. **Origem do Facto:**
-     * Ao receber uma resposta do operador, asserir `justifica(N, utilizador, [])` para rastreabilidade auditável na árvore causal.
+  1. [x] **Predicado `obtem_facto/2`:**
+     * Substituição da pesquisa estática `facto(N, X)` no `verifica_condicoes/2` e `avalia/2` por `obtem_facto(X, N)` em [`src/core/retail_engine/engine.pl`](../../prolog_engine/src/core/retail_engine/engine.pl).
+     * Interceção de premissas ausentes com `e_perguntavel/2` protegido contra variáveis não instanciadas e verificação de `perguntavel/1`.
+  2. [x] **Gestão de Sessão e Prevenção de Loops:**
+     * Registo atómico `assertz(ja_perguntado(Template))` antes da interrogação, garantindo que cada atributo é questionado no máximo 1 vez.
+     * Tratamento defensivo de respostas `"não sei"` (*nao_sei*): falha graciosa da regra sem asserir negações lógicas, permitindo caminhos alternativos de inferência.
+  3. [x] **Rastreabilidade da Regra Ativa e Resposta "Porquê?":**
+     * Armazenamento contextual de `regra_ativa(RegraID, Objetivo)` durante `dispara_regras` via `setup_call_cleanup/3`.
+     * Intercetação de respostas `"porquê?"` (*Why Ask*), gerando fundamentação com identificador da regra, família (`regra_info/3`), objetivo em teste e fundamento normativo.
+  4. [x] **Origem do Facto e Explicabilidade:**
+     * Asserção de `justifica(N, utilizador, [])` para factos recolhidos via diálogo.
+     * Integração em `como/1` e `explain_how/2` discriminando premissas fornecidas pelo utilizador de factos inferidos por regras.
+  5. [x] **Módulo de Diálogo e Suíte de Testes:**
+     * Criação de [`src/core/retail_engine/interactive.pl`](../../prolog_engine/src/core/retail_engine/interactive.pl) com formulação em português para os 41 atributos observáveis e suporte a mock queues (`set_mock_answers/1`).
+     * Suíte [`tests/test_retail_interactive.pl`](../../prolog_engine/tests/test_retail_interactive.pl) com 12 testes PLUnit cobrindo todos os fluxos normativos e de exceção.
 
 ---
 
-### FASE 4: Módulo de Explicabilidade em 5 Vias
+### FASE 4: Módulo de Explicabilidade em 5 Vias [CONCLUÍDA]
 * **Objetivo:** Implementar as 5 perspetivas analíticas de diagnóstico pericial requeridas para nota máxima no Challenge 1.
+* **Estado:** **100% Concluído e Validado** (18/18 testes em [`tests/test_retail_explainability.pl`](../../prolog_engine/tests/test_retail_explainability.pl) aprovados sem falhas).
 * **Tarefas Concretas:**
-  1. **Via 1: Como? (`como/1` — How):**
-     * Adaptar o predicado para formatar a saída com os identificadores formais de regras (ex.: `[PC-001]`, `[PT-003]`) e discriminar claramente premissas fornecidas pelo operador versus premissas inferidas.
-  2. **Via 2: Porquê da Pergunta? (*Why Ask*):**
-     * Função dialógica de esclarecimento em tempo de recolha ativa de dados.
-  3. **Via 3: Porquê da Decisão? (*Output Why*):**
-     * Predicado de síntese que compila as conclusões terminais da avaliação num vetor legível `justification: list[str]` (desfecho `PERMITIR`, `RECUSAR`, `REVER` ou `ENCAMINHAR`).
-  4. **Via 4: Porque Não? (`whynot/1` — Why Not):**
-     * Adaptar `encontra_regras_whynot/2` para as regras de retalho.
-     * Reportar exatamente que premissas falharam quando o operador questiona por que razão o pedido não foi aprovado com reembolso total (`PERMITIR`).
-  5. **Via 5: E Se? (`what_if/3` — What-If Sandbox):**
-     * Implementar o padrão de sandbox transitória usando `setup_call_cleanup/3`:
+  1. [x] **Via 1: Como? (`como/1` e `explain_how/2` — How):**
+     * Predicados adaptados para aceitar tanto identificadores numéricos de factos (`FactId`) como termos compósitos (ex.: `decisao(permitir)`).
+     * Formatação formal das regras citadas entre parêntesis retos (ex.: `[PC-001]`, `[PT-003]`) e discriminação rigorosa da proveniência: `utilizador (operador de balcão)` vs. `inicial da base` vs. `conclusão por regra`.
+  2. [x] **Via 2: Porquê da Pergunta? (`why_ask/1`, `why_ask/2`, `why_ask/0` — Why Ask):**
+     * Resolução contextual direta da regra ativa (`regra_ativa/2`) e do metaconhecimento normativo (`regra_info/3`).
+     * Exposição de família formal, objetivo em teste e fundamento normativo tanto via diálogo terminal como chamada programática.
+  3. [x] **Via 3: Porquê da Decisão? (`output_why/1`, `output_why/0`, `decision_justification/2` — Output Why):**
+     * Predicado de síntese que compila os factos terminais `motivo/1` e `regra_disparada/1` num vetor de strings `justification: list[str]`.
+     * Integração direta no retorno do dicionário de `run_engine/1` (`decision` e `justification`), garantindo conformidade imediata com o DTO canónico `EvaluationResponse`.
+  4. [x] **Via 4: Porque Não? (`whynot/1` e `explain_whynot/2` — Why Not):**
+     * Adaptação de `encontra_regras_whynot/2` e `encontra_premissas_falsas/2` com suporte a cadeias de conjunção `e` e listas multi-elemento.
+     * Árvore recursiva de falhas: quando um desfecho (`decisao(permitir)`) não é alcançado, decompõe exatamente que premissas falharam (`elegibilidade_produto(aprovada)`, `nao decisao(recusar)`) e analisa os antecedentes que as originaram (`PC-001`, `PC-006`, `PC-007`).
+     * Suporte a atalhos atómicos canónicos: `whynot(permitir)`, `whynot(recusar)`, etc.
+  5. [x] **Via 5: E Se? (`what_if/3` — What-If Sandbox):**
+     * Implementação do padrão de sandbox transacional com snapshot dinâmico e operador ISO `setup_call_cleanup/3`:
        ```prolog
-       what_if(FactosAdicionar, FactosRemover, ComparacaoResultado)
+       what_if(+FactosAdicionar, +FactosRemover, -ResultadoComparativo)
        ```
-     * Isolar o estado, correr a inferência hipotética, extrair o diferencial de desfecho e repor rigorosamente o estado original da memória dinâmica.
+     * Execução contrafactual sobre memória volátil, cálculo do diferencial de desfecho (`baseline_decision`, `simulated_decision`, `decision_changed`, `impact_summary`) e garantia estrita de reposição com **zero poluição** de memória na sessão persistente.
 
 ---
 
-### FASE 5: Camada de Transporte REST, Toggle e Testes PLUnit
+### FASE 5: Camada de Transporte REST, Toggle e Testes PLUnit [CONCLUÍDA]
 * **Objetivo:** Expor o motor adaptado via HTTP, criar testes automatizados completos e integrar com o ecossistema FastAPI.
+* **Estado:** **100% Concluído e Validado** (81/81 testes PLUnit no Prolog e 153/153 testes Pytest no FastAPI orquestrador aprovados com 0 falhas).
 * **Tarefas Concretas:**
-  1. **Endpoints REST do Motor de Retalho (`src/api/retail_routes.pl`):**
-     * `POST /retail/evaluate`: Avaliação batch canónica (recebe JSON completo e devolve `EvaluationResponse` com `justification[]`).
-     * `POST /retail/interactive`: Inicia ou continua uma sessão de interrogação com recolha passo-a-passo.
-     * `POST /retail/whatif`: Executa simulação contrafactual sem persistência.
-     * `POST /retail/how`: Explica recursivamente um facto por ID.
-     * `POST /retail/whynot`: Analisa porque é que um dado desfecho não foi atingido.
-  2. **Feature Toggle no Orquestrador FastAPI:**
-     * Adicionar configuração `PROLOG_ENGINE_MODE: Literal["retail", "academic", "dual"] = "retail"`.
-     * Permitir chavear instantaneamente entre motores nas chamadas de avaliação.
-  3. **Suíte de Testes Automatizados (PLUnit):**
-     * `tests/test_retail_rules.pl`: 20 cenários cobrindo as 9 famílias (aprovação integral, defeito de fabrico, risco biológico, bodywear, devolução às cegas, Afterpay, marcas excluídas).
-     * `tests/test_retail_explainability.pl`: Validação dos 5 modos de explicação.
-     * `tests/test_retail_interactive.pl`: Validação da interrogação dinâmica e respostas "não sei" e "porquê?".
+  1. [x] **Endpoints REST do Motor de Retalho (`src/api/retail_routes.pl` e `src/main.pl`):**
+     * `POST /retail/evaluate`: Avaliação batch canónica com serialização estrita para `EvaluationResponse` canónico (`decision`, `confidence`, `engine`, `facts_count`, `justification[]`).
+     * `POST /retail/interactive`: Sessão de interrogação passo-a-passo sem bloqueio de I/O em threads daemon HTTP, retornando estado de conclusão ou perguntas pendentes estruturadas.
+     * `POST /retail/whatif`: Simulação contrafactual atómica em sandbox com `setup_call_cleanup/3`, retornando delta comparativo (`decision_changed`, `impact_summary`).
+     * `POST /retail/how`: Trajeto causal de dedução por ID numérico de facto ou termo compósito.
+     * `POST /retail/whynot`: Análise recursiva da árvore de falhas com regras candidatas e premissas não satisfeitas.
+     * `GET /retail/facts` e `POST /retail/reset`: Inspeção e limpeza segura de memória volátil da sessão.
+  2. [x] **Feature Toggle no Orquestrador FastAPI:**
+     * Adicionada configuração `PROLOG_ENGINE_MODE: Literal["retail", "academic", "dual"] = "retail"` em [`backend_orchestrator/app/core/config.py`](../../backend_orchestrator/app/core/config.py), `.env` e `.env.example`.
+     * `PrologClient` atualizado com métodos assíncronos para todos os endpoints `/retail/*` e chaveamento automático baseado no parâmetro `mode` ou na variável de ambiente.
+     * `OrchestratorService` com mapeamento canónico de decisões em português (`permitir`, `recusar`, `rever`, `encaminhar`, `vale_loja`, `credito_loja`) para o enum canónico (`approved`, `rejected`, `manager_override`, `store_credit_only`).
+     * Rota dedicada `/api/v1/retail/*` implementada em [`backend_orchestrator/app/api/v1/endpoints/retail.py`](../../backend_orchestrator/app/api/v1/endpoints/retail.py) e suporte a query param `?mode=` no endpoint principal `/api/v1/evaluate`.
+  3. [x] **Suíte de Testes Automatizados (PLUnit e Pytest):**
+     * [`tests/test_retail_rules.pl`](../../prolog_engine/tests/test_retail_rules.pl): 31 testes cobrindo todas as 9 famílias normativas e prioridades de desempate (31/31 aprovados).
+     * [`tests/test_retail_explainability.pl`](../../prolog_engine/tests/test_retail_explainability.pl): 18 testes cobrindo os 5 modos de explicabilidade pericial (18/18 aprovados).
+     * [`tests/test_retail_interactive.pl`](../../prolog_engine/tests/test_retail_interactive.pl): 12 testes cobrindo interrogação dinâmica e metaconhecimento normativo (12/12 aprovados).
+     * [`tests/test_inference_engine.pl`](../../prolog_engine/tests/test_inference_engine.pl): 8 testes do motor académico de veículos preservados sem regressões (8/8 aprovados).
+     * [`tests/test_retail_api.pl`](../../prolog_engine/tests/test_retail_api.pl): 12 testes HTTP REST validando todos os 7 endpoints de retalho (12/12 aprovados).
+     * **Total PLUnit:** 81/81 testes aprovados (100%).
+     * [`backend_orchestrator/tests/test_retail_prolog.py`](../../backend_orchestrator/tests/test_retail_prolog.py): 24 novos testes de integração e unitários cobrindo cliente, toggle, rotas e mapeamento.
+     * **Total Pytest:** 153/153 testes aprovados (100%).
 
 ---
 
@@ -205,3 +224,16 @@ O projeto cumpre com distinção todos os requisitos pedagógicos e práticos qu
 * [x] A interrogação dinâmica formula perguntas perante factos omissos e responde a *"porquê?"*;
 * [x] O teste de simulação *What-If* calcula o impacto de hipóteses sem corromper o estado persistente da sessão;
 * [x] Todos os contratos JSON cumprem as especificações canónicas de [`schemas.md`](../api/schemas.md).
+
+---
+
+## 6. Documentos Relacionados
+
+* [Plano de Atualização da Documentação Técnica](retail_prolog_documentation_update_plan.md) — Plano mestre de documentação das capacidades do motor de retalho.
+* [Arquitetura do Motor Prolog](../architecture/prolog_engine.md) — Clean Architecture, isolamento por paridade e ciclo ACM.
+* [Dissecação do Motor sp_exp2](../architecture/sp_exp2_engine_analysis.md) — Análise técnica dos 6 blocos estruturais do motor académico de apoio.
+* [Base de Conhecimento Pericial](../domain/expert_knowledge.md) — As 71 regras da Levi's e 7 precedências estritas.
+* [Explicabilidade Pericial](../domain/explainability.md) — Modelo formal das 5 vias de explicabilidade implementadas.
+* [API Interna do Motor SWI-Prolog](../api/prolog_engine_api.md) — Especificação técnica dos 7 endpoints `/retail/*`.
+* [Estratégia e Execução de Testes](testing.md) — Detalhes das suítes de testes PLUnit e Pytest.
+

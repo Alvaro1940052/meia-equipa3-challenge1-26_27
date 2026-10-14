@@ -267,12 +267,12 @@ A tabela abaixo sintetiza o balanço estrutural entre a implementação fornecid
 | Funcionalidade / Dimensão | Estado no `sp_exp2.pl` Original | Requisito do Projeto MEIA (Retail Returns) | Impacto / Ação Necessária |
 |:---|:---:|:---:|:---|
 | **Mecanismo de Inferência** | Forward Chaining com Metaconhecimento | Forward Chaining determinístico | **Manter e otimizar:** A mecânica de disparo indexado por metaconhecimento é robusta e deve ser preservada. |
-| **Operação Não-Interativa** | ❌ Interativo via terminal (`write`, `read`, `get0`) | Daemon HTTP / Microsserviço assíncrono (Clean Architecture) | **Já resolvido na POC:** O módulo [`engine.pl`](../../prolog_engine/src/core/inference/engine.pl) eliminou I/O de consola, retornando Prolog Dicts. |
-| **Como? (*How*)** | ✅ Implementado (`como/1`) | Explicação estruturada da cadeia causal | **Adaptar:** Traduzir termos simbólicos para linguagem natural de retalho (`justification[]`). |
-| **Porque Não? (*Why Not*)** | ✅ Implementado (`whynot/1`) | Diagnóstico contrafactual de recusa | **Adaptar:** Reportar impedimentos comerciais concretos (ex.: ausência de recibo, prazo ultrapassado). |
-| **Porquê da Decisão (*Output Why*)** | ❌ Inexistente (conclui factos avulsos) | Síntese de desfecho canónico (`approved`, `rejected`, etc.) | **Desenvolver:** Implementar agregação terminal de regras para produzir a resposta executiva de negócio. |
-| **Why? da Pergunta (*Why Ask*)** | ❌ Inexistente (assume factos prévios) | Justificação em tempo de interrogação de dados em falta | **Desenvolver:** Introduzir suporte a premissas perguntáveis (*askable*) e justificação da meta ativa. |
-| **E Se? (*What-If*)** | ❌ Inexistente | Simulação hipotética sem efeitos secundários na base persistente | **Desenvolver:** Criar mecanismo de sandbox que permita injetar/remover factos e computar o diferencial de decisão. |
+| **Operação Não-Interativa** | Não suportado: Interativo via terminal (`write`, `read`, `get0`) | Daemon HTTP / Microsserviço assíncrono (Clean Architecture) | **Já resolvido na POC:** O módulo [`engine.pl`](../../prolog_engine/src/core/inference/engine.pl) eliminou I/O de consola, retornando Prolog Dicts. |
+| **Como? (*How*)** | Suportado: Implementado (`como/1`) | Explicação estruturada da cadeia causal | **Adaptar:** Traduzir termos simbólicos para linguagem natural de retalho (`justification[]`). |
+| **Porque Não? (*Why Not*)** | Suportado: Implementado (`whynot/1`) | Diagnóstico contrafactual de recusa | **Adaptar:** Reportar impedimentos comerciais concretos (ex.: ausência de recibo, prazo ultrapassado). |
+| **Porquê da Decisão (*Output Why*)** | Não suportado: Inexistente (conclui factos avulsos) | Síntese de desfecho canónico (`approved`, `rejected`, etc.) | **Desenvolver:** Implementar agregação terminal de regras para produzir a resposta executiva de negócio. |
+| **Why? da Pergunta (*Why Ask*)** | Não suportado: Inexistente (assume factos prévios) | Justificação em tempo de interrogação de dados em falta | **Desenvolver:** Introduzir suporte a premissas perguntáveis (*askable*) e justificação da meta ativa. |
+| **E Se? (*What-If*)** | Não suportado: Inexistente | Simulação hipotética sem efeitos secundários na base persistente | **Desenvolver:** Criar mecanismo de sandbox que permita injetar/remover factos e computar o diferencial de decisão. |
 | **Domínio de Conhecimento** | Académico (Classificação de Veículos) | Triagem de Devoluções no Retalho (Levi Strauss & Co.) | **Substituir:** Codificar as heurísticas do perito Dustin Hopper ([`expert_knowledge.md`](../domain/expert_knowledge.md)). |
 
 ---

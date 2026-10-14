@@ -17,12 +17,13 @@ flowchart TD
     Drools["Motor Drools Levi's (:8082)"]
     Postgres[("PostgreSQL 16 (:5432)")]
 
-    Client -->|POST /api/v1/levis/avaliar| Orch
-    Client -->|POST /api/v1/evaluate| Orch
+    Client -->|"POST /api/v1/levis/avaliar"| Orch
+    Client -->|"POST /api/v1/evaluate?mode=..."| Orch
+    Client -->|"POST /api/v1/retail/*"| Orch
 
-    Orch -->|HTTP JSON| Prolog
-    Orch -->|REST + JWT Dev| Drools
-    Drools -->|JPA / Flyway| Postgres
+    Orch -->|"HTTP JSON (/retail/* & /evaluate)"| Prolog
+    Orch -->|"REST + JWT Dev"| Drools
+    Drools -->|"JPA / Flyway"| Postgres
 ```
 
 ### 1.1 Configuração Base e URLs
@@ -270,23 +271,397 @@ Devolve os 10 cenários de teste reais compilados a partir da base de conhecimen
 
 ---
 
-## 4. Endpoints do Motor SWI-Prolog (`/api/v1/evaluate` e `/api/v1/inference/*`)
+---
 
-### 4.1 `POST /api/v1/evaluate` (Motor de Retalho Declarativo)
-Submete um cenário ao motor SWI-Prolog (`rules.pl`).
+## 4. Endpoints do Motor de Retalho em Prolog (/api/v1/retail/*)
 
-* **Payload Exemplo:** `{"scenario": "test", "value": 42}`
-* **Resposta Exemplo (`200 OK`):**
+Tag Swagger: **`Levi's Retail Returns Expert Engine (Prolog)`**  
+Prefixo de Rota: **`/api/v1/retail`**
+
+Estes endpoints expõem publicamente a base pericial declarativa da Levi's no micro-serviço SWI-Prolog através do orquestrador FastAPI, incluindo avaliação em lote de 71 regras em 9 famílias, diálogo interativo passo-a-passo (mecânica ACM), simulação contrafactual *What-If* em sandbox e explicações causais (*How* e *Why Not*).
+
+### 4.1 Resumo dos Endpoints de Retalho em Prolog
+
+| Método | Caminho | Resumo e Propósito |
+|:---|:---|:---|
+| `POST` | `/api/v1/retail/evaluate` | Avaliação em lote de devoluções/trocas contra as 71 regras da Levi's em Prolog. |
+| `POST` | `/api/v1/retail/interactive` | Diálogo interativo passo-a-passo e aquisição de premissas (mecânica Prof. ACM). |
+| `POST` | `/api/v1/retail/whatif` | Simulação contrafactual *What-If* em sandbox com isolamento de memória volátil. |
+| `POST` | `/api/v1/retail/how` | Rasto causal dedutivo para um facto ou decisão (Via 1: Como?). |
+| `POST` | `/api/v1/retail/whynot` | Análise de árvore de falhas de regras para desfechos não alcançados (Via 4: Porque Não?). |
+| `GET` | `/api/v1/retail/facts` | Consulta de todos os factos atualmente assertados na sessão de memória de trabalho. |
+| `POST` | `/api/v1/retail/reset` | Reinicialização da memória de trabalho e estado interativo do motor Prolog. |
+
+---
+
+### 4.2 Avaliar Cenário em Lote (`POST /api/v1/retail/evaluate`)
+
+Submete os factos de um cenário de devolução diretamente ao motor pericial Prolog da Levi's. Suporta atributos estruturados de retalho ou lista explícita de termos em `facts`.
+
+#### 4.2.1 Exemplo de Pedido (`POST /api/v1/retail/evaluate`)
+```json
+{
+  "colaborador_autorizado": true,
+  "canal_compra": "mainline",
+  "categoria_produto": "vestuario",
+  "estado_produto": "nao_usado_com_etiquetas",
+  "comprovativo": "recibo_impresso",
+  "dias_desde_compra": 18,
+  "meio_pagamento": "credito"
+}
+```
+
+#### 4.2.2 Exemplo de Resposta de Sucesso (`HTTP 200 OK`)
+```json
+{
+  "status": "success",
+  "decision": "approved",
+  "retail_decision": "permitir",
+  "justification": [
+    "[PC-001] Artigo elegivel para devolucao por apresentar etiquetas intactas e estado nao usado.",
+    "[PT-003] Devolucao aceite dentro do prazo de 30 dias com recibo original de compra."
+  ],
+  "initial_facts_count": 7,
+  "derived_facts_count": 2,
+  "total_facts": 9,
+  "derived_facts": [
+    {
+      "id": 8,
+      "fact": "elegibilidade_produto(elegivel)",
+      "rule_id": "PC-001",
+      "justified_by": [4]
+    },
+    {
+      "id": 9,
+      "fact": "decisao(permitir)",
+      "rule_id": "PT-003",
+      "justified_by": [5, 6, 8]
+    }
+  ]
+}
+```
+
+#### 4.2.3 Exemplos de Execução
+
+**Em Bash / cURL:**
+```bash
+curl -X POST http://localhost:8000/api/v1/retail/evaluate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "colaborador_autorizado": true,
+    "canal_compra": "mainline",
+    "categoria_produto": "vestuario",
+    "estado_produto": "nao_usado_com_etiquetas",
+    "comprovativo": "recibo_impresso",
+    "dias_desde_compra": 18
+  }'
+```
+
+**Em PowerShell (Windows — `Invoke-RestMethod`):**
+```powershell
+$body = @{
+    colaborador_autorizado = $true
+    canal_compra = "mainline"
+    categoria_produto = "vestuario"
+    estado_produto = "nao_usado_com_etiquetas"
+    comprovativo = "recibo_impresso"
+    dias_desde_compra = 18
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri http://localhost:8000/api/v1/retail/evaluate -Method Post -ContentType "application/json" -Body $body
+```
+
+---
+
+### 4.3 Diálogo Interativo Passo-a-Passo (`POST /api/v1/retail/interactive`)
+
+Executa o ciclo de raciocínio passo-a-passo. Se o motor deparar com atributos omissos marcados como `perguntavel/1` em `retail_rules.pl`, suspende o avanço e formula a próxima questão pendente com o motivo normativo da regra ativa (`why`).
+
+#### 4.3.1 Exemplo de Pedido Inicial ou Incremental
+```json
+{
+  "initial_facts": [
+    "colaborador_autorizado(true)"
+  ],
+  "answers": {
+    "canal_compra": "mainline"
+  }
+}
+```
+
+Para responder especificamente ao atributo perguntado:
+```json
+{
+  "answer": {
+    "attribute": "estado_produto",
+    "value": "nao_usado_com_etiquetas"
+  }
+}
+```
+
+#### 4.3.2 Exemplo de Resposta — Pergunta Pendente (`HTTP 200 OK`, `status: "question"`)
+```json
+{
+  "status": "question",
+  "decision": "nao_concluido",
+  "question": {
+    "attribute": "comprovativo(X)",
+    "prompt": "Qual e o tipo de comprovativo de compra apresentado pelo cliente?",
+    "rule_active": "PT-003",
+    "objective": "decisao(permitir)",
+    "why": "A regra PT-003 investiga este atributo para aferir se existe suporte documental valido dentro da janela legal."
+  },
+  "justification": [],
+  "dialogue_log": [
+    {
+      "type": "asked",
+      "attribute": "comprovativo(X)",
+      "question": "Qual e o tipo de comprovativo de compra apresentado pelo cliente?"
+    }
+  ],
+  "total_facts": 2
+}
+```
+
+#### 4.3.3 Exemplos de Execução
+
+**Em Bash / cURL:**
+```bash
+curl -X POST http://localhost:8000/api/v1/retail/interactive \
+  -H "Content-Type: application/json" \
+  -d '{"initial_facts": ["colaborador_autorizado(true)"], "answers": {"canal_compra": "mainline"}}'
+```
+
+**Em PowerShell (Windows — `Invoke-RestMethod`):**
+```powershell
+$body = @{
+    initial_facts = @("colaborador_autorizado(true)")
+    answers = @{ canal_compra = "mainline" }
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri http://localhost:8000/api/v1/retail/interactive -Method Post -ContentType "application/json" -Body $body
+```
+
+---
+
+### 4.4 Simulação Contrafactual What-If em Sandbox (`POST /api/v1/retail/whatif`)
+
+Permite a um operador de caixa ou gerente simular variações sobre premissas (`add` e `remove`), calculando a decisão de base contra a simulada sem alterar a memória persistente da sessão.
+
+#### 4.4.1 Exemplo de Pedido (`POST /api/v1/retail/whatif`)
+```json
+{
+  "base_facts": {
+    "colaborador_autorizado": true,
+    "canal_compra": "mainline",
+    "estado_produto": "claramente_usado",
+    "comprovativo": "recibo_impresso",
+    "dias_desde_compra": 18
+  },
+  "add": [
+    "estado_produto(nao_usado_com_etiquetas)"
+  ],
+  "remove": [
+    "estado_produto(claramente_usado)"
+  ]
+}
+```
+
+#### 4.4.2 Exemplo de Resposta (`HTTP 200 OK`)
+```json
+{
+  "status": "success",
+  "baseline_decision": "rever",
+  "simulated_decision": "permitir",
+  "decision_changed": true,
+  "added_facts": [
+    "estado_produto(nao_usado_com_etiquetas)"
+  ],
+  "removed_facts": [
+    "estado_produto(claramente_usado)"
+  ],
+  "baseline_justification": [
+    "[PC-004] Artigo com sinais evidentes de uso requer avaliacao presencial do gerente de loja."
+  ],
+  "simulated_justification": [
+    "[PC-001] Artigo elegivel para devolucao por apresentar etiquetas intactas e estado nao usado.",
+    "[PT-003] Devolucao aceite dentro do prazo de 30 dias com recibo original de compra."
+  ],
+  "impact_summary": "A decisão mudou de 'rever' para 'permitir' com a simulação contrafactual.",
+  "simulated_facts_count": 8
+}
+```
+
+#### 4.4.3 Exemplos de Execução
+
+**Em Bash / cURL:**
+```bash
+curl -X POST http://localhost:8000/api/v1/retail/whatif \
+  -H "Content-Type: application/json" \
+  -d '{
+    "base_facts": {"colaborador_autorizado": true, "estado_produto": "claramente_usado", "comprovativo": "recibo_impresso", "dias_desde_compra": 18},
+    "add": ["estado_produto(nao_usado_com_etiquetas)"],
+    "remove": ["estado_produto(claramente_usado)"]
+  }'
+```
+
+**Em PowerShell (Windows — `Invoke-RestMethod`):**
+```powershell
+$body = @{
+    base_facts = @{
+        colaborador_autorizado = $true
+        estado_produto = "claramente_usado"
+        comprovativo = "recibo_impresso"
+        dias_desde_compra = 18
+    }
+    add = @("estado_produto(nao_usado_com_etiquetas)")
+    remove = @("estado_produto(claramente_usado)")
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri http://localhost:8000/api/v1/retail/whatif -Method Post -ContentType "application/json" -Body $body
+```
+
+---
+
+### 4.5 Explicabilidade Causal: Como? e Porque Não? (`POST /api/v1/retail/how` e `POST /api/v1/retail/whynot`)
+
+#### 4.5.1 Explicação Dedutiva *Como?* (`POST /api/v1/retail/how`)
+Rastreia a proveniência dos factos (operador vs regras com prefixo normativo `[ID]`):
+
+```bash
+curl -X POST http://localhost:8000/api/v1/retail/how \
+  -H "Content-Type: application/json" \
+  -d '{"fact": "decisao(permitir)"}'
+```
+
+Resposta de exemplo (`HTTP 200 OK`):
+```json
+{
+  "status": "success",
+  "fact": "decisao(permitir)",
+  "explanation": [
+    "Fact 8 -> decisao(permitir) concluded by rule [PT-003]",
+    "Based on facts: [5, 6, 7]",
+    "Fact 5 -> comprovativo(recibo_impresso) was provided by user (operador)",
+    "Fact 6 -> dias_desde_compra(18) was provided by user (operador)",
+    "Fact 7 -> elegibilidade_produto(elegivel) concluded by rule [PC-001]",
+    "Based on facts: [4]",
+    "Fact 4 -> estado_produto(nao_usado_com_etiquetas) was provided by user (operador)"
+  ]
+}
+```
+
+#### 4.5.2 Análise de Falhas *Porque Não?* (`POST /api/v1/retail/whynot`)
+Analisa por que razão uma decisão não foi tomada:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/retail/whynot \
+  -H "Content-Type: application/json" \
+  -d '{"decision": "permitir"}'
+```
+
+Resposta de exemplo (`HTTP 200 OK`):
+```json
+{
+  "status": "success",
+  "fact": "decisao(permitir)",
+  "explanation": [
+    "Because by rule [PT-003]:",
+    "  Condition comprovativo(recibo_impresso) is false",
+    "Because by rule [PT-005]:",
+    "  Condition comprovativo(cartao_lealdade) is false"
+  ]
+}
+```
+
+---
+
+### 4.6 Inspeção e Limpeza de Memória (`GET /api/v1/retail/facts` e `POST /api/v1/retail/reset`)
+
+* **Consultar Factos Correntes:**
+  ```bash
+  curl -X GET http://localhost:8000/api/v1/retail/facts
+  ```
+  Devolve a contagem e lista de todos os factos na memória ativa do motor Prolog.
+
+* **Repor Sessão Limpa:**
+  ```bash
+  curl -X POST http://localhost:8000/api/v1/retail/reset -H "Content-Type: application/json" -d '{}'
+  ```
+  Elimina o registo de diálogo, premissas voláteis e respostas simuladas.
+
+---
+
+### 4.7 Endpoint Principal de Avaliação com Feature Toggle (`POST /api/v1/evaluate?mode=...`)
+
+O endpoint principal de avaliação suporta o parâmetro query opcional `?mode=` para alternar dinamicamente entre os motores de inferência Prolog:
+
+| Valor do Parâmetro `mode` | Comportamento Operacional |
+|:---|:---|
+| `retail` (Predefinido) | Avalia o cenário contra as 71 regras da Levi's no motor `retail_engine` (`POST /retail/evaluate`). |
+| `academic` | Encaminha o cenário para o motor académico sp_exp2 / POC (`POST /evaluate`). |
+| `dual` | Executa concorrentemente o motor de retalho e o motor académico, devolvendo a decisão canónica de retalho e sintetizando o veredito académico na cadeia de justificação (`dual_academic`). |
+
+Se o parâmetro `?mode=` não for especificado, o orquestrador assume o valor definido na variável de ambiente `PROLOG_ENGINE_MODE` (cujo padrão de produção é `"retail"`).
+
+#### 4.7.1 Exemplo de Avaliação no Modo Retail (`POST /api/v1/evaluate?mode=retail`)
+
+**Em Bash / cURL:**
+```bash
+curl -X POST "http://localhost:8000/api/v1/evaluate?mode=retail" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "scenario": "retail_return",
+    "item": {
+      "category": "vestuario",
+      "is_underwear": false,
+      "has_tags": true,
+      "condition": "unworn_clean"
+    },
+    "purchase": {
+      "has_receipt": true,
+      "is_gift_receipt": false,
+      "days_since_purchase": 18,
+      "channel": "mainline",
+      "payment_method": "credit_card"
+    }
+  }'
+```
+
+**Em PowerShell (Windows — `Invoke-RestMethod`):**
+```powershell
+$body = @{
+    scenario = "retail_return"
+    item = @{
+        category = "vestuario"
+        is_underwear = $false
+        has_tags = $true
+        condition = "unworn_clean"
+    }
+    purchase = @{
+        has_receipt = $true
+        is_gift_receipt = $false
+        days_since_purchase = 18
+        channel = "mainline"
+        payment_method = "credit_card"
+    }
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri "http://localhost:8000/api/v1/evaluate?mode=retail" -Method Post -ContentType "application/json" -Body $body
+```
+
+#### 4.7.2 Resposta Canónica `EvaluationResponse` (`HTTP 200 OK`):
 ```json
 {
   "status": "success",
   "decision": "approved",
   "justification": [
-    "Value matches the expected threshold of 42",
-    "Item tags are marked as intact"
+    "[PC-001] Artigo elegivel para devolucao por apresentar etiquetas intactas e estado nao usado.",
+    "[PT-003] Devolucao aceite dentro do prazo de 30 dias com recibo original de compra."
   ],
   "engine": "prolog",
-  "timestamp": "2026-10-13T15:00:00Z"
+  "timestamp": "2026-10-14T17:00:00.123456Z",
+  "message": null
 }
 ```
 
@@ -296,18 +671,20 @@ Submete um cenário ao motor SWI-Prolog (`rules.pl`).
 
 | Código HTTP | Significado | Causa Principal | Formato da Resposta |
 |:---|:---|:---|:---|
-| **`200 OK`** | Sucesso | Avaliação processada com sucesso, consulta de histórico ou simulação concluída. | Schema tipado correspondente (`DecisaoResponse`, `SimulacaoResponse`, etc.) |
-| **`400 Bad Request`** | Pedido Inválido | Violação semântica ou Bean Validation no motor Drools. | `{"detail": "..."}` |
-| **`404 Not Found`** | Recurso Inexistente | UUID de avaliação inexistente ou código de regra não encontrado. | `{"detail": "Not Found"}` |
-| **`422 Unprocessable Entity`** | Validação Falhou | Campos obrigatórios em falta no JSON (ex.: `tipoPedido` ou lista de `artigos` vazia). | Matriz de erros nativa Pydantic v2 |
+| **`200 OK`** | Sucesso | Avaliação processada com sucesso, consulta de histórico ou simulação concluída. | Schema tipado correspondente (`EvaluationResponse`, `DecisaoResponse`, etc.) |
+| **`400 Bad Request`** | Pedido Inválido | Violação semântica de regras, rejeição pelo Prolog (`PrologResponseError`) ou Bean Validation no Drools. | `{"detail": "..."}` |
+| **`404 Not Found`** | Recurso Inexistente | UUID de avaliação inexistente no PostgreSQL ou código de regra não encontrado. | `{"detail": "Not Found"}` |
+| **`422 Unprocessable Entity`** | Validação Falhou | Campos obrigatórios em falta ou formato JSON inválido intercetado pelo Pydantic v2. | Matriz de erros nativa Pydantic v2 |
 | **`502 Bad Gateway`** | Falha de Terceiros | Erro interno ou exceção não tratada devolvida pelo Drools ou PostgreSQL. | `{"detail": "..."}` |
-| **`503 Service Unavailable`** | Motor Inacessível | O orquestrador não conseguiu contactar o motor Drools ou SWI-Prolog (porta fechada ou timeout). | `{"detail": "Service Unavailable: ..."}` |
+| **`503 Service Unavailable`** | Motor Inacessível | O orquestrador não conseguiu contactar o motor Drools ou SWI-Prolog (`PrologConnectionError`, timeout). | `{"detail": "Service Unavailable: ..."}` |
 
 ---
 
 ## 6. Documentos Relacionados
 
-* [Catálogo de Schemas Pydantic](schemas.md) — Definição dos modelos `PedidoAvaliacaoRequest`, `DecisaoResponse`, etc.
-* [Arquitetura do Motor Drools Levi's](../architecture/drools_engine.md) — Funcionamento dos 7 módulos e 98 regras.
-* [Interações entre Serviços](../architecture/service_interactions.md) — Diagramas de sequência ponta-a-ponta e resolução de portas.
-* [Histórico e Plano de Integração](../history/drools_levis_integration_plan.md) — Especificação original de todas as fases.
+* [Catálogo de Schemas Pydantic](schemas.md) — Definição dos modelos Pydantic v2 (`EvaluationResponse`, `RetailReturnScenarioInput`).
+* [API Interna do Motor Prolog](prolog_engine_api.md) — Especificação técnica dos 7 endpoints `/retail/*` do micro-serviço SWI-Prolog.
+* [Arquitetura do Motor Drools Levi's](../architecture/drools_engine.md) — Funcionamento dos 7 módulos e 98 regras empresariais.
+* [Interações entre Serviços](../architecture/service_interactions.md) — Diagramas de sequência ponta-a-ponta e fluxos de dados.
+* [Variáveis de Ambiente](../deployment/environment_variables.md) — Documentação da variável `PROLOG_ENGINE_MODE` e portas de rede.
+
