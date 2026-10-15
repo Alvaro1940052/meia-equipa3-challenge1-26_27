@@ -74,6 +74,10 @@ implementação existente. Este ADR regista como cada ponto foi resolvido.
    - O `MetadadosRegrasTest` passa a aceitar os IDs IU-xx definidos no `docs/08` (§5.4).
    - O `CoberturaRegrasTest` exige um teste `@Regra` por regra IU.
 
+9. **Integridade das etiquetas como parâmetro.** O §5.1 põe `getIntegridadeEtiquetas()` no modelo, com os valores
+   1,0, 0,6 e 0,0, mas o §6 tem os mesmos valores no ficheiro de parâmetros (`integridadeEtiquetas`). Para não haver
+   parâmetros no código, o mapeamento fica no `ServicoIncerteza`, lido do ficheiro.
+
 ## Consequências
 
 - **Regressão:** os cenários 2, 5, 7, 8, 9 e 10 ficam idênticos (CF em RISCO_BAIXO, sem `grauUso` nem

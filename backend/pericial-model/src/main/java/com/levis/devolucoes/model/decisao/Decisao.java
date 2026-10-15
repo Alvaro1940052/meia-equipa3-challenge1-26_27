@@ -8,6 +8,7 @@ import com.levis.devolucoes.model.enums.NivelAprovacao;
 import com.levis.devolucoes.model.enums.ProcessoObrigatorio;
 import com.levis.devolucoes.model.enums.TipoTransacao;
 import com.levis.devolucoes.model.enums.TipoVerificacao;
+import com.levis.devolucoes.model.incerteza.GrauCrenca;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -31,6 +32,12 @@ public class Decisao extends DecisaoBase {
 
   /** Resultados por artigo, agregados no fim da avaliação (ADR 0002). */
   private List<DecisaoArtigo> resultadosArtigos = new ArrayList<>();
+
+  /** Graus calculados pela camada de incerteza (docs/08), com os passos do cálculo. */
+  private List<GrauCrenca> grausCrenca = new ArrayList<>();
+
+  /** Versão do ficheiro de parâmetros de incerteza usado na avaliação. */
+  private String versaoParametrosIncerteza;
 
   public Decisao() {}
 
@@ -191,5 +198,21 @@ public class Decisao extends DecisaoBase {
 
   public void setResultadosArtigos(List<DecisaoArtigo> resultadosArtigos) {
     this.resultadosArtigos = resultadosArtigos;
+  }
+
+  public List<GrauCrenca> getGrausCrenca() {
+    return grausCrenca;
+  }
+
+  public void setGrausCrenca(List<GrauCrenca> grausCrenca) {
+    this.grausCrenca = grausCrenca;
+  }
+
+  public String getVersaoParametrosIncerteza() {
+    return versaoParametrosIncerteza;
+  }
+
+  public void setVersaoParametrosIncerteza(String versaoParametrosIncerteza) {
+    this.versaoParametrosIncerteza = versaoParametrosIncerteza;
   }
 }

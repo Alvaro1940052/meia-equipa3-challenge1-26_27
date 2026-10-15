@@ -8,6 +8,7 @@
 - **`PedidoDevolucao`** é o facto raiz. Agrega a loja, o colaborador, o cliente, a compra original, o comprovativo, os artigos devolvidos, os artigos de troca e o eventual pedido de exceção.
 - **`Decisao`** é o facto de saída. Preenche os campos OUT-001 a OUT-008 e guarda o rasto das regras disparadas em `RegistoRegra`.
 - **`IndicadorFraude`** é inserido à parte, para disparar a interrupção transversal EX-008.
+- **`Evidencia`**, **`GrauCrenca`** e **`Contribuicao`** formam a camada de incerteza (`08-incerteza.md`): evidências com pesos dos parâmetros, graus calculados e os passos de cada cálculo.
 
 ### Convenções
 
@@ -203,6 +204,35 @@ ArtigoTroca "0..*" --> "1" Produto : produto
 PedidoExcecao "0..*" --> "0..1" Colaborador : aprovador
 Decisao "1" *-- "1" Documentacao : documentacao
 Decisao "1" *-- "0..*" RegistoRegra : registos
+class Evidencia {
+  -String codigo
+  -Hipotese hipotese
+  -String pedidoId
+  -String artigoId
+  -Boolean presente
+  -FonteEvidencia fonte
+  -double peso
+  -String grupo
+}
+class GrauCrenca {
+  -String pedidoId
+  -String artigoId
+  -Hipotese hipotese
+  -MetodoIncerteza metodo
+  -double valor
+  -ClassificacaoIncerteza classificacao
+  -String versaoParametros
+  -boolean demonstrativo
+}
+class Contribuicao {
+  -String codigo
+  -double peso
+  -double valorAntes
+  -double valorDepois
+  -boolean aplicada
+}
+Decisao "1" *-- "0..*" GrauCrenca : grausCrenca
+GrauCrenca "1" *-- "0..*" Contribuicao : contribuicoes
 ```
 
 ## Relações
@@ -226,6 +256,9 @@ Decisao "1" *-- "0..*" RegistoRegra : registos
 | PedidoExcecao | Associação | 0..* → 0..1 | Colaborador | `aprovador` |
 | Decisao | Composição | 1 → 1 | Documentacao | `documentacao` |
 | Decisao | Composição | 1 → 0..* | RegistoRegra | `registos` |
+| Decisao | Composição | 1 → 0..* | GrauCrenca | `grausCrenca` |
+| GrauCrenca | Composição | 1 → 0..* | Contribuicao | `contribuicoes` |
+| Evidencia | Referência por ID | 0..* → 1 | PedidoDevolucao / ArtigoDevolvido | `pedidoId`, `artigoId` |
 
 ## Classes e atributos
 
@@ -293,6 +326,8 @@ Cliente que apresenta o pedido.
 | `barreiraLinguistica` | `boolean` | Existe uma barreira linguística. | PT-006 |
 | `contestaResultado` | `boolean` | O cliente contesta o resultado padrão. | EX-002 |
 | `agitado` | `boolean` | O cliente fica irritado ou cria perturbação. | EX-003 |
+| `explicaOrigemCompra` | `Boolean` | O cliente explica onde e quando comprou; `null` = "Não sei". | EF-04 (`08`) |
+| `pedeNumerario` | `boolean` | O cliente pede o reembolso em numerário. | EF-05 (`08`) |
 
 ### CompraOriginal
 
@@ -354,6 +389,7 @@ Dados de catálogo do artigo.
 | `pvpOriginal` | `BigDecimal` | Preço de venda ao público original. | CH-010 |
 | `precoAtual` | `BigDecimal` | Preço de venda atual, após promoções ativas. | PT-005, CH-009, EP-002, EP-005 |
 | `emSaldo` | `boolean` | O produto já está em saldo. | EP-007 |
+| `defeitoConhecido` | `boolean` | Defeito de fabrico conhecido para o SKU (catálogo). | ED-04 (`08`) |
 
 ### ArtigoDevolvido
 
@@ -368,7 +404,11 @@ Uma linha do pedido: um produto devolvido e o seu estado.
 | `estado` | `EstadoProduto` | Estado físico do artigo (IN-008). | PC-001 a PC-008 |
 | `entreCanais` | `boolean` | Comprado noutro canal ou loja. | EP-005 a EP-007 |
 | `revendivel` | `Boolean` | IN-010; nulo até à inspeção. | PC-002, PC-003, PT-004, EX-005 |
-| `destino` | `DestinoProduto` | Destino final do artigo (OUT-007). | EP-005 a EP-007, BW, PC-008 |
+| `destino` | `Hipotese` | `FRAUDE`, `DEFEITO_FABRICO`, `REVENDIBILIDADE`, `RECOMENDACAO_CREDITO` |
+| `MetodoIncerteza` | `FATOR_CERTEZA`, `BAYES`, `FUZZY` |
+| `FonteEvidencia` | `SISTEMA`, `COLABORADOR`, `POS`, `CATALOGO` |
+| `ClassificacaoIncerteza` | `RISCO_ALTO`, `RISCO_MEDIO`, `RISCO_BAIXO`, `PROPOR_PC006`, `REVER_DEFEITO`, `DESGASTE`, `REVENDIVEL`, `REVENDIBILIDADE_INDETERMINADA`, `NAO_REVENDIVEL`, `CREDITO_RECOMENDADO`, `CREDITO_A_CRITERIO`, `CREDITO_NAO_RECOMENDADO` |
+| `DestinoProduto` | Destino final do artigo (OUT-007). | EP-005 a EP-007, BW, PC-008 |
 | `descontoSaldo` | `int` | Percentagem de desconto em saldos. | EP-006, BW-002 |
 
 ### EstadoProduto
@@ -389,6 +429,9 @@ Resultado da inspeção física do artigo.
 | `rfidCorreto` | `boolean` | Etiqueta RFID correta. | CT-008 |
 | `embalagemIntacta` | `boolean` | Bodywear com embalagem original intacta. | BW-001, BW-002 |
 | `conjuntoCompleto` | `boolean` | Bodywear sem unidades em falta. | BW-002, BW-003 |
+| `grauUso` | `Integer` | Grau de uso de 0 (nenhum) a 4 (intenso); `null` se desconhecido. | EF-03, IU-30 (`08`) |
+| `alegaDefeito` | `boolean` | O cliente alega um defeito. | IU-20 (`08`) |
+| `inspecaoDefeito` | `Map<String, Boolean>` | Respostas da inspeção: ED-xx → presente, ausente ou `null` ("Não sei"). | ED-01..ED-07 (`08`) |
 
 Métodos auxiliares: `isModificado() boolean`
 
@@ -447,6 +490,8 @@ Facto de saída. Acumula o resultado das regras e preenche os campos OUT.
 | `terminal` | `boolean` | Uma paragem obrigatória encerrou o fluxo. | HS, CH-007, CH-008, EX-008 |
 | `documentacao` | `Documentacao` | OUT-008. | CT-004 a CT-007, EX-007 |
 | `registos` | `List<RegistoRegra>` | Rasto das regras disparadas. | Auditoria |
+| `grausCrenca` | `List<GrauCrenca>` | Graus calculados pela camada de incerteza. | IU-10, IU-20, IU-30, IU-40 (`08`) |
+| `versaoParametrosIncerteza` | `String` | Versão do ficheiro de parâmetros de incerteza. | Auditoria (`08`) |
 
 Métodos auxiliares: `aplicar(String regra, Elegibilidade r, String msg) void`
 
@@ -477,6 +522,55 @@ Uma entrada do rasto de auditoria: que regra disparou e com que resultado.
 | `mensagem` | `String` | Explicação para o colaborador. | Auditoria |
 | `instante` | `LocalDateTime` | Momento em que disparou. | Auditoria |
 
+### Evidencia (camada de incerteza, `08`)
+
+Evidência a favor ou contra uma hipótese. O peso vem do ficheiro de parâmetros, nunca do código.
+
+| Atributo | Tipo Java | Descrição | Regras |
+|---|---|---|---|
+| `codigo` | `String` | EF-xx (fraude) ou ED-xx (defeito de fabrico). | IU-01..IU-07 |
+| `hipotese` | `Hipotese` | Hipótese a que se refere. | IU-10, IU-20 |
+| `pedidoId` | `String` | Pedido. | — |
+| `artigoId` | `String` | Artigo; `null` nas evidências do pedido. | IU-20 |
+| `presente` | `Boolean` | Observada presente (TRUE), ausente (FALSE) ou desconhecida (`null`). | IU-10, IU-20 |
+| `fonte` | `FonteEvidencia` | Origem. | Explicações |
+| `peso` | `double` | CF ou LR, lido dos parâmetros. | IU-10, IU-20 |
+| `grupo` | `String` | Grupo de correlação (ex.: USO). | IU-20 |
+| `descricao` | `String` | Texto para as explicações. | Explicações |
+
+### GrauCrenca (camada de incerteza, `08`)
+
+Grau calculado para uma hipótese, com a classe dos limiares e os passos do cálculo.
+
+| Atributo | Tipo Java | Descrição | Regras |
+|---|---|---|---|
+| `pedidoId` | `String` | Pedido. | — |
+| `artigoId` | `String` | Artigo; `null` para FRAUDE e RECOMENDACAO_CREDITO. | — |
+| `hipotese` | `Hipotese` | Hipótese avaliada. | IU-11..IU-50 |
+| `metodo` | `MetodoIncerteza` | Técnica usada. | Explicações |
+| `valor` | `double` | CF em [−1, 1], probabilidade ou grau em [0, 1], recomendação em [0, 100]. | IU-11..IU-50 |
+| `classificacao` | `ClassificacaoIncerteza` | Classe resultante dos limiares. | IU-11..IU-50, PC-004, PC-005 |
+| `contribuicoes` | `List<Contribuicao>` | Passos do cálculo. | Explicações, auditoria |
+| `versaoParametros` | `String` | Versão do ficheiro de parâmetros. | Auditoria |
+| `demonstrativo` | `boolean` | Os parâmetros são demonstrativos. | Interface |
+
+### Contribuicao (camada de incerteza, `08`)
+
+Um passo do cálculo: uma evidência ou uma regra fuzzy.
+
+| Atributo | Tipo Java | Descrição |
+|---|---|---|
+| `codigo` | `String` | EF, ED, RV ou CR. |
+| `descricao` | `String` | Texto legível. |
+| `peso` | `double` | CF, LR ou força da regra fuzzy. |
+| `valorAntes` | `double` | Valor antes do passo. |
+| `valorDepois` | `double` | Valor depois do passo. |
+| `aplicada` | `boolean` | Falso quando não foi aplicada. |
+| `motivoNaoAplicada` | `String` | Ex.: "grupo USO", "desconhecida". |
+
+O mapeamento das etiquetas para a revendibilidade (COLOCADAS 1,0; SOLTAS 0,6; AUSENTES 0,0) é um parâmetro
+(`integridadeEtiquetas` no ficheiro de parâmetros) e não um método do modelo (ADR 0012).
+
 ## Enumerações
 
 | Enumeração | Valores |
@@ -502,7 +596,7 @@ Uma entrada do rasto de auditoria: que regra disparou e com que resultado.
 | `NivelAprovacao` | `NENHUMA`, `XSTORE_MANAGER`, `RESPONSAVEL_SENIOR`, `DISTRICT_AREA` |
 | `ProcessoObrigatorio` | `POS`, `BACKPOCKET`, `AFTERPAY`, `PAYPAL_VENMO`, `VERIFONE_INTERAC`, `FRANQUIA_CANADA`, `DANO`, `RISCO_BIOLOGICO` |
 | `DestinoProduto` | `AREA_VENDAS`, `SALDOS`, `REETIQUETAR`, `BAIXA_DANO`, `RISCO_BIOLOGICO`, `DEVOLUCAO_CLIENTE` |
-| `Modulo` | `M0`, `M1`, `M2`, `M3`, `M4`, `M5`, `ONLINE`, `M6`, `M7`, `M8`, `M9` |
+| `Modulo` | `M0`, `M1`, `M2`, `EVIDENCIA`, `INCERTEZA`, `M3`, `M4`, `M5`, `ONLINE`, `M6`, `M7`, `M8`, `M9` |
 
 ## Integração com Drools
 

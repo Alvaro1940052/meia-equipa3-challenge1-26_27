@@ -48,6 +48,9 @@ public interface PedidoMapper {
   Loja loja(LojaRequest loja);
 
   @Mapping(target = "forneceDados", defaultValue = "true")
+  // Entradas da camada de incerteza: chegam no DTO no passo 11e (docs/07, E3)
+  @Mapping(target = "explicaOrigemCompra", ignore = true)
+  @Mapping(target = "pedeNumerario", ignore = true)
   Cliente cliente(ClienteRequest cliente);
 
   @Mapping(target = "encomendaEncontrada", defaultValue = "false")
@@ -68,11 +71,15 @@ public interface PedidoMapper {
   @Mapping(target = "vendidoNaLoja", defaultValue = "false")
   @Mapping(target = "produtoFranquia", defaultValue = "false")
   @Mapping(target = "emSaldo", defaultValue = "false")
+  @Mapping(target = "defeitoConhecido", ignore = true)
   Produto produto(ProdutoRequest produto);
 
   @Mapping(target = "etiquetaPrecoCorreta", defaultValue = "true")
   @Mapping(target = "rfidCorreto", defaultValue = "true")
   @Mapping(target = "conjuntoCompleto", defaultValue = "true")
+  @Mapping(target = "grauUso", ignore = true)
+  @Mapping(target = "alegaDefeito", ignore = true)
+  @Mapping(target = "inspecaoDefeito", ignore = true)
   EstadoProduto estado(EstadoProdutoRequest estado);
 
   ArtigoTroca troca(ArtigoTrocaRequest troca);
