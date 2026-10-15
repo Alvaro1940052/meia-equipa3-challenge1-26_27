@@ -19,6 +19,8 @@ import com.levis.devolucoes.model.enums.NivelRisco;
 import com.levis.devolucoes.model.incerteza.Contribuicao;
 import com.levis.devolucoes.model.incerteza.Evidencia;
 import com.levis.devolucoes.model.incerteza.GrauCrenca;
+import com.levis.devolucoes.model.pedido.PedidoDevolucao;
+import com.levis.devolucoes.model.produto.ArtigoDevolvido;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -237,6 +239,53 @@ public class ServicoIncerteza {
         r.valor(),
         classe,
         contribuicoesFuzzy(entradas, r));
+  }
+
+  /**
+   * Recomendação de crédito de um pedido em REVER por PT-004 (IU-40): os dias desde a compra, a
+   * menor revendibilidade calculada entre os artigos (a mais cautelosa), o risco de fraude e a soma
+   * dos preços pagos.
+   */
+  public GrauCrenca recomendacaoCreditoPedido(
+      PedidoDevolucao pedido, Collection<GrauCrenca> graus) {
+    Double revendibilidade =
+        graus.stream()
+            .filter(g -> g.getHipotese() == Hipotese.REVENDIBILIDADE)
+            .map(GrauCrenca::getValor)
+            .min(Double::compare)
+            .orElse(null);
+    Double risco =
+        graus.stream()
+            .filter(g -> g.getHipotese() == Hipotese.FRAUDE)
+            .map(GrauCrenca::getValor)
+            .findFirst()
+            .orElse(null);
+    BigDecimal valor =
+        pedido.getArtigos() == null
+            ? BigDecimal.ZERO
+            : pedido.getArtigos().stream()
+                .map(ArtigoDevolvido::getPrecoPago)
+                .filter(java.util.Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    long dias = pedido.getDiasDesdeCompra() == null ? 0 : pedido.getDiasDesdeCompra();
+    return recomendacaoCredito(pedido.getId(), dias, revendibilidade, risco, valor);
+  }
+
+  /**
+   * Resumo legível de um grau, para o rasto das regras (ex.: "risco de fraude 0,84: RISCO_ALTO").
+   */
+  public String resumo(GrauCrenca grau) {
+    String nome =
+        switch (grau.getHipotese()) {
+          case FRAUDE -> "risco de fraude (fator de certeza)";
+          case DEFEITO_FABRICO -> "probabilidade de defeito de fabrico";
+          case REVENDIBILIDADE -> "grau de revendibilidade";
+          case RECOMENDACAO_CREDITO -> "recomendação de crédito de loja";
+        };
+    String formato =
+        grau.getHipotese() == Hipotese.RECOMENDACAO_CREDITO ? "%s %.0f: %s" : "%s %.2f: %s";
+    return String.format(PT, formato, nome, grau.getValor(), grau.getClassificacao())
+        + (grau.isDemonstrativo() ? " (valores demonstrativos)" : "");
   }
 
   /**

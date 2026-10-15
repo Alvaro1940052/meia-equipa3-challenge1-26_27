@@ -168,6 +168,13 @@ public class Decisao extends DecisaoBase {
     this.meioReembolso = meioReembolso;
   }
 
+  /** Exige pelo menos o nível de aprovação indicado; a aprovação nunca desce (docs/08 §5.3). */
+  public void exigirAprovacao(NivelAprovacao nivel) {
+    if (aprovacao == null || nivel.compareTo(aprovacao) > 0) {
+      aprovacao = nivel;
+    }
+  }
+
   public NivelAprovacao getAprovacao() {
     return aprovacao;
   }
@@ -198,6 +205,12 @@ public class Decisao extends DecisaoBase {
 
   public void setResultadosArtigos(List<DecisaoArtigo> resultadosArtigos) {
     this.resultadosArtigos = resultadosArtigos;
+  }
+
+  /** Acrescenta um grau calculado pela camada de incerteza e guarda a versão dos parâmetros. */
+  public void acrescentarGrau(GrauCrenca grau) {
+    grausCrenca.add(grau);
+    versaoParametrosIncerteza = grau.getVersaoParametros();
   }
 
   public List<GrauCrenca> getGrausCrenca() {

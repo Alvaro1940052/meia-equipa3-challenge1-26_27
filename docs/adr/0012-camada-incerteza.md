@@ -31,6 +31,13 @@ implementação existente. Este ADR regista como cada ponto foi resolvido.
    - Usa-se o jar publicado pelo autor no SourceForge (licença LGPL-3.0, segundo o repositório
      github.com/pcingola/jFuzzyLogic), instalado num repositório Maven dentro do projeto (`backend/repo-local/`), para
      que o CI e qualquer máquina compilem sem passo manual.
+   - O `jFuzzyLogic_core.jar` (versão 3.3, de 2015) traz embutidas outras bibliotecas, entre elas o ANTLR 3.1
+     (`org.antlr.runtime`), que colide com o `antlr-runtime` 3.5.2 do Drools. O artefacto do repositório local tem só as
+     classes do jFuzzyLogic, sem alterações, e declara o `antlr-runtime` 3.5.2 como dependência. Foi verificado que o
+     parser FCL funciona com essa versão e que os exemplos do `docs/08` dão os mesmos valores. O script
+     `backend/repo-local/preparar-jfuzzylogic.sh` gera o artefacto a partir do jar original e confirma o SHA-256.
+   - O jFuzzyLogic corre em Java 25 e devolve o grau de cada regra (`Rule.getDegreeOfSupport()`) e as pertenças das
+     entradas, como pede o §4.3.
    - O motor fica atrás da interface `MotorFuzzy`.
 4. **O cálculo de um grau explica-se no "Como?".**
    - O §7.1 propõe `GET .../explicacoes/porque?campo=INCERTEZA.*`. Pela ADR 0006, "Porquê?" é porque é que o sistema
@@ -49,10 +56,12 @@ implementação existente. Este ADR regista como cada ponto foi resolvido.
 2. **EF-05 e EF-06 derivam dos factos.** A PT-001 e a PT-002 estão no M4, que corre depois do grupo EVIDENCIA. As
    regras IU-05 e IU-06 usam o mesmo critério que elas: comprovativo ausente ou que não confirma a compra
    (às cegas), ou comprovativo válido (verificada).
-3. **IU-50 atua sobre cada `DecisaoArtigo`.** A elegibilidade do pedido é recalculada a partir dos artigos no M9
+3. **Efeitos sobre cada `DecisaoArtigo`.** A elegibilidade do pedido é recalculada a partir dos artigos no M9
    (OUT-001, ADR 0002). Se a IU-50 alterasse a `Decisao`, a agregação sobrescrevia-a.
-   - A IU-50 passa os artigos PERMITIR a REVER: os que têm PROPOR_PC006 ou REVER_DEFEITO e, se o pedido tiver
-     RISCO_MEDIO, todos.
+   - A IU-21 e a IU-22 (defeito provável ou possível) aplicam logo REVER ao artigo no M3: o §3.4 diz que "o artigo fica
+     em REVER até à decisão da gestão", e só assim a PT-003 continua a ver um artigo elegível (como no §8). Como o
+     `aplicar` nunca baixa a severidade, uma variante da IU-50 para o defeito nunca dispararia; a IU-50 fica só para o
+     risco de fraude médio, passando os artigos PERMITIR (ou ainda sem resultado) a REVER.
    - Nunca altera RECUSAR nem ENCAMINHAR.
 4. **Respostas de inspeção no modelo.**
    - O §5.4 manda o `AvaliacaoService` inserir as evidências do colaborador. A simulação ("E se?") e o "Porque não?"
@@ -74,7 +83,11 @@ implementação existente. Este ADR regista como cada ponto foi resolvido.
    - O `MetadadosRegrasTest` passa a aceitar os IDs IU-xx definidos no `docs/08` (§5.4).
    - O `CoberturaRegrasTest` exige um teste `@Regra` por regra IU.
 
-9. **Integridade das etiquetas como parâmetro.** O §5.1 põe `getIntegridadeEtiquetas()` no modelo, com os valores
+9. **Foco da EX-008 depois da IU-11.** O `auto-focus` da EX-008 não interrompe o grupo em curso (o Drools avalia os
+   grupos de forma preguiçosa); antes, o indício era inserido no arranque e a EX-008 corria antes de tudo. A IU-11 dá
+   explicitamente o foco ao grupo TRANSVERSAL depois de inserir o indício, para a suspensão ser imediata. Consequência
+   no cenário 6: o M0 e o M2 (CT-003, IN-003) correm antes da suspensão, porque o risco só se conhece depois deles.
+10. **Integridade das etiquetas como parâmetro.** O §5.1 põe `getIntegridadeEtiquetas()` no modelo, com os valores
    1,0, 0,6 e 0,0, mas o §6 tem os mesmos valores no ficheiro de parâmetros (`integridadeEtiquetas`). Para não haver
    parâmetros no código, o mapeamento fica no `ServicoIncerteza`, lido do ficheiro.
 

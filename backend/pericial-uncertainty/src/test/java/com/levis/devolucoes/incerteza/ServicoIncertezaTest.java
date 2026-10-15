@@ -13,7 +13,11 @@ import com.levis.devolucoes.model.enums.NivelRisco;
 import com.levis.devolucoes.model.incerteza.Contribuicao;
 import com.levis.devolucoes.model.incerteza.Evidencia;
 import com.levis.devolucoes.model.incerteza.GrauCrenca;
+import com.levis.devolucoes.model.pedido.CompraOriginal;
+import com.levis.devolucoes.model.pedido.PedidoDevolucao;
+import com.levis.devolucoes.model.produto.ArtigoDevolvido;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -225,5 +229,32 @@ class ServicoIncertezaTest {
   @Test
   void aConfiguracaoPadraoUsaOFicheiroDeProducao() {
     assertThat(ServicoIncerteza.padrao().isDemonstrativo()).isTrue();
+  }
+
+  @Test
+  void recomendacaoDoPedidoUsaAMenorRevendibilidadeORiscoEASomaDosPrecos() {
+    PedidoDevolucao pedido = new PedidoDevolucao();
+    pedido.setId("P");
+    CompraOriginal compra = new CompraOriginal();
+    compra.setDataCompra(LocalDate.now().minusDays(35));
+    pedido.setCompraOriginal(compra);
+    pedido.setDataPedido(LocalDate.now());
+    ArtigoDevolvido a1 = new ArtigoDevolvido();
+    a1.setPrecoPago(new BigDecimal("50"));
+    ArtigoDevolvido a2 = new ArtigoDevolvido();
+    a2.setPrecoPago(new BigDecimal("30"));
+    pedido.setArtigos(List.of(a1, a2));
+    GrauCrenca alta = SERVICO.revendibilidade("P", "A-1", 0, EstadoEtiquetas.SOLTAS);
+    GrauCrenca risco = SERVICO.riscoFraude("P", List.of(fraude("EF-06")));
+
+    GrauCrenca g = SERVICO.recomendacaoCreditoPedido(pedido, List.of(alta, risco));
+    GrauCrenca direto =
+        SERVICO.recomendacaoCredito("P", 35, alta.getValor(), 0.0, new BigDecimal("80"));
+
+    assertThat(g.getValor()).isCloseTo(direto.getValor(), within(0.0001));
+    assertThat(SERVICO.resumo(g))
+        .startsWith("recomendação de crédito de loja")
+        .contains("demonstrativos");
+    assertThat(SERVICO.resumo(risco)).contains("-0,60").contains("RISCO_BAIXO");
   }
 }
