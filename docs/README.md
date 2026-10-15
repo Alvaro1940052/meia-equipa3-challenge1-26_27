@@ -63,6 +63,8 @@ Documenta os fundamentos de negócio, enquadramento curricular e as regras empí
 | **Contexto de Negócio** | [`business_context.md`](domain/business_context.md) | Enquadramento académico no mestrado MEIA (ENGCIA & PPROGIA), desafio Challenges 4Teams (Equipa 3), caso de uso de retalho e papel do perito Dustin Hopper. |
 | **Heurísticas do Perito** | [`expert_knowledge.md`](domain/expert_knowledge.md) | Mapeamento formal das 71 regras da Levi's em 9 famílias, hierarquia de precedência de 7 níveis, variáveis críticas e fontes normativas (RPAC e perito Dustin Hopper). |
 | **Explicabilidade e Transparência** | [`explainability.md`](domain/explainability.md) | Modelo formal de explicabilidade em 5 vias para Prolog (*Como, Porquê da Pergunta, Porquê da Decisão, Porque Não, E Se Sandbox*) e Drools, estrutura de vetores de justificação e conformidade ética. |
+| **Validação Cruzada Drools vs. Prolog** | [`validacao_motores_drools_prolog.md`](domain/validacao_motores_drools_prolog.md) | Validação empírica dos 10 cenários de teste reais do perito Dustin Hopper executados em Drools e Prolog via REST com análise exaustiva de paridade. |
+| **Comparativo: Regras vs. Redes Semânticas** | [`comparativo_regras_vs_redes_semanticas.md`](domain/comparativo_regras_vs_redes_semanticas.md) | Análise comparativa entre Regras de Produção e Redes Semânticas, modelação no domínio Levi's, código comparativo em Prolog, proposta de arquitetura híbrida e guião de preparação para a defesa oral de MEIA. |
 
 ---
 
@@ -80,6 +82,7 @@ Documenta o desenho técnico da solução, princípios de engenharia (Clean Arch
 | **Interações e Fluxos de Dados** | [`service_interactions.md`](architecture/service_interactions.md) | Diagramas de sequência ponta-a-ponta (rotas `/retail/*` e Drools Levi's), interrogação dialógica interativa passo-a-passo (ACM), simulação contrafactual *What-If* em sandbox e mapeamento semântico no orquestrador. |
 | **Análise do Motor sp_exp2** | [`sp_exp2_engine_analysis.md`](architecture/sp_exp2_engine_analysis.md) | Dissecação dos 6 blocos do motor dos docentes (`sp_exp2.pl`), ciclo forward-chaining, metaconhecimento, explicabilidade nativa e plano de adaptação pericial para retalho. |
 | **Plano Mestre de Adaptação Prolog** | [`prolog_expert_system_adaptation.md`](architecture/prolog_expert_system_adaptation.md) | Plano mestre 100% implementado e validado de transposição do guia do Prof. ACM para as 71 regras da Levi's, arquitetura dual, mecânica `obtem_facto/2` e testes de paridade. |
+| **Diferenças: sp_exp2 vs. retail_engine** | [`diferencas_motor_academico_vs_implementado.md`](architecture/diferencas_motor_academico_vs_implementado.md) | Guia intuitivo de diferenças para a defesa oral: dissecação das 5 mutações no código Prolog baseadas em `MI_Perguntas_ACM.md` (`obtem_facto/2`, `perguntavel/1`, gestão de "não sei", `Why Ask`), diagramas comparativos e guião de perguntas para a apresentação técnica. |
 
 ---
 

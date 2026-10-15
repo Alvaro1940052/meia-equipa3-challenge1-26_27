@@ -22,6 +22,7 @@ O sistema baseia-se em princípios sólidos de engenharia de software: **Clean A
 | [Interações entre Serviços e Fluxos de Dados (`service_interactions.md`)](service_interactions.md) | Comunicação e integração ponta-a-ponta | Diagramas de sequência detalhados para `/retail/*`, diálogo interativo ACM, sandbox contrafactual *What-If*, fluxo Drools Levi's, mapeamento semântico de decisões e matriz de erros. |
 | [Análise Aprofundada do Motor sp_exp2 (`sp_exp2_engine_analysis.md`)](sp_exp2_engine_analysis.md) | Dissecação e adaptação do motor académico | Análise detalhada dos 6 blocos do `sp_exp2.pl`, ciclo de inferência, metaconhecimento, explicabilidade e roteiro de adaptação pericial para retalho. |
 | [Plano Mestre de Adaptação em Prolog (`prolog_expert_system_adaptation.md`)](prolog_expert_system_adaptation.md) | Adaptação pericial da Levi's (100% Concluída) | Da teoria das perguntas de PPROGIA (ACM) às 71 regras da Levi's (RPAC-Team3): arquitetura dual, `obtem_facto/2`, precedência, validação com 81 testes PLUnit e 153 testes Pytest. |
+| [Diferenças: sp_exp2 vs. retail_engine (`diferencas_motor_academico_vs_implementado.md`)](diferencas_motor_academico_vs_implementado.md) | Guia intuitivo de diferenças para a defesa oral | Dissecação didática das 5 mutações no código Prolog baseadas em `MI_Perguntas_ACM.md` (`obtem_facto/2`, `perguntavel/1`, gestão de "não sei", `Why Ask`), diagramas de fluxo comparativos e guião de perguntas para a apresentação técnica. |
 
 ---
 
