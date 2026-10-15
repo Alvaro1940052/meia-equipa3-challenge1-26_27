@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { ApiClientError, api } from "@/client/api";
 import ErrorBanner from "@/components/shared/ErrorBanner";
 import { ELIGIBILITY, WHAT_IF_PRESETS, cause, label } from "@/config/returnsLabels";
@@ -15,7 +15,7 @@ import type {
   SimulacaoResponse,
 } from "@/types/returns";
 
-const BASE = "/api/returns";
+const ExplainBaseContext = createContext<string>("/api/returns");
 const LOCALE = "locale=pt-PT";
 
 type TabId = "how" | "whynot" | "missing" | "whatif";
@@ -78,9 +78,10 @@ function Conditions({ items }: { items: CondicaoDto[] }) {
 }
 
 function HowTab({ evaluationId }: { evaluationId: string }) {
+  const base = useContext(ExplainBaseContext);
   const load = useCallback(
-    () => api<ExplicacaoComoResponse>(`${BASE}/avaliacoes/${evaluationId}/explicacoes/como?${LOCALE}`),
-    [evaluationId]
+    () => api<ExplicacaoComoResponse>(`${base}/avaliacoes/${evaluationId}/explicacoes/como?${LOCALE}`),
+    [base, evaluationId]
   );
   const { data, error, loading, retry } = useRemote(load);
 
@@ -111,16 +112,17 @@ function HowTab({ evaluationId }: { evaluationId: string }) {
 }
 
 function WhyNotTab({ evaluationId, obtained }: { evaluationId: string; obtained: Elegibilidade | null }) {
+  const base = useContext(ExplainBaseContext);
   const targets = (Object.keys(ELIGIBILITY) as Elegibilidade[]).filter((value) => value !== obtained);
   const [target, setTarget] = useState<Elegibilidade>(targets[0]);
   const load = useCallback(
     () =>
       api<ExplicacaoPorqueNaoConclusaoResponse>(
-        `${BASE}/avaliacoes/${evaluationId}/explicacoes/porque-nao?conclusao=${encodeURIComponent(
+        `${base}/avaliacoes/${evaluationId}/explicacoes/porque-nao?conclusao=${encodeURIComponent(
           `OUT-001:${target}`
         )}&${LOCALE}`
       ),
-    [evaluationId, target]
+    [base, evaluationId, target]
   );
   const { data, error, loading, retry } = useRemote(load);
 
@@ -165,9 +167,10 @@ function WhyNotTab({ evaluationId, obtained }: { evaluationId: string; obtained:
 }
 
 function MissingTab({ request }: { request: ReturnRequest }) {
+  const base = useContext(ExplainBaseContext);
   const load = useCallback(
-    () => api<DadosEmFaltaResponse>(`${BASE}/dados-em-falta?${LOCALE}`, { method: "POST", body: request }),
-    [request]
+    () => api<DadosEmFaltaResponse>(`${base}/dados-em-falta?${LOCALE}`, { method: "POST", body: request }),
+    [base, request]
   );
   const { data, error, loading, retry } = useRemote(load);
   const [why, setWhy] = useState<{ code: string; data?: ExplicacaoPorqueResponse; error?: string } | null>(null);
@@ -176,7 +179,7 @@ function MissingTab({ request }: { request: ReturnRequest }) {
     setWhy({ code });
     try {
       const response = await api<ExplicacaoPorqueResponse>(
-        `${BASE}/porque?dado=${encodeURIComponent(code)}&${LOCALE}`,
+        `${base}/porque?dado=${encodeURIComponent(code)}&${LOCALE}`,
         { method: "POST", body: request }
       );
       setWhy({ code, data: response });
@@ -226,6 +229,7 @@ function MissingTab({ request }: { request: ReturnRequest }) {
 }
 
 function WhatIfTab({ evaluationId }: { evaluationId: string }) {
+  const base = useContext(ExplainBaseContext);
   const [simulation, setSimulation] = useState<SimulacaoResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -237,7 +241,7 @@ function WhatIfTab({ evaluationId }: { evaluationId: string }) {
     setError(null);
     try {
       setSimulation(
-        await api<SimulacaoResponse>(`${BASE}/avaliacoes/${evaluationId}/simulacoes?${LOCALE}`, {
+        await api<SimulacaoResponse>(`${base}/avaliacoes/${evaluationId}/simulacoes?${LOCALE}`, {
           method: "POST",
           body: { alteracoes: changes },
         })
@@ -357,44 +361,48 @@ export default function ExplainTabs({
   evaluationId,
   request,
   obtained,
+  base = "/api/returns",
 }: {
   evaluationId: string;
   request: ReturnRequest;
   obtained: Elegibilidade | null;
+  base?: string;
 }) {
   const [active, setActive] = useState<TabId>("how");
 
   return (
-    <section className="explain" aria-label="Explicações da decisão">
-      <div className="explain-tabs" role="tablist">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            role="tab"
-            id={`tab-${tab.id}`}
-            aria-selected={active === tab.id}
-            aria-controls={`panel-${tab.id}`}
-            className={`subtab-btn ${active === tab.id ? "active" : ""}`}
-            onClick={() => setActive(tab.id)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-      {/* Painéis sempre montados: cada um carrega uma vez por avaliação. */}
-      <div role="tabpanel" id="panel-how" aria-labelledby="tab-how" hidden={active !== "how"}>
-        <HowTab evaluationId={evaluationId} />
-      </div>
-      <div role="tabpanel" id="panel-whynot" aria-labelledby="tab-whynot" hidden={active !== "whynot"}>
-        <WhyNotTab evaluationId={evaluationId} obtained={obtained} />
-      </div>
-      <div role="tabpanel" id="panel-missing" aria-labelledby="tab-missing" hidden={active !== "missing"}>
-        <MissingTab request={request} />
-      </div>
-      <div role="tabpanel" id="panel-whatif" aria-labelledby="tab-whatif" hidden={active !== "whatif"}>
-        <WhatIfTab evaluationId={evaluationId} />
-      </div>
-    </section>
+    <ExplainBaseContext.Provider value={base}>
+      <section className="explain" aria-label="Explicações da decisão">
+        <div className="explain-tabs" role="tablist">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              id={`tab-${tab.id}`}
+              aria-selected={active === tab.id}
+              aria-controls={`panel-${tab.id}`}
+              className={`subtab-btn ${active === tab.id ? "active" : ""}`}
+              onClick={() => setActive(tab.id)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        {/* Painéis sempre montados: cada um carrega uma vez por avaliação. */}
+        <div role="tabpanel" id="panel-how" aria-labelledby="tab-how" hidden={active !== "how"}>
+          <HowTab evaluationId={evaluationId} />
+        </div>
+        <div role="tabpanel" id="panel-whynot" aria-labelledby="tab-whynot" hidden={active !== "whynot"}>
+          <WhyNotTab evaluationId={evaluationId} obtained={obtained} />
+        </div>
+        <div role="tabpanel" id="panel-missing" aria-labelledby="tab-missing" hidden={active !== "missing"}>
+          <MissingTab request={request} />
+        </div>
+        <div role="tabpanel" id="panel-whatif" aria-labelledby="tab-whatif" hidden={active !== "whatif"}>
+          <WhatIfTab evaluationId={evaluationId} />
+        </div>
+      </section>
+    </ExplainBaseContext.Provider>
   );
 }

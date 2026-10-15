@@ -3,7 +3,7 @@ export const GATEWAY_URL = "http://127.0.0.1:8000";
 
 export const GATEWAY_TIMEOUT_MS = 15_000;
 
-export type EngineId = "prolog" | "drools" | "returns";
+export type EngineId = "returns" | "prolog";
 
 type Method = "GET" | "POST";
 
@@ -21,24 +21,6 @@ interface EngineProxyConfig {
 
 // Só os paths listados aqui podem ser alcançados pelo browser.
 export const ENGINE_PROXY: Record<EngineId, EngineProxyConfig> = {
-  prolog: {
-    gatewayPrefix: "/api/v1/inference",
-    allowed: [
-      { method: "POST", pattern: "load" },
-      { method: "POST", pattern: "run" },
-      { method: "GET", pattern: "facts" },
-      { method: "POST", pattern: "how" },
-      { method: "POST", pattern: "whynot" },
-      { method: "POST", pattern: "reset" },
-    ],
-  },
-  drools: {
-    gatewayPrefix: "/api/v1/drools",
-    allowed: [
-      { method: "POST", pattern: "evaluate" },
-      { method: "GET", pattern: "health" },
-    ],
-  },
   returns: {
     gatewayPrefix: "/api/v1/levis",
     allowed: [
@@ -52,6 +34,22 @@ export const ENGINE_PROXY: Record<EngineId, EngineProxyConfig> = {
       { method: "POST", pattern: "porque" },
       { method: "GET", pattern: "regras" },
       { method: "GET", pattern: "regras/*" },
+      { method: "GET", pattern: "cenarios-exemplo" },
+      { method: "GET", pattern: "cenarios-exemplo/*" },
+      { method: "GET", pattern: "health" },
+    ],
+  },
+  prolog: {
+    gatewayPrefix: "/api/v1/retail",
+    allowed: [
+      { method: "POST", pattern: "avaliar" },
+      { method: "GET", pattern: "avaliacoes" },
+      { method: "GET", pattern: "avaliacoes/*" },
+      { method: "GET", pattern: "avaliacoes/*/explicacoes/como" },
+      { method: "GET", pattern: "avaliacoes/*/explicacoes/porque-nao" },
+      { method: "POST", pattern: "avaliacoes/*/simulacoes" },
+      { method: "POST", pattern: "dados-em-falta" },
+      { method: "POST", pattern: "porque" },
       { method: "GET", pattern: "cenarios-exemplo" },
       { method: "GET", pattern: "cenarios-exemplo/*" },
       { method: "GET", pattern: "health" },

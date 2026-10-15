@@ -52,7 +52,41 @@ def mock_prolog_client() -> AsyncMock:
         "decision": "approved",
         "justification": ["Value is 42", "Dummy rule matched"],
     }
+    mock.evaluate_retail.return_value = {
+        "status": "success",
+        "decision": "manager_override",
+        "retail_decision": "rever",
+        "justification": [
+            "[PC-002] Artigo não usado com etiquetas soltas exige julgamento humano",
+            "[PT-001] Comprovativo digital confirma a compra dentro de 30 dias",
+        ],
+        "initial_facts_count": 18,
+        "derived_facts_count": 14,
+        "total_facts": 32,
+        "derived_facts": [
+            {"id": 19, "fact": "controlo_sessao_conforme(true)", "rule_id": "CT-003"},
+            {"id": 25, "fact": "decisao(rever)", "rule_id": "PC-002"},
+        ],
+    }
+    mock.how_retail.return_value = {
+        "status": "success",
+        "fact": "decisao(rever)",
+        "explanation": ["Fact 25 -> decisao(rever) concluded by rule [PC-002]"],
+    }
+    mock.whynot_retail.return_value = {
+        "status": "success",
+        "fact": "decisao(permitir)",
+        "explanation": ["Because by rule [PT-003]: Condition comprovativo(recibo_impresso) is false"],
+    }
+    mock.whatif_retail.return_value = {
+        "status": "success",
+        "baseline_decision": "rever",
+        "simulated_decision": "permitir",
+        "impact_summary": "A decisão mudou de rever para permitir.",
+    }
+    mock.reset_retail.return_value = {"status": "success", "message": "Reset"}
     return mock
+
 
 
 @pytest.fixture

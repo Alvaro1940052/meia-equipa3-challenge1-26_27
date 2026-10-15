@@ -13,16 +13,18 @@ interface HealthPayload {
 }
 
 function isOnline(engine: EngineId, data: HealthPayload): boolean {
-  // O estado do Prolog vem do health agregado do gateway.
-  return engine === "prolog"
-    ? data.prolog_engine === "connected"
-    : data.status === "UP";
+  if (data.status === "UP" || data.status === "healthy") {
+    return true;
+  }
+  if (engine === "prolog") {
+    return data.prolog_engine === "connected";
+  }
+  return false;
 }
 
 const INITIAL: Record<EngineId, HealthState> = {
   returns: "checking",
   prolog: "checking",
-  drools: "checking",
 };
 
 export function useEnginesHealth() {

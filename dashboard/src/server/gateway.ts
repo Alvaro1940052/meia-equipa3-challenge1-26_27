@@ -110,7 +110,7 @@ export async function proxyEngine(
   }
 
   const path = `${config.gatewayPrefix}/${segments.map(encodeURIComponent).join("/")}`;
-  const neutralBrand = engine === "returns";
+  const neutralBrand = engine === "returns" || engine === "prolog";
   let body = method === "POST" ? await request.text() : undefined;
   if (neutralBrand && body) {
     try {

@@ -33,22 +33,15 @@ export const ENGINES: EngineMeta[] = [
   {
     id: "returns",
     label: "Drools · Devoluções",
-    tagline: "Elegibilidade de devoluções e trocas segundo a política da loja",
+    tagline: "Elegibilidade de devoluções e trocas segundo a política da Levi's (Drools)",
     healthPath: "/api/returns/health",
     steps: DEFAULT_STEPS,
   },
   {
     id: "prolog",
-    label: "Prolog",
-    tagline: "Motor de inferência por encadeamento de regras e factos",
-    healthPath: "/api/health",
-    steps: DEFAULT_STEPS,
-  },
-  {
-    id: "drools",
-    label: "Drools · Diagnóstico",
-    tagline: "Diagnóstico a partir de evidências, com regras disparadas",
-    healthPath: "/api/drools/health",
+    label: "Prolog · Devoluções",
+    tagline: "Elegibilidade de devoluções e trocas segundo as 71 regras da Levi's (Prolog)",
+    healthPath: "/api/prolog/health",
     steps: DEFAULT_STEPS,
   },
 ];

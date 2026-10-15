@@ -13,9 +13,6 @@ import EngineWorkspace from "@/components/shared/EngineWorkspace";
 import ErrorBanner from "@/components/shared/ErrorBanner";
 import type { CenarioExemploResponse, DecisaoResponse, ReturnRequest } from "@/types/returns";
 
-const engine = ENGINES.find((item) => item.id === "returns")!;
-const BASE = "/api/returns";
-
 interface Evaluation {
   decision: DecisaoResponse;
   request: ReturnRequest;
@@ -36,7 +33,10 @@ function parseRequest(text: string): { request: ReturnRequest | null; error: str
   }
 }
 
-export default function ReturnsPanel() {
+export default function ReturnsPanel({ engineId = "returns" }: { engineId?: "returns" | "prolog" } = {}) {
+  const engine = ENGINES.find((item) => item.id === engineId) ?? ENGINES[0];
+  const BASE = engineId === "prolog" ? "/api/prolog" : "/api/returns";
+
   const [scenarios, setScenarios] = useState<CenarioExemploResponse[] | null>(null);
   const [scenariosError, setScenariosError] = useState<string | null>(null);
   const [scenarioId, setScenarioId] = useState<number | null>(null);
@@ -52,7 +52,7 @@ export default function ReturnsPanel() {
       .catch((err) =>
         setScenariosError(err instanceof ApiClientError ? err.message : "Não foi possível carregar os cenários.")
       );
-  }, []);
+  }, [BASE]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial dos cenários
@@ -145,6 +145,7 @@ export default function ReturnsPanel() {
               evaluationId={evaluation.decision.avaliacaoId}
               request={evaluation.request}
               obtained={evaluation.decision.elegibilidade ?? null}
+              base={BASE}
             />
           ) : (
             <p className="field-hint">Esta avaliação não foi guardada, por isso não há explicações disponíveis.</p>

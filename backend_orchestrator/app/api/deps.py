@@ -92,4 +92,19 @@ def get_levis_service(
     return LevisService(levis_client=levis_client)
 
 
+def get_retail_prolog_service(
+    request: Request,
+    prolog_client: PrologClient = Depends(get_prolog_client),
+    levis_service: LevisService = Depends(get_levis_service),
+):
+    """Provide RetailPrologService instance, reusing application state if available."""
+    if hasattr(request.app.state, "retail_prolog_service") and request.app.state.retail_prolog_service is not None:
+        return request.app.state.retail_prolog_service
+    from app.services.retail_prolog_service import RetailPrologService
+    svc = RetailPrologService(prolog_client=prolog_client, levis_service=levis_service)
+    request.app.state.retail_prolog_service = svc
+    return svc
+
+
+
 

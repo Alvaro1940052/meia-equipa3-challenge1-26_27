@@ -88,6 +88,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.levis_http_client = levis_http_client
     app.state.levis_client = levis_client
     app.state.levis_service = levis_service
+    from app.services.retail_prolog_service import RetailPrologService
+    app.state.retail_prolog_service = RetailPrologService(
+        prolog_client=prolog_client,
+        levis_service=levis_service,
+    )
 
     if settings.INFERENCE_ENGINE_ENABLED:
         from app.clients.inference_client import InferenceClient

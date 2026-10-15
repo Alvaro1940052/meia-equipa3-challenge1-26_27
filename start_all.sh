@@ -79,7 +79,7 @@ echo "   -> Dashboard Produção iniciado (:3000)"
 echo "⏳ [5/5] A aguardar arranque e estabilização dos serviços..."
 ALL_READY=0
 for i in {1..35}; do
-  if curl -sf http://127.0.0.1:3000/api/backend/health > /dev/null 2>&1 && \
+  if curl -sf http://127.0.0.1:3000/api/health > /dev/null 2>&1 && \
      curl -sf http://127.0.0.1:8082/actuator/health > /dev/null 2>&1 && \
      curl -sf http://127.0.0.1:8000/api/v1/levis/health > /dev/null 2>&1; then
     ALL_READY=1
@@ -108,7 +108,7 @@ else
   echo "   [FAIL] Backend Orchestrator FastAPI (:8000)"
 fi
 
-if curl -sf http://127.0.0.1:3000/api/backend/health >/dev/null 2>&1; then
+if curl -sf http://127.0.0.1:3000/api/health >/dev/null 2>&1; then
   echo "   [OK] Dashboard Next.js (:3000)"
 else
   echo "   [FAIL] Dashboard Next.js (:3000)"
