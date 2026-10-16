@@ -1,6 +1,7 @@
 package com.levis.devolucoes.service.mapeamento;
 
 import com.levis.devolucoes.dto.comum.ColaboradorDto;
+import com.levis.devolucoes.dto.enums.Resposta;
 import com.levis.devolucoes.dto.pedido.ArtigoRequest;
 import com.levis.devolucoes.dto.pedido.ArtigoTrocaRequest;
 import com.levis.devolucoes.dto.pedido.ClienteRequest;
@@ -26,6 +27,8 @@ import com.levis.devolucoes.model.produto.ArtigoDevolvido;
 import com.levis.devolucoes.model.produto.ArtigoTroca;
 import com.levis.devolucoes.model.produto.EstadoProduto;
 import com.levis.devolucoes.model.produto.Produto;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.NullValueMappingStrategy;
@@ -48,9 +51,6 @@ public interface PedidoMapper {
   Loja loja(LojaRequest loja);
 
   @Mapping(target = "forneceDados", defaultValue = "true")
-  // Entradas da camada de incerteza: chegam no DTO no passo 11e (docs/07, E3)
-  @Mapping(target = "explicaOrigemCompra", ignore = true)
-  @Mapping(target = "pedeNumerario", ignore = true)
   Cliente cliente(ClienteRequest cliente);
 
   @Mapping(target = "encomendaEncontrada", defaultValue = "false")
@@ -71,15 +71,12 @@ public interface PedidoMapper {
   @Mapping(target = "vendidoNaLoja", defaultValue = "false")
   @Mapping(target = "produtoFranquia", defaultValue = "false")
   @Mapping(target = "emSaldo", defaultValue = "false")
-  @Mapping(target = "defeitoConhecido", ignore = true)
+  @Mapping(target = "defeitoConhecido", defaultValue = "false")
   Produto produto(ProdutoRequest produto);
 
   @Mapping(target = "etiquetaPrecoCorreta", defaultValue = "true")
   @Mapping(target = "rfidCorreto", defaultValue = "true")
   @Mapping(target = "conjuntoCompleto", defaultValue = "true")
-  @Mapping(target = "grauUso", ignore = true)
-  @Mapping(target = "alegaDefeito", ignore = true)
-  @Mapping(target = "inspecaoDefeito", ignore = true)
   EstadoProduto estado(EstadoProdutoRequest estado);
 
   ArtigoTroca troca(ArtigoTrocaRequest troca);
@@ -92,4 +89,21 @@ public interface PedidoMapper {
   @Mapping(target = "pedidoId", source = "pedidoId")
   @Mapping(target = "comunicadoGSS", ignore = true)
   IndicadorFraude fraude(IndicadorFraudeRequest indicador, String pedidoId);
+
+  /** Resposta do colaborador (docs/08): SIM = presente, NAO = ausente, NAO_SEI = desconhecida. */
+  default Boolean resposta(Resposta resposta) {
+    if (resposta == null || resposta == Resposta.NAO_SEI) {
+      return null;
+    }
+    return resposta == Resposta.SIM;
+  }
+
+  /** Respostas da inspeção do defeito, por evidência (ED-xx). */
+  default Map<String, Boolean> inspecao(Map<String, Resposta> respostas) {
+    Map<String, Boolean> inspecao = new LinkedHashMap<>();
+    if (respostas != null) {
+      respostas.forEach((codigo, resposta) -> inspecao.put(codigo, resposta(resposta)));
+    }
+    return inspecao;
+  }
 }
