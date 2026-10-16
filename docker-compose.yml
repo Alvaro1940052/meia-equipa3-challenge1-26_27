@@ -1,4 +1,37 @@
 services:
+  levis-postgres:
+    image: postgres:16-alpine
+    container_name: levis-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: pericial
+      POSTGRES_USER: pericial
+      POSTGRES_PASSWORD: pericial
+    volumes:
+      - levis_postgres_data:/var/lib/postgresql/data
+    networks:
+      - retail-network
+
+  drools-engine:
+    build:
+      context: ./drools-engine-levis-devolucoes-java
+      dockerfile: backend/pericial-api/Dockerfile
+    container_name: expert-drools-engine
+    ports:
+      - "8082:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - PERICIAL_DB_URL=jdbc:postgresql://levis-postgres:5432/pericial
+      - PERICIAL_DB_UTILIZADOR=pericial
+      - PERICIAL_DB_PALAVRA_PASSE=pericial
+    depends_on:
+      - levis-postgres
+    restart: unless-stopped
+    networks:
+      - retail-network
+
   prolog-engine:
     build:
       context: ./prolog_engine
@@ -6,19 +39,6 @@ services:
     container_name: retail-prolog-engine
     ports:
       - "8080:8080"
-    environment:
-      - PORT=8080
-    restart: unless-stopped
-    networks:
-      - retail-network
-
-  drools-engine:
-    build:
-      context: ./drools_engine
-      dockerfile: Dockerfile
-    container_name: expert-drools-engine
-    ports:
-      - "8082:8080"
     environment:
       - PORT=8080
     restart: unless-stopped
@@ -37,6 +57,7 @@ services:
       - PROLOG_ENGINE_URL=http://prolog-engine:8080
       - PROLOG_TIMEOUT_SECONDS=5.0
       - DROOLS_ENGINE_URL=http://drools-engine:8080
+      - LEVIS_DROOLS_URL=http://drools-engine:8080
       - DEBUG=true
       - CORS_ORIGINS=["http://localhost:3000","http://localhost:5173","http://localhost:8000"]
       - INFERENCE_ENGINE_ENABLED=true
@@ -47,18 +68,19 @@ services:
     networks:
       - retail-network
 
-  levis-postgres:
-    image: postgres:16-alpine
-    container_name: levis-postgres
-    restart: unless-stopped
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    container_name: retail-dashboard
     ports:
-      - "5432:5432"
+      - "3000:3000"
     environment:
-      POSTGRES_DB: pericial
-      POSTGRES_USER: pericial
-      POSTGRES_PASSWORD: pericial
-    volumes:
-      - levis_postgres_data:/var/lib/postgresql/data
+      - PORT=3000
+      - GATEWAY_URL=http://orchestrator:8000
+    depends_on:
+      - orchestrator
+    restart: unless-stopped
     networks:
       - retail-network
 
@@ -69,4 +91,3 @@ networks:
 volumes:
   levis_postgres_data:
     driver: local
-

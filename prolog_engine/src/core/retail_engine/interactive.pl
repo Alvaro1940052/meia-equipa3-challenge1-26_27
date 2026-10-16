@@ -174,7 +174,10 @@ tem_algum_mock :-
 
 is_terminal_thread :-
     modo_terminal_ativo,
-    stream_property(current_input, tty(true)).
+    (   stream_property(current_input, tty(true))
+    ->  true
+    ;   \+ stream_property(current_input, end_of_file)
+    ).
 
 perguntar(Template, _Contexto, Resposta) :-
     formatar_pergunta(Template, QuestionText),

@@ -1,5 +1,5 @@
-// Gateway e motores correm na mesma máquina; não há variáveis de ambiente.
-export const GATEWAY_URL = "http://127.0.0.1:8000";
+// Gateway e motores: configurável via variável de ambiente ou fallback para localhost.
+export const GATEWAY_URL = process.env.GATEWAY_URL || "http://127.0.0.1:8000";
 
 export const GATEWAY_TIMEOUT_MS = 15_000;
 

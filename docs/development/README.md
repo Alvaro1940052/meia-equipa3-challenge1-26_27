@@ -39,6 +39,7 @@ flowchart TD
 | **Convenções de Código e Boas Práticas** | [`coding_conventions.md`](coding_conventions.md) | Regra de ouro arquitetural (separação orquestrador ≠ regras), padrões de idioma (código em inglês, documentação em pt-PT), DSL declarativa do motor de retalho (`regra/se/entao`), 9 famílias normativas, precedência de 7 níveis, metaconhecimento e isolamento com `setup_call_cleanup/3`. |
 | **Plano de Implementação do Motor de Retalho** | [`retail_prolog_implementation_plan.md`](retail_prolog_implementation_plan.md) | Plano estruturado em 5 fases para a implementação do motor de retalho da Levi's, mecânica ACM (`obtem_facto/2`), 71 regras normativas e 5 vias de explicabilidade (100% concluído). |
 | **Plano de Atualização da Documentação Técnica** | [`retail_prolog_documentation_update_plan.md`](retail_prolog_documentation_update_plan.md) | Roteiro estruturado em 8 fases para sincronização exaustiva de toda a documentação técnica do repositório com o código operacional implementado. |
+| **Plano de Entregas Moodle e Produção** | [`plano_organizacao_entregas_moodle_e_prod.md`](plano_organizacao_entregas_moodle_e_prod.md) | Plano de engenharia em 5 fases para autonomização dos pacotes de entrega para ENGCIA e PPROGIA e estabilização para o Demo Day. |
 
 ---
 

@@ -126,6 +126,7 @@ Manuais para novos contribuidores, configuração do ambiente local, convençõe
 | **Convenções de Código e Boas Práticas** | [`coding_conventions.md`](development/coding_conventions.md) | Padrões linguísticos (código em inglês, documentação em pt-PT), estrutura de módulos, tipagem estática, convenções de regras em Prolog (DSL declarativa, metaconhecimento obrigatório `perguntavel/1` e `facto_dispara_regras/2`) e práticas Git. |
 | **Plano do Motor de Retalho Prolog** | [`retail_prolog_implementation_plan.md`](development/retail_prolog_implementation_plan.md) | Plano de implementação concluído a 100% (Fases 1 a 5) para adaptação do motor pericial da Levi's em Prolog com 71 regras, mecânica ACM e 5 vias de explicabilidade. |
 | **Plano de Atualização da Documentação** | [`retail_prolog_documentation_update_plan.md`](development/retail_prolog_documentation_update_plan.md) | Plano mestre de sincronização da documentação técnica para o motor de retalho Prolog (Fases 0 a 7). |
+| **Plano de Entregas Moodle e Produção** | [`plano_organizacao_entregas_moodle_e_prod.md`](development/plano_organizacao_entregas_moodle_e_prod.md) | Plano de engenharia em 5 fases para autonomização dos pacotes de entrega para ENGCIA e PPROGIA e estabilização para o Demo Day. |
 
 ---
 
