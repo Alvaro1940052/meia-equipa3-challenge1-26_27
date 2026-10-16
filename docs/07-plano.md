@@ -326,3 +326,9 @@ parâmetros e nos ficheiros FCL, e a camada nunca transforma um RECUSAR num PERM
 ### E4. Verificação
 `mvn clean verify` (8 módulos), `npm run verificar && npm test && npm run build && npx playwright test`,
 `docker compose up --build` com o cenário 6 na interface, e o CI verde.
+
+### E5. Estado (2026-10-16)
+Fase 11 concluída: 11a e 11b em `b8b167d`, 11c em `08ad826`, 11d em `c291037`, 11e em `49f7214` e 11f em
+`0b4cd90`. `mvn clean install` verde nos 8 módulos (Spotless, Checkstyle, ArchUnit, JaCoCo, Testcontainers); frontend
+com `npm run verificar`, 35 testes Vitest, `npm run build` e 17 testes Playwright verdes contra a API construída pelo
+`docker compose --build`. Os valores da camada continuam demonstrativos e as decisões E1 e A-32 a A-34 "a validar".

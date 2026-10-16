@@ -90,6 +90,10 @@ implementação existente. Este ADR regista como cada ponto foi resolvido.
 10. **Integridade das etiquetas como parâmetro.** O §5.1 põe `getIntegridadeEtiquetas()` no modelo, com os valores
    1,0, 0,6 e 0,0, mas o §6 tem os mesmos valores no ficheiro de parâmetros (`integridadeEtiquetas`). Para não haver
    parâmetros no código, o mapeamento fica no `ServicoIncerteza`, lido do ficheiro.
+11. **Respostas na API.** As perguntas do colaborador (`cliente.explicaOrigemCompra`, `estado.inspecaoDefeito`)
+   chegam como `Resposta` (SIM, NAO, NAO_SEI) e são convertidas em `Boolean` (NAO_SEI → `null`, evidência
+   desconhecida). `ProdutoRequest.defeitoConhecido` (ED-04) é preenchido pelo catálogo quando o pedido não o traz; o
+   catálogo simulado marca o SKU `TRUCKER-AZUL-M` com um defeito conhecido, só para demonstração.
 
 ## Consequências
 
