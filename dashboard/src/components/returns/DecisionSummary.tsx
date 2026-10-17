@@ -24,87 +24,125 @@ export default function DecisionSummary({
     docs?.assinaturaCliente && `Assinatura do cliente: ${docs.assinaturaCliente}`,
     docs?.assinaturaProcessador && `Assinatura do colaborador: ${docs.assinaturaProcessador}`,
     docs?.assinaturaTestemunha && `Assinatura de testemunha: ${docs.assinaturaTestemunha}`,
-    docs?.reciboAgrafado && "Agrafar o recibo ao registo",
+    docs?.reciboAgrafado && "Agrafar o recibo ao registo de caixa",
     docs?.notaRecibo && `Nota no recibo: ${docs.notaRecibo}`,
     docs?.registoExcecao && `Registo de exceção: ${docs.registoExcecao}`,
   ].filter(Boolean) as string[];
 
   return (
     <ResultSummary
-      eyebrow="Decisão"
+      eyebrow="Resumo da Decisão"
       tone={eligibility?.tone ?? "info"}
       headline={eligibility?.label ?? label(decision.elegibilidade)}
       meta={`${durationMs} ms`}
     >
-      {eligibility && <p className="result-line">{eligibility.hint}</p>}
-
-      <dl className="facts-grid">
-        {details.map(([name, value]) => (
-          <div key={name}>
-            <dt>{name}</dt>
-            <dd>{value}</dd>
-          </div>
-        ))}
-      </dl>
-
-      {decision.excecaoRecusada && (
-        <p className="result-line">O pedido de exceção foi analisado e recusado.</p>
+      {eligibility && (
+        <p className="font-body-md text-on-surface-variant text-sm">
+          {eligibility.hint}
+        </p>
       )}
 
-      {decision.artigos.length > 0 && (
-        <div className="table-container">
-          <table className="plain-table">
-            <caption className="presets-label">Decisão por artigo</caption>
-            <thead>
-              <tr>
-                <th scope="col">Artigo</th>
-                <th scope="col">Resultado</th>
-                <th scope="col">Valor</th>
-                <th scope="col">Destino do artigo</th>
-                <th scope="col">Aprovação</th>
-              </tr>
-            </thead>
-            <tbody>
-              {decision.artigos.map((item) => (
-                <tr key={item.artigoId}>
-                  <td>{item.artigoId}</td>
-                  <td>
-                    {item.elegibilidade ? (ELIGIBILITY[item.elegibilidade]?.label ?? item.elegibilidade) : "—"}
-                  </td>
-                  <td>{item.valorDevolucao != null ? money(item.valorDevolucao) : "—"}</td>
-                  <td>
-                    {label(item.destino)}
-                    {item.descontoSaldo ? ` (−${item.descontoSaldo}%)` : ""}
-                  </td>
-                  <td>{label(item.aprovacao)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* Grid de Factos Principais */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 pt-2">
+        {details.map(([name, value]) => (
+          <div
+            key={name}
+            className="p-3 rounded-xl bg-surface-container-low border border-border-card flex flex-col justify-between"
+          >
+            <span className="font-caption text-[11px] text-on-surface-variant font-bold uppercase tracking-wider">
+              {name}
+            </span>
+            <span className="font-headline-sm text-sm font-extrabold text-on-surface mt-1 truncate" title={value}>
+              {value}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {decision.excecaoRecusada && (
+        <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs font-medium flex items-center gap-2">
+          <span className="material-symbols-outlined text-rose-600 text-[18px]">gpp_bad</span>
+          <span>O pedido de exceção de balcão foi analisado e recusado pela política comercial.</span>
         </div>
       )}
 
+      {/* Tabela de Artigos */}
+      {decision.artigos.length > 0 && (
+        <div className="flex flex-col gap-2 mt-2">
+          <span className="font-label-md text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+            Decisão por Artigo
+          </span>
+          <div className="w-full overflow-x-auto rounded-xl border border-border-card shadow-xs">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead className="bg-surface-container-low text-on-surface-variant font-bold border-b border-border-card">
+                <tr>
+                  <th scope="col" className="p-3">Artigo</th>
+                  <th scope="col" className="p-3">Resultado</th>
+                  <th scope="col" className="p-3">Valor</th>
+                  <th scope="col" className="p-3">Destino do Artigo</th>
+                  <th scope="col" className="p-3">Aprovação</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border-card/50 bg-white">
+                {decision.artigos.map((item) => (
+                  <tr key={item.artigoId} className="hover:bg-surface-container-lowest">
+                    <td className="p-3 font-bold text-on-surface">{item.artigoId}</td>
+                    <td className="p-3">
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-extrabold ${
+                          item.elegibilidade === "PERMITIR"
+                            ? "bg-emerald-100 text-emerald-800"
+                            : item.elegibilidade === "RECUSAR"
+                            ? "bg-rose-100 text-rose-800"
+                            : "bg-amber-100 text-amber-800"
+                        }`}
+                      >
+                        {item.elegibilidade ? (ELIGIBILITY[item.elegibilidade]?.label ?? item.elegibilidade) : "—"}
+                      </span>
+                    </td>
+                    <td className="p-3 font-bold text-on-surface">
+                      {item.valorDevolucao != null ? money(item.valorDevolucao) : "—"}
+                    </td>
+                    <td className="p-3 text-on-surface-variant">
+                      {label(item.destino)}
+                      {item.descontoSaldo ? ` (−${item.descontoSaldo}%)` : ""}
+                    </td>
+                    <td className="p-3 text-on-surface-variant">{label(item.aprovacao)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Documentação */}
       {docNotes.length > 0 && (
-        <>
-          <div className="presets-label">Documentação a preencher</div>
-          <ul className="doc-notes">
-            {docNotes.map((note) => (
-              <li key={note}>{note}</li>
+        <div className="flex flex-col gap-2 mt-2">
+          <span className="font-label-md text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+            Procedimentos e Documentação
+          </span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {docNotes.map((note, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-2 p-2.5 rounded-xl bg-surface-container-low border border-border-card text-xs text-on-surface"
+              >
+                <span className="material-symbols-outlined text-primary text-[18px]">task_alt</span>
+                <span>{note}</span>
+              </div>
             ))}
-          </ul>
-        </>
+          </div>
+        </div>
       )}
 
       {decision.regrasAValidar.length > 0 && (
-        <p className="field-hint">
-          Regras ainda por validar que influenciaram esta decisão:{" "}
-          {decision.regrasAValidar.map((rule) => (
-            <span key={rule} className="tag-pending">
-              {rule}
-            </span>
-          ))}
-        </p>
+        <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2">
+          <span className="material-symbols-outlined text-amber-600 text-[18px]">pending_actions</span>
+          <span>Existem procedimentos pendentes de confirmação do fecho de turno no terminal POS.</span>
+        </div>
       )}
     </ResultSummary>
   );
 }
+

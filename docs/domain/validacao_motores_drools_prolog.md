@@ -269,27 +269,58 @@ classDiagram
 
 ---
 
-## 6. Procedimento de Reprodução e Testes Automatizados
+---
 
-Qualquer utilizador, avaliador docente ou auditor de qualidade pode reproduzir integralmente esta validação executando os seguintes comandos no terminal:
+## 6. Resolução de Discrepâncias de Integração e Paridade Multi-Motor End-to-End
 
-### 6.1 Executar a Bateria Completa de Testes PLUnit em Prolog
-```bash
-cd /root/meia-equipa3-challenge1-26_27/prolog_engine
-swipl -g "run_expert_scenarios_tests, halt." -t "halt(1)" tests/test_retail_expert_scenarios.pl
-```
-*Resultado esperado:* `% All 10 tests passed`.
+Durante a primeira vaga de persistência e comparação lado a lado no Dashboard (`/decisoes`), foram identificadas **5 discrepâncias técnicas transitórias** decorrentes de divergências finas de modelação e hardcoding no adaptador de serialização. Estas causas foram completamente resolvidas através do plano de correção em 5 fases:
 
-### 6.2 Executar o Script de Benchmark e Extração JSON
-```bash
-cd /root/meia-equipa3-challenge1-26_27
-python3 docs/domain/validacao_pericial/run_benchmarks.py
-```
-*Resultado esperado:* Os 10 cenários são consultados via HTTP nos dois motores e os ficheiros JSON em `docs/domain/validacao_pericial/` são atualizados com carimbo de sucesso.
+### 6.1 Discrepâncias Transitórias Detetadas e Resoluções Implementadas
+1. **Valor Deliberado Fixo vs. Dinâmico:** O adaptador `retail_prolog_service.py` devolvia um valor estático de `69.50 €`. Foi implementado cálculo dinâmico baseado na soma dos artigos do pedido (`precoPago`/`precoAtual`) e fixado em `0.00 €` para recusas ou trocas sem diferencial monetário.
+2. **Cenário 09 (Bodywear Contaminado):** `PC-007` possuía uma guarda restritiva `nao estado_produto(...)` e `BW-004`/`PC-008` geravam `decisao(recusar)`. A política de satisfação incondicional da Levi's foi restabelecida: `decisao(permitir)` para reembolso financeiro do cliente ($29.99), cumulado com isolamento físico `destino_produto(isolamento_risco_biologico)`.
+3. **Cenário 07 (Interac Canadá sem Cartão Físico):** O terminal Interac no Canadá não suporta tokenização automática. Foi adicionada a regra `TN-011-SEM-CARTAO` para tratar o ramo negativo (`cartao_interac_presente(false)`), derivando `decisao(rever)` com aprovação de chefia sénior e `meio_reembolso(sem_meio_definido)`.
+4. **Cenário 06 (Fraude Multi-Artigo e Risco Biológico):** A regra `EX-008` apenas derivava escalamento distrital mas não afirmava `decisao(rever)`. Com a inclusão da decisão formal e salvaguarda contra recusa indevida em `PC-008-RECUSA`, o pedido é pausado e escalado para a chefia distrital com valor deliberado de $444.00.
+5. **Cenário 10 (PayPal Online com Falha de Portal):** A regra `CH-005` disparava incorretamente `meio_reembolso(cartao_oferta)` para canais digitais restritos. Foram adicionadas guardas para PayPal/Venmo/Afterpay e o adaptador foi calibrado para mapear `processo_obrigatorio(fluxo_app)` diretamente para `MeioReembolsoEnum.APLICACAO_PAGAMENTO`.
+
+### 6.2 Fortalecimento da Suíte PLUnit
+A suíte declarativa [`prolog_engine/tests/test_retail_expert_scenarios.pl`](../../prolog_engine/tests/test_retail_expert_scenarios.pl) foi reforçada com asserções terminais (`assertion(has_fact(decisao(...)))`, asserções de aprovação e asserções negativas `assertion(\+ has_fact(decisao(recusar)))`), garantindo cobertura estrita contra regressões.
+
+### 6.3 Verificação de Consenso no Dashboard
+Com a semeadura forçada (`POST /api/v1/inferences/seed?force=true`), o histórico de decisões e o modal de comparação no frontend Next.js exibem **Consenso Operacional Confirmado (100% de Acordo)** em todos os 10 cenários, alinhando elegibilidade, aprovações, meios de estorno e valores monetários deliberados entre o motor Drools (Java) e o motor Prolog (SWI-Prolog).
 
 ---
 
-## 7. Documentos Relacionados
+## 7. Procedimento de Reprodução e Testes Automatizados
+
+Qualquer utilizador, avaliador docente ou auditor de qualidade pode reproduzir integralmente esta validação executando os seguintes comandos no terminal:
+
+### 7.1 Executar a Bateria Completa de Testes PLUnit dos Cenários Periciais
+* **No Windows (PowerShell):**
+  ```powershell
+  & "C:\Program Files\swipl\bin\swipl.exe" -g "run_expert_scenarios_tests, halt." -t "halt(1)" prolog_engine/tests/test_retail_expert_scenarios.pl
+  ```
+* **No Linux / WSL:**
+  ```bash
+  swipl -g "run_expert_scenarios_tests, halt." -t "halt(1)" prolog_engine/tests/test_retail_expert_scenarios.pl
+  ```
+*Resultado esperado:* `% All 10 tests passed in 0.144 seconds`.
+
+### 7.2 Executar a Bateria Completa de Testes das 71 Regras
+* **No Windows (PowerShell):**
+  ```powershell
+  & "C:\Program Files\swipl\bin\swipl.exe" -g "run_retail_rules_tests, halt." -t "halt(1)" prolog_engine/tests/test_retail_rules.pl
+  ```
+*Resultado esperado:* `% All 31 tests passed in 0.329 seconds`.
+
+### 7.3 Validar a Persistência Multi-Motor via API REST
+```powershell
+curl.exe -s "http://localhost:8000/api/v1/avaliacoes?tamanho=100"
+```
+*Critério de Sucesso:* 20 registos no total (10 Drools + 10 Prolog), com paridade absoluta nos pares de cada cenário.
+
+---
+
+## 8. Documentos Relacionados
 
 * [Contexto de Negócio da Levi's (`business_context.md`)](business_context.md)
 * [Heurísticas e Base de 71 Regras do Perito (`expert_knowledge.md`)](expert_knowledge.md)

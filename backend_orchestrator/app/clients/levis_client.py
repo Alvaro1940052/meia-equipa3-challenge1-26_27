@@ -187,6 +187,29 @@ class LevisClient:
 
         # Drools Spring Boot PedidoAvaliacaoRequest does not accept colaborador in body
         data.pop("colaborador", None)
+
+        # Sanitize items for Drools DTO compatibility
+        if "artigos" in data and isinstance(data["artigos"], list):
+            clean_artigos = []
+            for art in data["artigos"]:
+                if isinstance(art, dict):
+                    clean_art = dict(art)
+                    est = clean_art.get("estado")
+                    if isinstance(est, dict):
+                        clean_est = dict(est)
+                        # Ensure revendivel is at artigo level
+                        if "revendivel" in clean_est and "revendivel" not in clean_art:
+                            clean_art["revendivel"] = clean_est["revendivel"]
+                        # Remove fields not present in record EstadoProdutoRequest
+                        clean_est.pop("revendivel", None)
+                        clean_est.pop("bainhaFeitaOuAlterada", None)
+                        clean_est.pop("temDefeitoFabrico", None)
+                        clean_art["estado"] = clean_est
+                    clean_artigos.append(clean_art)
+                else:
+                    clean_artigos.append(art)
+            data["artigos"] = clean_artigos
+
         return data
 
     async def _request(

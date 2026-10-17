@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID, uuid4
@@ -146,10 +147,182 @@ MODULE_NAMES = {
     "EP": "M8-POLITICAS_PRECO",
 }
 
+# Ground truth knowledge mapping for Prolog observable input premises (formatar_pergunta/2 & regra_info/3)
+PROLOG_INPUT_KNOWLEDGE: Dict[str, Dict[str, Any]] = {
+    "IN-001": {
+        "atributo": "mercado",
+        "pergunta": "Qual é o mercado da transação de retalho? (eua/canada/porquê)",
+        "regras": ["CH-007", "TN-011", "TN-011-SEM-CARTAO", "TN-012", "HS-004"],
+        "resumo": "O mercado da transação (Estados Unidos vs Canadá) determina a aplicação de regras fiscais e meios de pagamento exclusivos como débito Interac (TN-011) ou restrições a franquias canadianas (CH-007, HS-004).",
+    },
+    "IN-002": {
+        "atributo": "tipo_loja",
+        "pergunta": "Qual é o tipo da loja recetora? (mainline/outlet/porquê)",
+        "regras": ["CH-001", "CH-009", "CH-010"],
+        "resumo": "O formato da loja recetora (Mainline vs Outlet) condiciona as regras de cálculo do valor de reembolso, aceitação de devoluções cruzadas e preços de liquidação promocional (CH-001, CH-009, CH-010).",
+    },
+    "IN-003": {
+        "atributo": "canal_compra",
+        "pergunta": "Qual foi o canal de compra original? (mainline/outlet/levi_com/levi_ca/grossista/franquia_canada/porquê)",
+        "regras": ["CH-001", "CH-002", "CH-003", "CH-004", "CH-005", "CH-007", "CH-008", "HS-004"],
+        "resumo": "O canal de compra original determina se o processo corre diretamente em loja física, via portal online/BackPocket (CH-002), se deve ser recusado (grossistas via CH-008) ou se pertence a franquia canadiana (CH-007).",
+    },
+    "IN-004": {
+        "atributo": "comprovativo",
+        "pergunta": "Qual o comprovativo de compra apresentado pelo cliente? (recibo_impresso/recibo_digital/confirmacao_encomenda/recibo_oferta/consulta_transacao/foto_recibo/consulta_backpocket/nenhum/porquê)",
+        "regras": ["PT-001", "PT-002", "PT-003", "PT-004", "PT-005", "PT-006", "PT-007", "PT-008"],
+        "resumo": "O comprovativo apresentado é o pilar que classifica a devolução como verificada (PT-001) com direito a estorno integral, ou como devolução às cegas (PT-002, PT-005) sujeita a crédito de loja ou troca.",
+    },
+    "IN-005": {
+        "atributo": "tipo_pedido",
+        "pergunta": "Qual é o tipo de pedido formulado pelo cliente? (devolucao/troca/ajuste_preco/porquê)",
+        "regras": ["PT-003", "PT-005", "PT-007", "PT-008", "EP-001", "EP-002", "TN-007"],
+        "resumo": "O tipo de pedido (devolução, devolução de oferta, troca de produto ou ajuste de preço) define a árvore de dedução: elegibilidade de reembolso (PT-003), paridade de valor em trocas (EP-001) ou limite de 14 dias para ajuste de preço (PT-007).",
+    },
+    "IN-006": {
+        "atributo": "dias_desde_compra",
+        "pergunta": "Quantos dias decorreram desde a data da compra ou envio da encomenda? (número de dias/porquê)",
+        "regras": ["PT-003", "PT-004", "PT-007", "PT-008", "CH-005"],
+        "resumo": "O prazo decorrido desde a compra/envio é o critério temporal regulamentar: até 30 dias permite reembolso total (PT-003); após 30 dias requer autorização da gerência para crédito de loja (PT-004); para ajuste de preço o limite máximo é de 14 dias (PT-007, PT-008).",
+    },
+    "IN-007": {
+        "atributo": "sku_reconhecido",
+        "pergunta": "O código SKU do artigo é reconhecido no catálogo do sistema POS e qual é a sua marca? (sim/nao/porquê)",
+        "regras": ["HS-001", "HS-002", "PC-007", "BW-001", "BW-002"],
+        "resumo": "A verificação de SKU e marca atua como paragem obrigatória (Hard Stop): artigos com SKU não reconhecido (HS-001) ou de marcas não autorizadas como Dockers ou Signature (HS-002) são imediatamente recusados no balcão.",
+    },
+    "IN-008": {
+        "atributo": "estado_produto",
+        "pergunta": "Qual é o estado físico do artigo? (nao_usado_com_etiquetas/nao_usado_etiquetas_soltas/nao_usado_sem_etiquetas/claramente_usado/lavado/sujo_contaminado_inseguro/porquê)",
+        "regras": ["HS-003", "PC-001", "PC-002", "PC-003", "PC-004", "PC-005", "PC-006", "PC-008"],
+        "resumo": "A condição física do produto dita a sua aprovação imediata (PC-001 para artigos intactos), necessidade de inspeção de vendabilidade (PC-002/PC-003), ou recusa categórica e isolamento de segurança para peças contaminadas (PC-008).",
+    },
+    "IN-009": {
+        "atributo": "meio_pagamento",
+        "pergunta": "Qual foi o meio de pagamento original utilizado na compra? (credito/debito/numerario/afterpay/gift_card/paypal_venmo/interac/porquê)",
+        "regras": ["HS-005", "TN-001", "TN-002", "TN-003", "TN-004", "TN-005", "TN-008", "TN-009", "TN-010", "TN-011"],
+        "resumo": "O meio de pagamento original dita o canal obrigatório de estorno: reembolsos em cartão são tokenizados automaticamente (TN-001), compras Afterpay recusam exceções de balcão (HS-005), e transações canadianas exigem cartão físico Interac (TN-011).",
+    },
+    "IN-010": {
+        "atributo": "revendivel",
+        "pergunta": "O artigo está apto para revenda imediata na área de vendas? (sim/nao/porquê)",
+        "regras": ["PC-002", "PC-003", "PC-004", "EX-001", "EX-005"],
+        "resumo": "A aptidão para revenda imediata (vendabilidade) é a premissa indispensável para que a chefia possa autorizar a aceitação de artigos com etiquetas soltas (PC-002) ou em falta (PC-003).",
+    },
+    "EP-001": {
+        "atributo": "troca_apenas_tamanho",
+        "pergunta": "A troca solicitada é apenas de tamanho para o mesmo modelo e cor? (sim/nao/porquê)",
+        "regras": ["EP-001", "EP-002", "CH-006", "TN-006"],
+        "resumo": "A modalidade da troca estabelece se o preço promocional original é mantido sem recálculo (troca direta de tamanho via EP-001) ou se é processada como devolução e nova venda com recálculo de valor (EP-002, CH-006).",
+    },
+    "EX-001": {
+        "atributo": "pedido_excecao",
+        "pergunta": "O cliente solicitou uma exceção à política padrão e qual a decisão da gerência? (sim/nao/porquê)",
+        "regras": ["EX-001", "EX-003", "EX-004", "EX-006", "EX-007", "HS-005"],
+        "resumo": "A submissão e aprovação de exceção de balcão pelo Key Holder ou Store Manager (EX-001, EX-003) habilita o override no terminal POS, desde que não viole regras intransponíveis da política corporativa (EX-006, HS-005).",
+    },
+    "EX-002": {
+        "atributo": "cliente_contesta",
+        "pergunta": "O cliente contesta a recusa regulamentar inicial de balcão ou apresenta agitação? (sim/nao/porquê)",
+        "regras": ["EX-002", "EX-003", "EX-005", "PT-006"],
+        "resumo": "Perante contestação firme ou agitação do cliente, o protocolo de atendimento exige escalonamento formal para a liderança de loja (EX-002, EX-003) e ativação de medidas de desescalada (EX-005).",
+    },
+    "HS-006": {
+        "atributo": "colaborador_autorizado",
+        "pergunta": "O colaborador tem sessão e credenciais autorizadas no terminal POS? (sim/nao/porquê)",
+        "regras": ["HS-006", "CT-001", "CT-002", "CT-003"],
+        "resumo": "O controlo de acessos no POS impede transações não autorizadas ou por colaboradores sem nível de permissão adequado (HS-006, CT-001).",
+    },
+    "EX-008": {
+        "atributo": "risco_fraude",
+        "pergunta": "Existem indícios de fraude ou inconsistências suspeitas no pedido? (sim/nao/porquê)",
+        "regras": ["EX-008"],
+        "resumo": "Indicadores de fraude ou devoluções em série obrigam à suspensão cautelar imediata da transação e notificação da segurança (EX-008).",
+    },
+    "CH-002": {
+        "atributo": "encomenda_encontrada",
+        "pergunta": "A encomenda online foi localizada no sistema de encomendas e o portal está operacional? (sim/nao/porquê)",
+        "regras": ["CH-002", "CH-003", "CH-004", "CH-005", "CH-006"],
+        "resumo": "A confirmação da encomenda e estado operacional do portal online determinam se a devolução segue o fluxo BackPocket ou se recai em devolução às cegas (CH-002, CH-003, CH-004).",
+    },
+}
+
+# Rule metadata catalog for candidate waiting rule explanations
+PROLOG_RULE_DETAILS: Dict[str, Dict[str, Any]] = {
+    "HS-001": {"nome": "Recusar produto sem SKU reconhecido", "conclusoes": ["OUT-001:RECUSAR"]},
+    "HS-002": {"nome": "Recusar marcas excluídas (Dockers/Signature)", "conclusoes": ["OUT-001:RECUSAR"]},
+    "HS-003": {"nome": "Recusar produtos personalizados ou alterados", "conclusoes": ["OUT-001:RECUSAR"]},
+    "HS-004": {"nome": "Encaminhar para processo de franquia do Canadá", "conclusoes": ["OUT-001:ENCAMINHAR"]},
+    "HS-005": {"nome": "Recusar exceções de reembolso para Afterpay online", "conclusoes": ["OUT-001:RECUSAR"]},
+    "HS-006": {"nome": "Encaminhar transação sem credenciais autorizadas", "conclusoes": ["OUT-001:ENCAMINHAR"]},
+    "PC-001": {"nome": "Permitir elegibilidade para artigo intacto", "conclusoes": ["OUT-001:PERMITIR"]},
+    "PC-002": {"nome": "Rever com gestão artigo com etiquetas soltas", "conclusoes": ["OUT-001:REVER"]},
+    "PC-003": {"nome": "Rever com gestão artigo sem etiquetas", "conclusoes": ["OUT-001:REVER"]},
+    "PC-004": {"nome": "Rever com gestão artigo usado sem defeito", "conclusoes": ["OUT-001:REVER"]},
+    "PC-005": {"nome": "Recusar artigo lavado sem defeito de fabrico", "conclusoes": ["OUT-001:RECUSAR"]},
+    "PC-006": {"nome": "Permitir reembolso/substituição por defeito de fabrico", "conclusoes": ["OUT-001:PERMITIR"]},
+    "PC-007": {"nome": "Permitir bodywear ao abrigo da política de satisfação", "conclusoes": ["OUT-001:PERMITIR"]},
+    "PC-008": {"nome": "Recusar e isolar em segurança artigo contaminado", "conclusoes": ["OUT-001:RECUSAR"]},
+    "PT-001": {"nome": "Classificar devolução verificada com comprovativo", "conclusoes": ["OUT-001:TIPO_VERIFICADA"]},
+    "PT-002": {"nome": "Classificar devolução às cegas na ausência de comprovativo", "conclusoes": ["OUT-001:TIPO_AS_CEGAS"]},
+    "PT-003": {"nome": "Permitir reembolso total ou troca até 30 dias", "conclusoes": ["OUT-001:PERMITIR"]},
+    "PT-004": {"nome": "Rever devolução verificada após 30 dias", "conclusoes": ["OUT-001:REVER"]},
+    "PT-005": {"nome": "Permitir exclusivamente troca ou crédito às cegas", "conclusoes": ["OUT-002:CREDITO_LOJA"]},
+    "PT-006": {"nome": "Saltar registo se cliente sem recibo não fornece dados", "conclusoes": ["OUT-001:REVER"]},
+    "PT-007": {"nome": "Permitir ajuste de preço único até 14 dias com recibo", "conclusoes": ["OUT-001:PERMITIR"]},
+    "PT-008": {"nome": "Recusar ajuste de preço após 14 dias ou sem recibo", "conclusoes": ["OUT-001:RECUSAR"]},
+    "CH-001": {"nome": "Regras da loja recetora Mainline/Outlet", "conclusoes": ["OUT-001:PERMITIR"]},
+    "CH-002": {"nome": "Encaminhar compra online verificada via BackPocket", "conclusoes": ["OUT-001:ENCAMINHAR"]},
+    "CH-003": {"nome": "Compra online sem encomenda tratada como às cegas", "conclusoes": ["OUT-002:CARTAO_OFERTA"]},
+    "CH-004": {"nome": "Rever quando portal online indisponível", "conclusoes": ["OUT-001:REVER"]},
+    "CH-005": {"nome": "Emitir cartão de oferta para devolução online >30 dias", "conclusoes": ["OUT-002:CARTAO_OFERTA"]},
+    "CH-006": {"nome": "Concluir troca online e estornar saldo remanescente", "conclusoes": ["OUT-002:TROCA"]},
+    "CH-007": {"nome": "Encaminhar produto da franquia do Canadá", "conclusoes": ["OUT-001:ENCAMINHAR"]},
+    "CH-008": {"nome": "Recusar produto de grossista", "conclusoes": ["OUT-001:RECUSAR"]},
+    "CH-009": {"nome": "Calcular valor de devolução às cegas em Outlet", "conclusoes": ["OUT-002:CREDITO_LOJA"]},
+    "CH-010": {"nome": "Devolução de Mainline em Outlet ao PVP original", "conclusoes": ["OUT-001:PERMITIR"]},
+    "TN-001": {"nome": "Reembolso tokenizado automático em cartão", "conclusoes": ["OUT-003:ORIGINAL"]},
+    "TN-002": {"nome": "Reembolso automático para conta de cartão perdido/roubado", "conclusoes": ["OUT-003:ORIGINAL"]},
+    "TN-003": {"nome": "Permitir meio alternativo se conta encerrada e estorno recusado", "conclusoes": ["OUT-003:ALTERNATIVO"]},
+    "TN-004": {"nome": "Proibir estorno em numerário sem recusa prévia de cartão", "conclusoes": ["OUT-003:NUMERARIO"]},
+    "TN-005": {"nome": "Reembolso automático em compras contactless", "conclusoes": ["OUT-003:ORIGINAL"]},
+    "TN-006": {"nome": "Estornar saldo remanescente ao meio original em troca", "conclusoes": ["OUT-003:ORIGINAL"]},
+    "TN-007": {"nome": "Devolução de oferta: crédito ao portador ou estorno original", "conclusoes": ["OUT-002:CREDITO_LOJA"]},
+    "TN-008": {"nome": "Exigir fluxo da aplicação para PayPal ou Venmo", "conclusoes": ["OUT-003:APLICACAO"]},
+    "TN-009": {"nome": "Processar devolução Afterpay de loja via app", "conclusoes": ["OUT-003:APLICACAO"]},
+    "TN-010": {"nome": "Processar compra online Afterpay na BackPocket", "conclusoes": ["OUT-001:ENCAMINHAR"]},
+    "TN-011": {"nome": "Exigir cartão físico Interac no Canadá", "conclusoes": ["OUT-003:INTERAC"]},
+    "TN-011-SEM-CARTAO": {"nome": "Rever com chefia Interac sem cartão físico", "conclusoes": ["OUT-001:REVER"]},
+    "TN-012": {"nome": "Processar Interac BackPocket com estorno manual", "conclusoes": ["OUT-003:INTERAC"]},
+    "EP-001": {"nome": "Troca direta de tamanho mantendo valor promocional", "conclusoes": ["OUT-002:TROCA_DIRETA"]},
+    "EP-002": {"nome": "Troca de modelo/cor tratada como nova venda", "conclusoes": ["OUT-002:TROCA_COM_VALOR"]},
+    "EX-001": {"nome": "Critério da gestão avalia pedido de exceção de balcão", "conclusoes": ["OUT-001:REVER"]},
+    "EX-002": {"nome": "Explicar política e oferecer alternativa sob contestação", "conclusoes": ["OUT-001:REVER"]},
+    "EX-003": {"nome": "Escalar para gestor sénior perante cliente agitado", "conclusoes": ["OUT-001:REVER"]},
+    "EX-004": {"nome": "Autorizar exceção sem hard stops e com sistema apto", "conclusoes": ["OUT-001:PERMITIR"]},
+    "EX-005": {"nome": "Adotar resolução menos abrangente para exceção aprovada", "conclusoes": ["OUT-001:PERMITIR"]},
+    "EX-006": {"nome": "Recusar exceção que viole Afterpay ou marcas", "conclusoes": ["OUT-001:RECUSAR"]},
+    "EX-007": {"nome": "Documentar formalmente motivo de exceção", "conclusoes": ["OUT-001:PERMITIR"]},
+    "EX-008": {"nome": "Suspender transação perante indícios de fraude", "conclusoes": ["OUT-001:RECUSAR"]},
+    "BW-001": {"nome": "Retornar bodywear intacto à área de vendas", "conclusoes": ["OUT-004:AREA_VENDAS"]},
+    "BW-002": {"nome": "Destruir/dar baixa a bodywear aberto ou usado", "conclusoes": ["OUT-004:DESTRUICAO"]},
+    "CT-001": {"nome": "Devolução verificada por colaborador com credenciais", "conclusoes": ["OUT-001:PERMITIR"]},
+    "CT-002": {"nome": "Devolução às cegas requer aprovação de Store Manager", "conclusoes": ["OUT-001:REVER"]},
+    "CT-003": {"nome": "Mesmo colaborador conclui transação com credenciais", "conclusoes": ["OUT-001:PERMITIR"]},
+}
+
 
 def _module_for_rule(code: str) -> str:
     prefix = code[:2].upper()
     return MODULE_NAMES.get(prefix, "M3-ELEGIBILIDADE")
+
+
+def _val(v: Any) -> str:
+    if v is None:
+        return ""
+    if hasattr(v, "value"):
+        return str(v.value).lower()
+    return str(v).lower()
 
 
 def pedido_to_prolog_facts(pedido: Dict[str, Any]) -> List[str]:
@@ -158,10 +331,10 @@ def pedido_to_prolog_facts(pedido: Dict[str, Any]) -> List[str]:
 
     # 1. Colaborador
     colab = pedido.get("colaborador") or {}
-    funcao = colab.get("funcao")
+    funcao = _val(colab.get("funcao"))
     if funcao in [
-        "KEY_HOLDER", "STORE_MANAGER", "DISTRICT_MANAGER",
-        "DEV_KH", "DEV_SM", "COLABORADOR_COM_CREDENCIAL",
+        "key_holder", "store_manager", "district_manager",
+        "dev_kh", "dev_sm", "colaborador_com_credencial",
     ] or colab.get("idCredencialPOS"):
         facts.extend(["colaborador_autorizado(true)", "sessao_pos_propria(true)"])
     elif pedido.get("colaborador_autorizado") is False:
@@ -171,17 +344,27 @@ def pedido_to_prolog_facts(pedido: Dict[str, Any]) -> List[str]:
 
     # 2. Loja & Mercado
     loja = pedido.get("loja") or {}
-    mercado = str(loja.get("mercado") or "").lower()
-    if mercado == "canada":
+    mercado = _val(loja.get("mercado"))
+    if mercado in ["canada", "ca"]:
         facts.append("mercado(canada)")
 
     # 3. Compra Original & Canal
     compra = pedido.get("compraOriginal") or {}
-    canal = str(compra.get("canal") or loja.get("tipoLoja") or "").lower()
-    if canal in ["mainline", "outlet", "levi_com", "grossista"]:
+    canal = _val(compra.get("canal") or loja.get("tipoLoja"))
+    if canal in ["franquia_canada", "franquia_ca"]:
+        facts.append("canal_compra(franquia_canada)")
+    elif canal in [
+        "grossista",
+        "mainline",
+        "outlet",
+        "levi_com",
+        "levi_ca",
+        "backpocket",
+        "desconhecido",
+    ]:
         facts.append(f"canal_compra({canal})")
 
-    tipo_loja = str(loja.get("tipoLoja") or "").lower()
+    tipo_loja = _val(loja.get("tipoLoja"))
     if tipo_loja in ["mainline", "outlet"]:
         facts.append(f"tipo_loja({tipo_loja})")
 
@@ -198,31 +381,52 @@ def pedido_to_prolog_facts(pedido: Dict[str, Any]) -> List[str]:
     if artigos:
         art = artigos[0]
         prod = art.get("produto") or {}
-        if prod.get("skuReconhecidoPOS", True):
+        if prod.get("skuReconhecidoPOS") is False or prod.get("skuReconhecidoPOS") == "false":
+            facts.append("sku_reconhecido(false)")
+        else:
             facts.append("sku_reconhecido(true)")
-        marca = str(prod.get("marca") or "").lower()
-        if marca in ["levis", "signature", "dockers"]:
+
+        marca = _val(prod.get("marca"))
+        if marca in ["signature", "ls_signature"]:
+            facts.append("marca(signature)")
+        elif marca in ["dockers", "beyond_yoga"]:
             facts.append(f"marca({marca})")
-        cat = str(prod.get("categoria") or "").lower()
-        if cat in ["vestuario", "bodywear", "acessorio"]:
+        elif marca in ["outra", "excluida"]:
+            facts.append("marca(signature)")
+        elif marca == "levis":
+            facts.append("marca(levis)")
+
+        cat = _val(prod.get("categoria"))
+        if cat in ["bodywear", "roupa_interior"]:
+            facts.append("categoria_produto(bodywear)")
+        elif cat in ["vestuario", "acessorio"]:
             facts.append(f"categoria_produto({cat})")
 
         est = art.get("estado") or {}
-        cond = str(est.get("condicaoUso") or "").lower()
-        etiq = str(est.get("etiquetas") or "").lower()
-        if est.get("sujoOuInseguro"):
+        cond = _val(est.get("condicaoUso"))
+        etiq = _val(est.get("etiquetas"))
+        if est.get("sujoOuInseguro") or cond in ["manchado", "danificado"]:
             facts.append("estado_produto(sujo_contaminado_inseguro)")
-        elif cond == "nao_usado" and etiq == "soltas":
-            facts.append("estado_produto(nao_usado_etiquetas_soltas)")
-        elif cond == "nao_usado" and etiq in ["intactas", "preservadas", ""]:
-            facts.append("estado_produto(nao_usado_com_etiquetas)")
-        elif cond == "claramente_usado":
+        elif cond == "lavado":
+            facts.append("estado_produto(lavado)")
+        elif cond in ["usado", "claramente_usado"]:
             facts.append("estado_produto(claramente_usado)")
+        elif cond == "nao_usado":
+            if etiq in ["soltas", "novo_etiquetas_soltas"]:
+                facts.append("estado_produto(nao_usado_etiquetas_soltas)")
+            elif etiq in ["ausentes", "sem_etiquetas", "novo_sem_etiquetas"]:
+                facts.append("estado_produto(nao_usado_sem_etiquetas)")
+            else:
+                facts.append("estado_produto(nao_usado_com_etiquetas)")
 
-        if est.get("personalizado") or est.get("alterado") or est.get("embainhado"):
+        if est.get("personalizado") or est.get("alterado") or est.get("embainhado") or est.get("bainhaFeitaOuAlterada"):
             facts.append("personalizado_ou_alterado(true)")
-        if est.get("defeitoFabricoConfirmado"):
+        if est.get("defeitoFabricoConfirmado") or est.get("temDefeitoFabrico"):
             facts.append("defeito_fabrico(true)")
+
+        rev = art.get("revendivel") if art.get("revendivel") is not None else est.get("revendivel")
+        if rev is not None:
+            facts.append(f"revendivel({str(rev).lower()})")
 
         if art.get("entreCanais"):
             facts.append("artigo_entre_canais(true)")
@@ -234,17 +438,44 @@ def pedido_to_prolog_facts(pedido: Dict[str, Any]) -> List[str]:
         elif "no_sortido" in pedido:
             facts.append(f'no_sortido({str(pedido["no_sortido"]).lower()})')
 
-    # 5. Comprovativo
+    # 5. Comprovativo & Tipo de Pedido Base
+    tipo_ped = str(pedido.get("tipoPedido") or "").lower()
     comprovativo = pedido.get("comprovativo") or {}
     comp_tipo = str(comprovativo.get("tipo") or "").lower()
-    if comp_tipo == "recibo_digital":
+    recibo_orig = comprovativo.get("reciboOriginal")
+
+    if comp_tipo in ["recibo_digital"]:
         facts.append("comprovativo(recibo_digital)")
-    elif comp_tipo == "recibo_impresso":
+    elif comp_tipo in ["recibo_impresso"]:
         facts.append("comprovativo(recibo_impresso)")
-    elif comp_tipo == "foto_recibo":
+    elif comp_tipo in ["confirmacao_encomenda", "confirmacao_online"]:
+        facts.append("comprovativo(confirmacao_encomenda)")
+    elif comp_tipo in ["recibo_oferta"]:
+        facts.append("comprovativo(recibo_oferta)")
+    elif comp_tipo in ["consulta_transacao", "consulta_pos"]:
+        facts.append("comprovativo(consulta_transacao)")
+    elif comp_tipo in ["foto_recibo", "fotografia_recibo"]:
         facts.append("comprovativo(foto_recibo)")
-    elif comp_tipo in ["nenhum", "sem_comprovativo", ""]:
+    elif comp_tipo in ["consulta_backpocket"]:
+        facts.append("comprovativo(consulta_backpocket)")
+    elif not comp_tipo or comp_tipo in ["nenhum", "sem_comprovativo", "none"]:
         facts.append("comprovativo(nenhum)")
+
+    # Flag de Recibo Original em Ajuste de Preço
+    if tipo_ped in ["ajuste_preco"]:
+        if recibo_orig is False or comp_tipo in [
+            "foto_recibo",
+            "fotografia_recibo",
+            "consulta_transacao",
+            "consulta_pos",
+            "consulta_backpocket",
+            "nenhum",
+            "sem_comprovativo",
+            "none",
+        ]:
+            facts.append("recibo_original(false)")
+        elif recibo_orig is True and comp_tipo == "recibo_impresso":
+            facts.append("recibo_original(true)")
 
     # Dias desde compra / envio
     dt_pedido = pedido.get("dataPedido")
@@ -271,36 +502,80 @@ def pedido_to_prolog_facts(pedido: Dict[str, Any]) -> List[str]:
     if meio:
         facts.append(f"meio_pagamento({meio})")
     if "afterpay" in meio:
-        facts.extend(["afterpay_pede_excecao(true)", "tentativa_excecao(true)"])
+        is_online = canal in ["levi_com", "levi_ca"] or pedido.get("compraOnline") is True
+        pede_excecao = tipo_ped == "troca" or bool(pedido.get("pedidoExcecao")) or bool(pedido.get("excecaoGerencia"))
+        if is_online and pede_excecao:
+            facts.extend(["afterpay_pede_excecao(true)", "tentativa_excecao(true)"])
     if meio == "interac":
         facts.append(f'cartao_interac_presente({str(pag.get("cartaoFisicoPresente", False)).lower()})')
+    if pag.get("acessoAplicacaoPagamento") is False:
+        facts.append("acesso_aplicacao_pagamento(false)")
+    estado_conta = str(pag.get("estadoConta") or "").lower()
+    if estado_conta == "ativa":
+        facts.extend(["conta_cartao_ativa(true)", "cartao_perdido_ou_roubado(false)"])
+    elif estado_conta == "ativa_cartao_perdido":
+        facts.extend(["conta_cartao_ativa(true)", "cartao_perdido_ou_roubado(true)"])
+    elif estado_conta == "encerrada":
+        facts.append("conta_cartao_ativa(false)")
+    if pag.get("reembolsoOriginalRecusado"):
+        facts.append("tentativa_cartao_recusada(true)")
 
     # 7. Tipo de pedido & Troca
-    tipo_ped = str(pedido.get("tipoPedido") or "").lower()
-    if tipo_ped == "troca":
+    if tipo_ped in ["devolucao_oferta", "oferta", "gift"]:
+        facts.append("tipo_pedido(devolucao_oferta)")
+    elif tipo_ped == "troca":
         facts.append("tipo_pedido(troca)")
         trocas = pedido.get("artigosTroca") or []
-        if trocas and trocas[0].get("apenasMudaTamanho"):
-            facts.append("troca_apenas_tamanho(true)")
-        if dt_envio:
+        if trocas:
+            muda_so_tamanho = trocas[0].get("apenasMudaTamanho")
+            if muda_so_tamanho is True:
+                facts.append("troca_apenas_tamanho(true)")
+            elif muda_so_tamanho is False:
+                facts.append("troca_apenas_tamanho(false)")
+
+        # Saldo reembolsável para TN-006 em trocas onde o valor original excede o valor da troca
+        valor_original = float(pag.get("valorPago") or compra.get("valorTotal") or 0.0)
+        if valor_original == 0.0:
+            for art in (pedido.get("artigos") or []):
+                valor_original += float(art.get("quantidade") or 1) * float(art.get("precoPago") or 0.0)
+
+        valor_troca = 0.0
+        for tr in trocas:
+            p_tr = tr.get("precoVenda")
+            if p_tr is None:
+                p_tr = (tr.get("produto") or {}).get("precoAtual", 0.0)
+            valor_troca += float(p_tr or 0.0)
+
+        if pedido.get("saldoReembolsavel") is True or pedido.get("saldo_reembolsavel") is True or (valor_original > valor_troca and len(trocas) > 0):
+            facts.append("saldo_reembolsavel(true)")
+
+        if dt_envio and "tentativa_excecao(true)" not in facts:
             facts.append("tentativa_excecao(true)")
     elif tipo_ped == "devolucao":
         facts.append("tipo_pedido(devolucao)")
-    elif tipo_ped in ["devolucao_oferta", "oferta"]:
-        facts.append("tipo_pedido(devolucao_oferta)")
     elif tipo_ped in ["ajuste_preco"]:
         facts.append("tipo_pedido(ajuste_preco)")
     elif compra.get("compraOferta"):
         facts.append("tipo_pedido(devolucao_oferta)")
 
-    # 8. Cliente
+    # 8. Cliente (Contestação e Agitação)
     cli = pedido.get("cliente") or {}
     if cli.get("forneceDados") is not None:
         facts.append(f'cliente_fornece_dados({str(cli["forneceDados"]).lower()})')
-    if cli.get("contestaResultado"):
+    sit = str(pedido.get("situacaoCliente") or "").upper()
+    if (cli.get("contestaResultado") or sit in ["CONTESTA", "CHAMAR_GERENCIA"]) and "cliente_contesta(true)" not in facts:
         facts.append("cliente_contesta(true)")
-    if cli.get("agitado"):
+    if (cli.get("agitado") or sit == "CHAMAR_GERENCIA") and "cliente_agitado(true)" not in facts:
         facts.append("cliente_agitado(true)")
+
+    # 8b. Exceção de Gerência
+    excecao = pedido.get("pedidoExcecao") or {}
+    if excecao or pedido.get("excecaoGerencia"):
+        if "tentativa_excecao(true)" not in facts:
+            facts.append("tentativa_excecao(true)")
+        if excecao.get("aprovada") is True or pedido.get("excecaoGerencia") is True:
+            if "excecao_aprovada(true)" not in facts:
+                facts.append("excecao_aprovada(true)")
 
     # 9. Stylist
     stylist = compra.get("idStylistVenda")
@@ -340,7 +615,7 @@ class RetailPrologService:
     ) -> DecisaoResponse:
         """Evaluate a return scenario against Levi's Prolog rules and map to DecisaoResponse."""
         if hasattr(payload, "model_dump"):
-            data = payload.model_dump()
+            data = payload.model_dump(mode="json")
         else:
             data = dict(payload)
 
@@ -352,10 +627,12 @@ class RetailPrologService:
             pedido = data
             scenario_id = None
 
-        # Resolve scenario ID from pedido ID (e.g. C01 -> 1)
+        # Resolve scenario ID from pedido ID (e.g. C01 -> 1 or CENARIO-01 -> 1)
         if scenario_id is None and isinstance(pedido, dict):
             pid = str(pedido.get("id") or "")
-            if pid.startswith("C") and pid[1:].isdigit():
+            if pid.startswith("CENARIO-") and pid.split("-")[1].isdigit():
+                scenario_id = int(pid.split("-")[1])
+            elif pid.startswith("C") and pid[1:].isdigit():
                 scenario_id = int(pid[1:])
 
         # Determine facts to submit
@@ -368,8 +645,10 @@ class RetailPrologService:
             facts = pedido_to_prolog_facts(pedido)
 
         # Execute Prolog evaluation
+        start_t = time.perf_counter()
         await self.prolog_client.reset_retail()
         raw_result = await self.prolog_client.evaluate_retail({"facts": facts})
+        duracao_ms = max(1, int((time.perf_counter() - start_t) * 1000))
 
         # Map to DecisaoResponse
         decision_resp = self._map_prolog_to_decisao(raw_result, pedido)
@@ -382,6 +661,18 @@ class RetailPrologService:
             "facts": facts,
             "pedido": pedido,
         }
+
+        # Persist Prolog inference record asynchronously and safely
+        try:
+            from app.services.inferences_service import InferencesService
+            await InferencesService.record_inference_safely(
+                motor="PROLOG",
+                decisao=decision_resp,
+                pedido_data=pedido,
+                duracao_ms=duracao_ms,
+            )
+        except Exception as exc:
+            logger.warning("[RetailPrologService] Could not persist Prolog inference record: %s", exc)
 
         return decision_resp
 
@@ -607,11 +898,55 @@ class RetailPrologService:
 
     async def explain_why(self, dado: str, payload: Dict[str, Any]) -> ExplicacaoPorqueResponse:
         """Explain why a particular input premise is needed (Why Ask)."""
+        dado_clean = (dado or "IN-004").strip().upper()
+
+        info = PROLOG_INPUT_KNOWLEDGE.get(dado_clean)
+        if not info:
+            # Fallback for unknown input codes
+            return ExplicacaoPorqueResponse(
+                codigo=dado_clean,
+                dado=dado_clean,
+                pergunta=f"Qual é o valor do atributo {dado_clean}?",
+                resumo=f"O atributo {dado_clean} é requerido pelo motor pericial para validar as regras normativas de devolução.",
+                regrasQueDependem=[],
+                regrasEmEspera=[],
+            )
+
+        pergunta = info["pergunta"]
+        resumo = info["resumo"]
+        regras_dependentes = list(info["regras"])
+
+        # Construct candidate regrasEmEspera based on rule details
+        regras_em_espera: List[RegraEmEsperaDto] = []
+        for rule_id in regras_dependentes:
+            r_meta = PROLOG_RULE_DETAILS.get(rule_id, {})
+            nome = r_meta.get("nome", f"Regra {rule_id}")
+            conclusoes = r_meta.get("conclusoes", [])
+            modulo = _module_for_rule(rule_id)
+
+            regras_em_espera.append(
+                RegraEmEsperaDto(
+                    codigoRegra=rule_id,
+                    nomeRegra=f"[{rule_id}] {nome}",
+                    modulo=modulo,
+                    conclusoes=conclusoes,
+                    condicoesDoDado=[
+                        CondicaoDto(
+                            nome=info["atributo"],
+                            descricao=f"Avaliação da premissa '{info['atributo']}' para a regra {rule_id}",
+                            cumprida=False,
+                        )
+                    ],
+                )
+            )
+
         return ExplicacaoPorqueResponse(
-            codigo=dado,
-            pergunta="Qual é a condição do comprovativo de compra apresentado?",
-            resumo=f"O atributo {dado} é lido pela regra normativa para determinar se a devolução é verificada ou às cegas.",
-            regrasQueDependem=["PT-001", "PT-002", "PT-003"],
+            codigo=dado_clean,
+            dado=dado_clean,
+            pergunta=pergunta,
+            resumo=resumo,
+            regrasQueDependem=regras_dependentes,
+            regrasEmEspera=regras_em_espera,
         )
 
     def _map_prolog_to_decisao(
@@ -628,87 +963,148 @@ class RetailPrologService:
         derived_facts = raw.get("derived_facts", [])
         fact_strings = [df.get("fact", "") for df in derived_facts]
 
-        # Map Elegibilidade
+        # 1. Map Elegibilidade (OUT-001)
         if any("decisao(encaminhar)" in f or "processo_obrigatorio(backpocket)" in f for f in fact_strings):
             elegibilidade = ElegibilidadeEnum.ENCAMINHAR
-        elif decision_raw in ["permitir", "approved", "store_credit_only"]:
-            elegibilidade = ElegibilidadeEnum.PERMITIR
-        elif decision_raw in ["recusar", "rejected"]:
+        elif any("decisao(recusar)" in f for f in fact_strings) or decision_raw in ["recusar", "rejected"]:
             elegibilidade = ElegibilidadeEnum.RECUSAR
+        elif any("decisao(rever)" in f for f in fact_strings) or decision_raw in ["rever"]:
+            elegibilidade = ElegibilidadeEnum.REVER
+        elif any("decisao(permitir)" in f for f in fact_strings) or decision_raw in ["permitir", "approved", "store_credit_only"]:
+            elegibilidade = ElegibilidadeEnum.PERMITIR
         elif decision_raw in ["encaminhar"]:
             elegibilidade = ElegibilidadeEnum.ENCAMINHAR
         else:
             elegibilidade = ElegibilidadeEnum.REVER
 
-        # Extract transaction type
-        tipo_transacao = TipoTransacaoEnum.REEMBOLSO
-        ped_tipo = str(pedido.get("tipoPedido") or "").lower() if isinstance(pedido, dict) else ""
-        if ped_tipo == "troca":
-            tipo_transacao = TipoTransacaoEnum.TROCA
-        elif ped_tipo in ["ajuste_preco", "ajustepreco"]:
-            tipo_transacao = TipoTransacaoEnum.AJUSTE_PRECO
-        elif ped_tipo in ["credito_loja"]:
-            tipo_transacao = TipoTransacaoEnum.CREDITO_LOJA
-
-        for f in fact_strings:
-            if "tipo_transacao(troca)" in f or "tipo_pedido(troca)" in f:
-                tipo_transacao = TipoTransacaoEnum.TROCA
-                break
-            elif "tipo_transacao(troca_ou_credito)" in f or "meio_reembolso(vale_loja)" in f:
-                tipo_transacao = TipoTransacaoEnum.CREDITO_LOJA
-                break
-            elif "tipo_transacao(ajuste_preco)" in f:
-                tipo_transacao = TipoTransacaoEnum.AJUSTE_PRECO
-                break
-            elif "decisao(recusar)" in f:
-                tipo_transacao = TipoTransacaoEnum.NENHUMA
-                break
-
-        # Extract tender / refund method
-        meio_reembolso = MeioReembolsoEnum.MEIO_ORIGINAL
-        for f in fact_strings:
-            if "meio_reembolso(vale_loja)" in f or "credito_loja" in f:
-                meio_reembolso = MeioReembolsoEnum.CREDITO_LOJA
-                break
-            elif "meio_reembolso(cartao_oferta)" in f:
-                meio_reembolso = MeioReembolsoEnum.CARTAO_OFERTA
-                break
-
-        # Extract approval level
-        aprovacao = None
-        if elegibilidade == ElegibilidadeEnum.REVER:
-            aprovacao = NivelAprovacaoEnum.RESPONSAVEL_SENIOR
-            for f in fact_strings:
-                if "aprovacao(gerente)" in f:
-                    aprovacao = NivelAprovacaoEnum.XSTORE_MANAGER
-                    break
-                elif "aprovacao(distrital)" in f or "escalamento_distrital" in f:
-                    aprovacao = NivelAprovacaoEnum.DISTRICT_AREA
-                    break
-
-        # Process mandatory
-        processo = None
-        for f in fact_strings:
-            if "processo_obrigatorio(backpocket)" in f or "backpocket" in f:
-                processo = ProcessoObrigatorioEnum.BACKPOCKET
-                break
-            elif "afterpay" in f:
-                processo = ProcessoObrigatorioEnum.AFTERPAY
-                break
-            elif "paypal" in f or "venmo" in f:
-                processo = ProcessoObrigatorioEnum.PAYPAL_VENMO
-                break
-
-        # Verification type
+        # Verification type (PT-001, PT-002)
         tipo_verificacao = TipoVerificacaoEnum.VERIFICADA
         for f in fact_strings:
             if "tipo_verificacao(as_cegas)" in f or "comprovativo(nenhum)" in f:
                 tipo_verificacao = TipoVerificacaoEnum.AS_CEGAS
                 break
 
-        # Rules trace
+        # 2. Extract transaction type (OUT-002)
+        is_portal_outage = (
+            pedido.get("portalOnlineDisponivel") is False
+            or any("portal_online_disponivel(false)" in f for f in fact_strings)
+            or any("CH-004" in df.get("rule_id", "") for df in derived_facts)
+        )
+        if elegibilidade == ElegibilidadeEnum.RECUSAR:
+            tipo_transacao = TipoTransacaoEnum.NENHUMA
+        elif (
+            tipo_verificacao == TipoVerificacaoEnum.AS_CEGAS
+            and (pedido.get("tipoPedido") or "").lower() in ["devolucao", "devolucao_oferta"]
+        ):
+            tipo_transacao = TipoTransacaoEnum.CREDITO_LOJA
+        elif is_portal_outage and any("fluxo_app" in f for f in fact_strings):
+            tipo_transacao = None
+        else:
+            tipo_transacao = TipoTransacaoEnum.REEMBOLSO
+            ped_tipo = str(pedido.get("tipoPedido") or "").lower() if isinstance(pedido, dict) else ""
+            if ped_tipo == "troca":
+                tipo_transacao = TipoTransacaoEnum.TROCA
+            elif ped_tipo in ["ajuste_preco", "ajustepreco"]:
+                tipo_transacao = TipoTransacaoEnum.AJUSTE_PRECO
+            elif ped_tipo in ["credito_loja", "devolucao_oferta"]:
+                tipo_transacao = TipoTransacaoEnum.CREDITO_LOJA
+
+            for f in fact_strings:
+                if "tipo_transacao(reembolso)" in f:
+                    tipo_transacao = TipoTransacaoEnum.REEMBOLSO
+                    break
+                elif "tipo_transacao(troca)" in f or "tipo_pedido(troca)" in f:
+                    tipo_transacao = TipoTransacaoEnum.TROCA
+                    break
+                elif "tipo_transacao(troca_ou_credito)" in f or "meio_reembolso(vale_loja)" in f or "meio_reembolso(credito_loja)" in f:
+                    tipo_transacao = TipoTransacaoEnum.CREDITO_LOJA
+                    break
+                elif "tipo_transacao(ajuste_preco)" in f:
+                    tipo_transacao = TipoTransacaoEnum.AJUSTE_PRECO
+                    break
+
+        # 3. Extract tender / refund method (OUT-004)
+        if elegibilidade == ElegibilidadeEnum.RECUSAR:
+            meio_reembolso = None
+        elif any("meio_reembolso(sem_meio_definido)" in f or "sem_meio_definido" in f for f in fact_strings):
+            meio_reembolso = None
+        elif any("meio_reembolso(fluxo_app)" in f or "processo_obrigatorio(fluxo_app)" in f or "fluxo_app" in f for f in fact_strings):
+            meio_reembolso = MeioReembolsoEnum.APLICACAO_PAGAMENTO
+        elif (
+            tipo_verificacao == TipoVerificacaoEnum.AS_CEGAS
+            and (pedido.get("tipoPedido") or "").lower() in ["devolucao", "devolucao_oferta"]
+        ):
+            meio_reembolso = MeioReembolsoEnum.CREDITO_LOJA
+        else:
+            meio_reembolso = MeioReembolsoEnum.MEIO_ORIGINAL
+            for f in fact_strings:
+                if "meio_reembolso(cartao_oferta)" in f:
+                    meio_reembolso = MeioReembolsoEnum.CARTAO_OFERTA
+                    break
+                elif "meio_reembolso(vale_loja)" in f or "credito_loja" in f:
+                    meio_reembolso = MeioReembolsoEnum.CREDITO_LOJA
+                    break
+                elif "meio_reembolso(meio_original)" in f:
+                    meio_reembolso = MeioReembolsoEnum.MEIO_ORIGINAL
+                    break
+
+        # 4. Extract approval level (OUT-005)
+        # Strict hierarchy: DISTRICT_AREA > RESPONSAVEL_SENIOR > XSTORE_MANAGER > NENHUMA
+        if any("aprovacao(distrital)" in f or "escalamento_distrital" in f for f in fact_strings):
+            aprovacao = NivelAprovacaoEnum.DISTRICT_AREA
+        elif any("aprovacao(responsavel_senior)" in f or "responsavel_senior" in f for f in fact_strings):
+            aprovacao = NivelAprovacaoEnum.RESPONSAVEL_SENIOR
+        elif (
+            any("aprovacao(gerente)" in f or "aprovacao(gestor_xstore)" in f for f in fact_strings)
+            or (tipo_verificacao == TipoVerificacaoEnum.AS_CEGAS and elegibilidade != ElegibilidadeEnum.RECUSAR)
+        ):
+            aprovacao = NivelAprovacaoEnum.XSTORE_MANAGER
+        elif elegibilidade == ElegibilidadeEnum.PERMITIR:
+            aprovacao = NivelAprovacaoEnum.NENHUMA
+        else:
+            aprovacao = None
+
+        # 5. Process mandatory (OUT-006)
+        processo = None
+        for f in fact_strings:
+            if "processo_obrigatorio(backpocket)" in f or "backpocket" in f:
+                processo = ProcessoObrigatorioEnum.BACKPOCKET
+                break
+            elif "processo_obrigatorio(fluxo_app)" in f or "fluxo_app" in f or "paypal" in f or "venmo" in f:
+                processo = ProcessoObrigatorioEnum.PAYPAL_VENMO
+                break
+            elif "afterpay" in f:
+                processo = ProcessoObrigatorioEnum.AFTERPAY
+                break
+
+        # 6. Dynamic value calculation (OUT-003)
+        if elegibilidade == ElegibilidadeEnum.RECUSAR:
+            valor_deliberado = 0.00
+        elif (tipo_transacao is None or is_portal_outage) and any("fluxo_app" in f for f in fact_strings):
+            valor_deliberado = 0.00
+        else:
+            raw_artigos = pedido.get("artigos") or []
+            if raw_artigos:
+                valor_deliberado = sum(
+                    float(
+                        a.get("precoPago")
+                        or a.get("precoAtual")
+                        or (a.get("produto") or {}).get("precoAtual")
+                        or (a.get("produto") or {}).get("pvpOriginal")
+                        or 0.0
+                    )
+                    for a in raw_artigos
+                )
+            else:
+                valor_deliberado = float(
+                    pedido.get("valorTotal")
+                    or (pedido.get("compraOriginal") or {}).get("pagamento", {}).get("valorPago")
+                    or 0.00
+                )
+
+        # 7. Rules trace with domain prioritization
         justifications: List[str] = raw.get("justification", [])
-        regras: List[RegistoRegraResponse] = []
+        regras_raw: List[RegistoRegraResponse] = []
         for idx, just in enumerate(justifications, start=1):
             rule_id = "REGRA"
             msg = just
@@ -717,7 +1113,7 @@ class RetailPrologService:
                 rule_id = parts[0][1:].strip()
                 msg = parts[1].strip()
 
-            regras.append(
+            regras_raw.append(
                 RegistoRegraResponse(
                     ordem=idx,
                     codigoRegra=rule_id,
@@ -729,19 +1125,64 @@ class RetailPrologService:
                 )
             )
 
-        # Articles breakdown
+        def _rule_sort_key(r: RegistoRegraResponse) -> int:
+            code = r.codigoRegra.upper()
+            if code.startswith(("PC-008", "BW-", "HS-", "EX-008", "TN-011")):
+                return 0
+            if code.startswith(("PC-", "EX-", "TN-", "CH-", "PT-", "EP-")):
+                return 1
+            if code.startswith("CT-"):
+                return 2
+            return 3
+
+        regras_sorted = sorted(regras_raw, key=_rule_sort_key)
+        regras = [
+            r.model_copy(update={"ordem": idx})
+            for idx, r in enumerate(regras_sorted, start=1)
+        ]
+
+        # 8. Articles breakdown
+        base_valor = (
+            BaseValorEnum.VALOR_PROMOCIONAL
+            if (tipo_verificacao == TipoVerificacaoEnum.AS_CEGAS and (pedido.get("tipoPedido") or "").lower() in ["devolucao_oferta"])
+            else BaseValorEnum.VALOR_PAGO
+        )
+
         artigos_list: List[ResultadoArtigoResponse] = []
         raw_artigos = pedido.get("artigos") or []
         for idx, art in enumerate(raw_artigos, start=1):
             art_id = str(art.get("id") or f"A-{idx}")
+            if elegibilidade == ElegibilidadeEnum.RECUSAR:
+                art_valor = 0.00
+            elif (tipo_transacao is None or is_portal_outage) and any("fluxo_app" in f for f in fact_strings):
+                art_valor = 0.00
+            else:
+                art_valor = float(
+                    art.get("precoPago")
+                    or art.get("precoAtual")
+                    or (art.get("produto") or {}).get("precoAtual")
+                    or (art.get("produto") or {}).get("pvpOriginal")
+                    or 0.00
+                )
+
+            art_est = art.get("estado") or {}
+            if art_est.get("sujoOuInseguro") or any("isolamento_risco_biologico" in f for f in fact_strings):
+                destino = DestinoProdutoEnum.RISCO_BIOLOGICO
+            elif elegibilidade == ElegibilidadeEnum.RECUSAR:
+                destino = DestinoProdutoEnum.DEVOLUCAO_CLIENTE
+            elif elegibilidade == ElegibilidadeEnum.ENCAMINHAR:
+                destino = DestinoProdutoEnum.SALDOS
+            else:
+                destino = DestinoProdutoEnum.AREA_VENDAS
+
             artigos_list.append(
                 ResultadoArtigoResponse(
                     artigoId=art_id,
                     elegibilidade=elegibilidade,
                     tipoTransacao=tipo_transacao,
-                    valorDevolucao=art.get("precoPago", 69.50),
-                    baseValor=BaseValorEnum.VALOR_PAGO,
-                    destino=DestinoProdutoEnum.AREA_VENDAS if elegibilidade != ElegibilidadeEnum.RECUSAR else DestinoProdutoEnum.DEVOLUCAO_CLIENTE,
+                    valorDevolucao=round(art_valor, 2),
+                    baseValor=base_valor,
+                    destino=destino,
                     aprovacao=aprovacao,
                     terminal=False,
                 )
@@ -753,20 +1194,26 @@ class RetailPrologService:
                     artigoId="A-1",
                     elegibilidade=elegibilidade,
                     tipoTransacao=tipo_transacao,
-                    valorDevolucao=69.50,
-                    baseValor=BaseValorEnum.VALOR_PAGO,
+                    valorDevolucao=round(valor_deliberado, 2),
+                    baseValor=base_valor,
                     destino=DestinoProdutoEnum.AREA_VENDAS if elegibilidade != ElegibilidadeEnum.RECUSAR else DestinoProdutoEnum.DEVOLUCAO_CLIENTE,
                     aprovacao=aprovacao,
                     terminal=False,
                 )
             )
 
+        # 9. Documentação
+        compra = pedido.get("compraOriginal") or {}
+        id_stylist = compra.get("idStylistVenda") or "S-21"
+        comprovativo_tipo = str((pedido.get("comprovativo") or {}).get("tipo") or "").lower()
+        recibo_agrafado = "impresso" in comprovativo_tipo
+
         doc = DocumentacaoResponse(
             assinaturaCliente="Assinatura do cliente ou 'Recusado'",
             assinaturaProcessador="Assinatura do colaborador",
             assinaturaTestemunha="Assinatura de testemunha",
-            idStylistAtribuido="S-21",
-            reciboAgrafado=False,
+            idStylistAtribuido=id_stylist,
+            reciboAgrafado=recibo_agrafado,
             retencaoAte=datetime.now().date(),
         )
 
@@ -778,8 +1225,8 @@ class RetailPrologService:
             elegibilidade=elegibilidade,
             tipoVerificacao=tipo_verificacao,
             tipoTransacao=tipo_transacao,
-            valorDevolucao=69.50,
-            baseValor=BaseValorEnum.VALOR_PAGO,
+            valorDevolucao=round(valor_deliberado, 2),
+            baseValor=base_valor,
             meioReembolso=meio_reembolso,
             aprovacao=aprovacao,
             processo=processo,

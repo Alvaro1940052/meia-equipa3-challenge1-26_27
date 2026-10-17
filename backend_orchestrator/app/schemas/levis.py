@@ -368,6 +368,19 @@ class LojaRequest(LevisBaseModel):
         default=None, description="Conjunto de SKUs presentes no sortido local."
     )
 
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_mercado(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            mercado = data.get("mercado")
+            if isinstance(mercado, str):
+                m_upper = mercado.strip().upper()
+                if m_upper in ["CA", "CANADA"]:
+                    data["mercado"] = MercadoEnum.CANADA
+                elif m_upper in ["EUA", "US", "USA"]:
+                    data["mercado"] = MercadoEnum.EUA
+        return data
+
 
 class ClienteRequest(LevisBaseModel):
     """Comportamento e dados do cliente no momento da solicitação (PT-006, EX-002, EX-003)."""
@@ -404,6 +417,17 @@ class CompraRequest(LevisBaseModel):
     encomendaEncontrada: Optional[bool] = Field(default=None, description="Encomenda online localizada em sistema.")
     ajustePrecoAplicado: bool = Field(default=False, description="Indica se já beneficiou de ajuste de preço prévio.")
     compraOferta: bool = Field(default=False, description="Indica se se tratou de compra de oferta.")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_canal(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            canal = data.get("canal")
+            if isinstance(canal, str):
+                c_upper = canal.strip().upper()
+                if c_upper in ["FRANQUIA_CA", "FRANQUIA_CANADA"]:
+                    data["canal"] = CanalCompraEnum.FRANQUIA_CANADA
+        return data
 
 
 CompraOriginalRequest = CompraRequest

@@ -3,7 +3,14 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { ApiClientError, api } from "@/client/api";
 import ErrorBanner from "@/components/shared/ErrorBanner";
-import { ELIGIBILITY, WHAT_IF_PRESETS, cause, label } from "@/config/returnsLabels";
+import {
+  ELIGIBILITY,
+  WHAT_IF_PRESETS,
+  cause,
+  cleanRuleCodes,
+  label,
+  moduleLabel,
+} from "@/config/returnsLabels";
 import type {
   CondicaoDto,
   DadosEmFaltaResponse,
@@ -20,20 +27,23 @@ const LOCALE = "locale=pt-PT";
 
 type TabId = "how" | "whynot" | "missing" | "whatif";
 
-const TABS: { id: TabId; label: string }[] = [
-  { id: "how", label: "Como chegou aqui?" },
-  { id: "whynot", label: "Porque não…?" },
-  { id: "missing", label: "O que falta?" },
-  { id: "whatif", label: "E se…?" },
+const TABS: { id: TabId; label: string; icon: string }[] = [
+  { id: "how", label: "Como Chegou Aqui?", icon: "route" },
+  { id: "whynot", label: "Porque Não...?", icon: "help_outline" },
+  { id: "missing", label: "O Que Falta?", icon: "checklist" },
+  { id: "whatif", label: "E Se...?", icon: "science" },
 ];
 
 const messageOf = (err: unknown) =>
-  err instanceof ApiClientError ? err.message : "Não foi possível obter a explicação.";
+  err instanceof ApiClientError ? err.message : "Não foi possível obter a explicação do motor.";
 
-/** Carrega um recurso ao montar e sempre que `load` mudar; devolve estado e repetição. */
+/** Carrega um recurso ao montar e sempre que load mudar; devolve estado e repetição. */
 function useRemote<T>(load: () => Promise<T>) {
-  // O resultado fica etiquetado com o `load` que o produziu: se `load` mudar, volta a "a carregar".
-  const [settled, setSettled] = useState<{ source: () => Promise<T>; data: T | null; error: string | null } | null>(null);
+  const [settled, setSettled] = useState<{
+    source: () => Promise<T>;
+    data: T | null;
+    error: string | null;
+  } | null>(null);
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
@@ -52,25 +62,64 @@ function useRemote<T>(load: () => Promise<T>) {
     setAttempt((value) => value + 1);
   }, []);
 
-  return { data: current?.data ?? null, error: current?.error ?? null, loading: current === null, retry };
+  return {
+    data: current?.data ?? null,
+    error: current?.error ?? null,
+    loading: current === null,
+    retry,
+  };
 }
 
-function Status({ loading, error, retry }: { loading: boolean; error: string | null; retry: () => void }) {
+function Status({
+  loading,
+  error,
+  retry,
+}: {
+  loading: boolean;
+  error: string | null;
+  retry: () => void;
+}) {
   if (error) return <ErrorBanner message={error} onRetry={retry} />;
-  if (loading) return <p className="field-hint">A carregar...</p>;
+  if (loading)
+    return (
+      <div className="flex items-center gap-2.5 p-4 rounded-xl bg-surface-container text-on-surface-variant text-sm font-medium animate-pulse">
+        <span className="material-symbols-outlined text-primary text-[20px] animate-spin">sync</span>
+        <span>A carregar explicação detalhada do motor...</span>
+      </div>
+    );
   return null;
 }
 
 function Conditions({ items }: { items: CondicaoDto[] }) {
   if (items.length === 0) return null;
   return (
-    <ul className="condition-list">
+    <ul className="flex flex-col gap-2 mt-2">
       {items.map((item, index) => (
-        <li key={index} className={item.cumprida ? "ok" : "fail"}>
-          <span aria-hidden="true">{item.cumprida ? "✓" : "✗"}</span>
-          <span className="sr-only">{item.cumprida ? "Cumprida: " : "Não cumprida: "}</span>
-          {item.descricao ?? item.nome}
-          {item.valor && <code>{item.valor}</code>}
+        <li
+          key={index}
+          className={`flex items-start gap-2.5 p-2.5 rounded-xl text-xs ${
+            item.cumprida
+              ? "bg-emerald-50/70 border border-emerald-200 text-emerald-950"
+              : "bg-rose-50/70 border border-rose-200 text-rose-950"
+          }`}
+        >
+          <span
+            className={`material-symbols-outlined text-[18px] shrink-0 ${
+              item.cumprida ? "text-primary" : "text-error"
+            }`}
+          >
+            {item.cumprida ? "check_circle" : "cancel"}
+          </span>
+          <div className="flex flex-col">
+            <span className="font-medium">
+              {cleanRuleCodes(item.descricao ?? item.nome) || "Critério de validação"}
+            </span>
+            {item.valor && (
+              <span className="text-[11px] text-on-surface-variant font-mono mt-0.5">
+                Valor avaliado: {item.valor}
+              </span>
+            )}
+          </div>
         </li>
       ))}
     </ul>
@@ -86,35 +135,109 @@ function HowTab({ evaluationId }: { evaluationId: string }) {
   const { data, error, loading, retry } = useRemote(load);
 
   return (
-    <>
+    <div className="flex flex-col gap-4">
       <Status loading={loading} error={error} retry={retry} />
       {data && (
         <>
-          {data.resumo && <p className="result-line">{data.resumo}</p>}
-          {data.paragem && <p className="result-line">O raciocínio parou em: {data.paragem}</p>}
-          <ol className="step-trail">
-            {data.passos.map((step) => (
-              <li key={step.ordem}>
-                <div className="step-trail-head">
-                  <strong>{step.codigoRegra ?? step.nomeRegra}</strong>
-                  {step.modulo && <span className="tag-module">{step.modulo}</span>}
-                  {step.resultado && <span className="tag-result">{ELIGIBILITY[step.resultado]?.label ?? step.resultado}</span>}
-                  {step.aValidar && <span className="tag-pending">a validar</span>}
+          {data.resumo && (
+            <div className="p-4 rounded-2xl bg-surface-container-low border border-border-card text-on-surface font-body-md text-sm">
+              {cleanRuleCodes(data.resumo)}
+            </div>
+          )}
+
+          {data.paragem && (
+            <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-medium flex items-center gap-2">
+              <span className="material-symbols-outlined text-amber-600 text-[18px]">stop_circle</span>
+              <span>O raciocínio concluiu em: {cleanRuleCodes(data.paragem)}</span>
+            </div>
+          )}
+
+          <div className="flex flex-col gap-3 relative before:absolute before:top-4 before:bottom-4 before:left-5 before:w-0.5 before:bg-border-card before:z-0">
+            {data.passos.map((step) => {
+              const ruleTitle = cleanRuleCodes(step.nomeRegra) || moduleLabel(step.modulo);
+              const message = cleanRuleCodes(step.mensagem);
+              const isApproved = step.resultado === "PERMITIR";
+              const isRejected = step.resultado === "RECUSAR";
+              const isReview = step.resultado === "REVER";
+
+              return (
+                <div
+                  key={step.ordem}
+                  className="card-tactile p-4 bg-white border border-border-card rounded-2xl shadow-xs relative z-10 ml-0 sm:ml-2 flex items-start gap-3.5"
+                >
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-extrabold shrink-0 shadow-xs ${
+                      isApproved
+                        ? "bg-emerald-100 text-emerald-800 ring-2 ring-emerald-300"
+                        : isRejected
+                        ? "bg-rose-100 text-rose-800 ring-2 ring-rose-300"
+                        : isReview
+                        ? "bg-amber-100 text-amber-800 ring-2 ring-amber-300"
+                        : "bg-surface-container text-on-surface ring-2 ring-border-card"
+                    }`}
+                  >
+                    {step.ordem}
+                  </div>
+
+                  <div className="flex flex-col flex-1 gap-1">
+                    <div className="flex items-center gap-2 flex-wrap justify-between">
+                      <span className="font-headline-sm text-sm font-bold text-on-surface">
+                        {ruleTitle}
+                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {step.modulo && (
+                          <span className="px-2.5 py-0.5 rounded-full bg-surface-container-low text-[10px] font-bold text-on-surface-variant border border-border-card">
+                            {moduleLabel(step.modulo)}
+                          </span>
+                        )}
+                        {step.resultado && (
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
+                              isApproved
+                                ? "bg-emerald-100 text-emerald-800"
+                                : isRejected
+                                ? "bg-rose-100 text-rose-800"
+                                : "bg-amber-100 text-amber-800"
+                            }`}
+                          >
+                            {ELIGIBILITY[step.resultado]?.label ?? step.resultado}
+                          </span>
+                        )}
+                        {step.aValidar && (
+                          <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[10px] font-bold border border-amber-200">
+                            Requer validação
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {message && (
+                      <p className="font-body-md text-xs sm:text-sm text-on-surface-variant leading-relaxed">
+                        {message}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                {step.mensagem && <p>{step.mensagem}</p>}
-              </li>
-            ))}
-          </ol>
+              );
+            })}
+          </div>
         </>
       )}
-    </>
+    </div>
   );
 }
 
-function WhyNotTab({ evaluationId, obtained }: { evaluationId: string; obtained: Elegibilidade | null }) {
+function WhyNotTab({
+  evaluationId,
+  obtained,
+}: {
+  evaluationId: string;
+  obtained: Elegibilidade | null;
+}) {
   const base = useContext(ExplainBaseContext);
   const targets = (Object.keys(ELIGIBILITY) as Elegibilidade[]).filter((value) => value !== obtained);
-  const [target, setTarget] = useState<Elegibilidade>(targets[0]);
+  const [target, setTarget] = useState<Elegibilidade>(targets[0] || "PERMITIR");
+
   const load = useCallback(
     () =>
       api<ExplicacaoPorqueNaoConclusaoResponse>(
@@ -127,53 +250,86 @@ function WhyNotTab({ evaluationId, obtained }: { evaluationId: string; obtained:
   const { data, error, loading, retry } = useRemote(load);
 
   return (
-    <>
-      <div className="presets-btns">
-        {targets.map((value) => (
-          <button
-            key={value}
-            type="button"
-            className={`btn-preset ${value === target ? "active" : ""}`}
-            aria-pressed={value === target}
-            onClick={() => setTarget(value)}
-          >
-            Porque não “{ELIGIBILITY[value].label}”?
-          </button>
-        ))}
+    <div className="flex flex-col gap-4">
+      {/* Target Eligibility Selectors */}
+      <div className="flex flex-wrap gap-2">
+        {targets.map((value) => {
+          const isActive = value === target;
+          return (
+            <button
+              key={value}
+              type="button"
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold border-2 transition-all cursor-pointer ${
+                isActive
+                  ? "bg-secondary text-white border-secondary shadow-[0_3px_0_#003E8A]"
+                  : "bg-white text-on-surface border-border-card hover:bg-surface-container"
+              }`}
+              aria-pressed={isActive}
+              onClick={() => setTarget(value)}
+            >
+              Porque não “{ELIGIBILITY[value].label}”?
+            </button>
+          );
+        })}
       </div>
+
       <Status loading={loading} error={error} retry={retry} />
+
       {data && (
-        <div className="explain-body">
-          {data.resumo && <p className="result-line">{data.resumo}</p>}
-          {data.definidoPor && <p className="result-line">Decisão fixada pela regra {data.definidoPor}.</p>}
-          {data.propostaPor.length > 0 && (
-            <p className="result-line">Propuseram este resultado: {data.propostaPor.join(", ")}.</p>
-          )}
-          {data.regras.map((rule, index) => (
-            <div key={index} className="rule-card">
-              <div className="step-trail-head">
-                <strong>{rule.codigoRegra}</strong>
-                <span className="tag-result">{cause(rule.causa)}</span>
-              </div>
-              {rule.resumo && <p>{rule.resumo}</p>}
-              {rule.regraResponsavel && <p className="field-hint">Regra responsável: {rule.regraResponsavel}</p>}
-              <Conditions items={rule.condicoes} />
+        <div className="flex flex-col gap-4">
+          {data.resumo && (
+            <div className="p-4 rounded-2xl bg-surface-container-low border border-border-card text-on-surface font-body-md text-sm">
+              {cleanRuleCodes(data.resumo)}
             </div>
-          ))}
+          )}
+
+          <div className="grid grid-cols-1 gap-3">
+            {data.regras.map((rule, index) => (
+              <div
+                key={index}
+                className="card-tactile p-4 bg-white border border-border-card rounded-2xl flex flex-col gap-2 shadow-xs"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-headline-sm text-sm font-bold text-on-surface">
+                    {cause(rule.causa)}
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full bg-surface-container text-[11px] font-bold text-on-surface-variant">
+                    Condição de Política
+                  </span>
+                </div>
+
+                {rule.resumo && (
+                  <p className="font-body-md text-xs sm:text-sm text-on-surface-variant">
+                    {cleanRuleCodes(rule.resumo)}
+                  </p>
+                )}
+
+                <Conditions items={rule.condicoes} />
+              </div>
+            ))}
+          </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
 
 function MissingTab({ request }: { request: ReturnRequest }) {
   const base = useContext(ExplainBaseContext);
   const load = useCallback(
-    () => api<DadosEmFaltaResponse>(`${base}/dados-em-falta?${LOCALE}`, { method: "POST", body: request }),
+    () =>
+      api<DadosEmFaltaResponse>(`${base}/dados-em-falta?${LOCALE}`, {
+        method: "POST",
+        body: request,
+      }),
     [base, request]
   );
   const { data, error, loading, retry } = useRemote(load);
-  const [why, setWhy] = useState<{ code: string; data?: ExplicacaoPorqueResponse; error?: string } | null>(null);
+  const [why, setWhy] = useState<{
+    code: string;
+    data?: ExplicacaoPorqueResponse;
+    error?: string;
+  } | null>(null);
 
   async function askWhy(code: string) {
     setWhy({ code });
@@ -189,42 +345,80 @@ function MissingTab({ request }: { request: ReturnRequest }) {
   }
 
   return (
-    <>
+    <div className="flex flex-col gap-4">
       <Status loading={loading} error={error} retry={retry} />
       {data && (
         <>
-          <p className="result-line">
-            {data.completo ? "O pedido tem dados suficientes para decidir." : "Faltam dados para uma decisão completa."}{" "}
-            {data.resumo}
-          </p>
-          <ul className="missing-list">
+          <div
+            className={`p-4 rounded-2xl border flex items-center gap-3 text-sm font-medium ${
+              data.completo
+                ? "bg-emerald-50 border-emerald-200 text-emerald-900"
+                : "bg-amber-50 border-amber-200 text-amber-900"
+            }`}
+          >
+            <span
+              className={`material-symbols-outlined text-[22px] ${
+                data.completo ? "text-primary" : "text-tertiary"
+              }`}
+            >
+              {data.completo ? "verified" : "help_center"}
+            </span>
+            <span>
+              {data.completo
+                ? "O pedido tem todos os dados necessários para uma decisão completa e fundamentada."
+                : "Existem dados em falta recomendados para assegurar a conformidade total."}{" "}
+              {cleanRuleCodes(data.resumo)}
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-3">
             {data.dados.map((item) => (
-              <li key={item.codigo}>
-                <div className="step-trail-head">
-                  <strong>{item.descricao ?? item.codigo}</strong>
-                  {item.obrigatorio && <span className="tag-pending">obrigatório</span>}
+              <div
+                key={item.codigo}
+                className="card-tactile p-4 bg-white border border-border-card rounded-2xl flex flex-col gap-2.5 shadow-xs"
+              >
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="font-headline-sm text-sm font-bold text-on-surface">
+                    {item.descricao ?? "Dado complementar de balcão"}
+                  </span>
+                  {item.obrigatorio && (
+                    <span className="px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-extrabold uppercase tracking-wider">
+                      Obrigatório
+                    </span>
+                  )}
                 </div>
-                <code className="fact-raw">{item.caminho}</code>
-                <button type="button" className="btn-action" onClick={() => askWhy(item.codigo)}>
-                  Porque é preciso?
-                </button>
+
+                <div className="flex items-center justify-between pt-1">
+                  <button
+                    type="button"
+                    onClick={() => askWhy(item.codigo)}
+                    className="btn-tactile-secondary px-3.5 py-1.5 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[16px] text-primary">help</span>
+                    <span>Porque é necessário este dado?</span>
+                  </button>
+                </div>
+
                 {why?.code === item.codigo && (
-                  <div className="explain-body" aria-live="polite">
-                    {why.error && <p className="field-error">{why.error}</p>}
-                    {!why.data && !why.error && <p className="field-hint">A carregar...</p>}
-                    {why.data?.pergunta && <p><strong>{why.data.pergunta}</strong></p>}
-                    {why.data?.resumo && <p>{why.data.resumo}</p>}
-                    {why.data && why.data.regrasQueDependem.length > 0 && (
-                      <p className="field-hint">Regras que dependem deste dado: {why.data.regrasQueDependem.join(", ")}</p>
+                  <div className="p-3.5 rounded-xl bg-surface-container-low border border-border-card text-xs flex flex-col gap-1.5 animate-in fade-in duration-150">
+                    {why.error && <p className="text-error font-medium">{why.error}</p>}
+                    {!why.data && !why.error && (
+                      <p className="text-on-surface-variant font-medium">A consultar diretrizes...</p>
+                    )}
+                    {why.data?.pergunta && (
+                      <p className="font-bold text-on-surface text-sm">{why.data.pergunta}</p>
+                    )}
+                    {why.data?.resumo && (
+                      <p className="text-on-surface-variant">{cleanRuleCodes(why.data.resumo)}</p>
                     )}
                   </div>
                 )}
-              </li>
+              </div>
             ))}
-          </ul>
+          </div>
         </>
       )}
-    </>
+    </div>
   );
 }
 
@@ -259,7 +453,7 @@ function WhatIfTab({ evaluationId }: { evaluationId: string }) {
     try {
       parsed = JSON.parse(value);
     } catch {
-      // Texto simples (ex.: COLOCADAS) segue como string.
+      // Texto simples segue como string
     }
     return { [path.trim()]: parsed };
   }
@@ -267,41 +461,58 @@ function WhatIfTab({ evaluationId }: { evaluationId: string }) {
   const simulated = simulation?.decisaoSimulada?.elegibilidade;
 
   return (
-    <>
-      <p className="result-line">Veja como a decisão mudaria se uma condição do pedido fosse diferente.</p>
-      <div className="presets-btns">
+    <div className="flex flex-col gap-4">
+      <p className="font-body-md text-on-surface-variant text-sm">
+        Explore hipóteses e simule como a decisão mudaria caso um critério do cliente ou da peça fosse diferente:
+      </p>
+
+      {/* Preset simulation buttons */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {WHAT_IF_PRESETS.map((preset) => (
           <button
             key={preset.label}
             type="button"
-            className="btn-preset"
             disabled={loading}
             onClick={() => simulate(preset.changes)}
+            className="p-3.5 rounded-2xl bg-white border-2 border-border-card border-b-4 border-b-border-card-bottom hover:border-secondary hover:bg-blue-50/40 text-left transition-all active:translate-y-0.5 cursor-pointer disabled:opacity-50"
           >
-            E se {preset.label.toLowerCase()}?
+            <div className="flex items-center gap-2 text-secondary font-bold text-xs uppercase tracking-wider mb-1">
+              <span className="material-symbols-outlined text-[18px]">science</span>
+              <span>Hipótese</span>
+            </div>
+            <span className="font-headline-sm text-xs sm:text-sm font-bold text-on-surface leading-snug block">
+              {preset.label}
+            </span>
           </button>
         ))}
       </div>
-      <details className="request-editor">
-        <summary>Alteração personalizada (avançado)</summary>
-        <div className="inline-form-row">
+
+      {/* Advanced Custom Simulator */}
+      <details className="group rounded-2xl border border-border-card bg-surface-container-low p-4">
+        <summary className="font-label-md text-xs font-bold uppercase tracking-wider text-on-surface-variant cursor-pointer flex items-center justify-between">
+          <span>Alteração Personalizada (Avançado)</span>
+          <span className="material-symbols-outlined text-[18px] group-open:rotate-180 transition-transform">
+            expand_more
+          </span>
+        </summary>
+        <div className="flex flex-col sm:flex-row items-center gap-2 mt-3 pt-3 border-t border-border-card">
           <input
-            className="form-input"
+            className="w-full sm:flex-1 px-3 py-2 rounded-xl bg-white border border-border-card text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
             aria-label="Caminho do campo"
-            placeholder="artigos[0].estado.condicaoUso"
+            placeholder="Ex: artigos[0].estado.condicaoUso"
             value={path}
             onChange={(event) => setPath(event.target.value)}
           />
           <input
-            className="form-input"
+            className="w-full sm:flex-1 px-3 py-2 rounded-xl bg-white border border-border-card text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
             aria-label="Novo valor"
-            placeholder="USADO"
+            placeholder="Ex: USADO"
             value={value}
             onChange={(event) => setValue(event.target.value)}
           />
           <button
             type="button"
-            className="btn-action"
+            className="btn-tactile-primary px-4 py-2 text-xs font-bold whitespace-nowrap cursor-pointer disabled:opacity-50"
             disabled={loading || !path.trim() || !value.trim()}
             onClick={() => simulate(customChange())}
           >
@@ -310,50 +521,73 @@ function WhatIfTab({ evaluationId }: { evaluationId: string }) {
         </div>
       </details>
 
-      {loading && <p className="field-hint">A simular...</p>}
+      {loading && (
+        <div className="flex items-center gap-2 p-3 text-xs text-on-surface-variant font-medium animate-pulse">
+          <span className="material-symbols-outlined text-primary text-[18px] animate-spin">sync</span>
+          <span>A calcular simulação no motor de regras...</span>
+        </div>
+      )}
+
       {error && <ErrorBanner message={error} />}
+
       {simulation && (
-        <div className="explain-body" aria-live="polite">
-          {simulated && (
-            <p className="result-line">
-              Decisão simulada: <strong>{ELIGIBILITY[simulated]?.label ?? simulated}</strong>
+        <div className="card-tactile p-5 bg-white border border-border-card rounded-2xl shadow-xs flex flex-col gap-4">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <span className="font-label-md text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+              Resultado da Simulação
+            </span>
+            {simulated && (
+              <span
+                className={`px-3 py-1 rounded-full text-xs font-extrabold border ${
+                  simulated === "PERMITIR"
+                    ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                    : simulated === "RECUSAR"
+                    ? "bg-rose-100 text-rose-800 border-rose-300"
+                    : "bg-amber-100 text-amber-800 border-amber-300"
+                }`}
+              >
+                Decisão Simulada: {ELIGIBILITY[simulated]?.label ?? simulated}
+              </span>
+            )}
+          </div>
+
+          {simulation.resumo && (
+            <p className="font-body-md text-xs sm:text-sm text-on-surface">
+              {cleanRuleCodes(simulation.resumo)}
             </p>
           )}
-          {simulation.resumo && <p className="result-line">{simulation.resumo}</p>}
+
           {simulation.diferencas.length > 0 ? (
-            <div className="table-container">
-              <table className="plain-table">
-                <caption className="sr-only">Diferenças face à decisão original</caption>
-                <thead>
+            <div className="w-full overflow-x-auto rounded-xl border border-border-card shadow-xs">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead className="bg-surface-container-low text-on-surface-variant font-bold border-b border-border-card">
                   <tr>
-                    <th scope="col">Onde</th>
-                    <th scope="col">Campo</th>
-                    <th scope="col">Antes</th>
-                    <th scope="col">Depois</th>
+                    <th scope="col" className="p-2.5">Onde</th>
+                    <th scope="col" className="p-2.5">Campo</th>
+                    <th scope="col" className="p-2.5">Antes</th>
+                    <th scope="col" className="p-2.5">Depois</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-border-card/50">
                   {simulation.diferencas.map((diff, index) => (
-                    <tr key={index}>
-                      <td>{diff.alvo ?? "—"}</td>
-                      <td>{label(diff.campo)}</td>
-                      <td>{label(diff.original)}</td>
-                      <td>{label(diff.simulado)}</td>
+                    <tr key={index} className="hover:bg-surface-container-lowest">
+                      <td className="p-2.5 font-bold text-on-surface">{diff.alvo ?? "—"}</td>
+                      <td className="p-2.5 text-on-surface-variant">{label(diff.campo)}</td>
+                      <td className="p-2.5 text-rose-700 font-medium">{label(diff.original)}</td>
+                      <td className="p-2.5 text-emerald-700 font-bold">{label(diff.simulado)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           ) : (
-            <p className="field-hint">Esta alteração não muda a decisão.</p>
-          )}
-          {simulation.regrasNovas.length > 0 && <p className="field-hint">Regras novas: {simulation.regrasNovas.join(", ")}</p>}
-          {simulation.regrasRemovidas.length > 0 && (
-            <p className="field-hint">Regras que deixam de disparar: {simulation.regrasRemovidas.join(", ")}</p>
+            <p className="text-xs text-on-surface-variant font-medium">
+              Esta alteração não altera as conclusões de elegibilidade do veredito.
+            </p>
           )}
         </div>
       )}
-    </>
+    </div>
   );
 }
 
@@ -372,24 +606,37 @@ export default function ExplainTabs({
 
   return (
     <ExplainBaseContext.Provider value={base}>
-      <section className="explain" aria-label="Explicações da decisão">
-        <div className="explain-tabs" role="tablist">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              role="tab"
-              id={`tab-${tab.id}`}
-              aria-selected={active === tab.id}
-              aria-controls={`panel-${tab.id}`}
-              className={`subtab-btn ${active === tab.id ? "active" : ""}`}
-              onClick={() => setActive(tab.id)}
-            >
-              {tab.label}
-            </button>
-          ))}
+      <section className="w-full flex flex-col gap-4" aria-label="Explicações da decisão">
+        {/* Navigation Tabs Pill Bar */}
+        <div
+          role="tablist"
+          className="flex flex-wrap gap-2 p-1.5 bg-surface-container rounded-2xl border border-border-card"
+        >
+          {TABS.map((tab) => {
+            const isActive = active === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                id={`tab-${tab.id}`}
+                aria-selected={isActive}
+                aria-controls={`panel-${tab.id}`}
+                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer ${
+                  isActive
+                    ? "bg-primary-container text-white shadow-[0_2px_0_0_#059669]"
+                    : "text-on-surface-variant hover:text-on-surface hover:bg-white/60"
+                }`}
+                onClick={() => setActive(tab.id)}
+              >
+                <span className="material-symbols-outlined text-[18px]">{tab.icon}</span>
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
-        {/* Painéis sempre montados: cada um carrega uma vez por avaliação. */}
+
+        {/* Tab Panels */}
         <div role="tabpanel" id="panel-how" aria-labelledby="tab-how" hidden={active !== "how"}>
           <HowTab evaluationId={evaluationId} />
         </div>

@@ -54,7 +54,7 @@ has_fact(Fact) :-
 test(all_71_rules_loaded) :-
     retail_engine:load_knowledge_base(retail_rules),
     aggregate_all(count, retail_engine:regra(_), Count),
-    assertion(Count == 71).
+    assertion(Count == 73).
 
 test(nine_families_exact_counts) :-
     retail_engine:load_knowledge_base(retail_rules),
@@ -68,10 +68,10 @@ test(nine_families_exact_counts) :-
     aggregate_all(count, retail_engine:regra_info(_, ct, _), CtCount),
     aggregate_all(count, retail_engine:regra_info(_, bw, _), BwCount),
     assertion(HsCount == 6),
-    assertion(PcCount == 8),
+    assertion(PcCount == 9),
     assertion(PtCount == 8),
     assertion(ChCount == 10),
-    assertion(TnCount == 12),
+    assertion(TnCount == 13),
     assertion(EpCount == 7),
     assertion(ExCount == 8),
     assertion(CtCount == 8),
@@ -222,7 +222,7 @@ test(pc_008_biohazard_immediate_rejection_and_isolation) :-
     assert_scenario_facts([
         colaborador_autorizado(true),
         sku_reconhecido(true),
-        categoria_produto(bodywear), % Even bodywear is isolated if biohazard
+        categoria_produto(vestuario),
         estado_produto(sujo_contaminado_inseguro)
     ]),
     retail_engine:run_engine(_),

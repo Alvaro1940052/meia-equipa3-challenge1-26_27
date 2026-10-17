@@ -1,5 +1,6 @@
 import {
   ENGINE_PROXY,
+  AVALIACOES_PROXY,
   GATEWAY_TIMEOUT_MS,
   GATEWAY_URL,
   type EngineId,
@@ -45,7 +46,8 @@ function codeFromStatus(status: number): ApiErrorCode {
 }
 
 function matches(pattern: string, segments: string[]): boolean {
-  const parts = pattern.split("/");
+  if (pattern === "" && segments.length === 0) return true;
+  const parts = pattern.split("/").filter(Boolean);
   return (
     parts.length === segments.length &&
     parts.every((part, i) => part === "*" || part === segments[i])
@@ -124,4 +126,29 @@ export async function proxyEngine(
     { method, body: body || undefined, search: new URL(request.url).search },
     { neutralBrand }
   );
+}
+
+/** Proxy genérico e seguro para as rotas unificadas de histórico de inferências e comparação de motores. */
+export async function proxyAvaliacoes(
+  request: Request,
+  segments: string[] = []
+): Promise<Response> {
+  const config = AVALIACOES_PROXY;
+  const method = request.method as "GET" | "POST";
+  const allowed = config.allowed.some(
+    (route) => route.method === method && matches(route.pattern, segments)
+  );
+  if (!allowed) {
+    return errorResponse("NOT_ALLOWED", "Operação não disponível.", 404);
+  }
+
+  const subpath = segments.length > 0 ? `/${segments.map(encodeURIComponent).join("/")}` : "";
+  const path = `${config.gatewayPrefix}${subpath}`;
+  const body = method === "POST" ? await request.text() : undefined;
+
+  return gatewayFetch(path, {
+    method,
+    body: body || undefined,
+    search: new URL(request.url).search,
+  });
 }

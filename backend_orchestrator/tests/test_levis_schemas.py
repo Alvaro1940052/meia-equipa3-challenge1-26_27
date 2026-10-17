@@ -28,7 +28,8 @@ from app.schemas.levis import (
     TipoTransacaoEnum,
 )
 
-CENARIOS_DIR = (
+LOCAL_CENARIOS_DIR = Path(__file__).parent.parent / "data" / "cenarios"
+REPO_CENARIOS_DIR = (
     Path(__file__).parent.parent.parent
     / "drools-engine-levis-devolucoes-java"
     / "backend"
@@ -38,6 +39,7 @@ CENARIOS_DIR = (
     / "resources"
     / "cenarios"
 )
+CENARIOS_DIR = LOCAL_CENARIOS_DIR if LOCAL_CENARIOS_DIR.exists() and any(LOCAL_CENARIOS_DIR.glob("cenario-*.json")) else REPO_CENARIOS_DIR
 
 
 def test_cenario_01_validation():

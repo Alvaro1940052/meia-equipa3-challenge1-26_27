@@ -121,3 +121,64 @@ export const WHAT_IF_PRESETS: { label: string; changes: Record<string, unknown> 
   { label: "O portal online estivesse disponível", changes: { portalOnlineDisponivel: true } },
   { label: "O artigo estivesse usado", changes: { "artigos[0].estado.condicaoUso": "USADO" } },
 ];
+
+/** Remove códigos de regra internos (ex: PT-003, IN-005, CT-001, OUT-001, etc.) e termos técnicos de marca */
+export function cleanRuleCodes(text?: string | null): string {
+  if (!text) return "";
+  let cleaned = text
+    // Remove códigos com separador: "PT-003: ", "PT-003 - ", "PT-003 "
+    .replace(/\b[A-Z]{2,4}-\d{3,4}\s*[:–—-]?\s*/g, "")
+    // Remove códigos isolados
+    .replace(/\b[A-Z]{2,4}-\d{3,4}\b/g, "")
+    // Remove padrões como "OUT-001=PERMITIR" ou "OUT-002"
+    .replace(/\b[A-Z]{2,4}-\d{3,4}=[A-Z_]+\b/g, "")
+    // Remove menção a "Regra Marca"
+    .replace(/\s*Regra Marca\s*/gi, "")
+    // Normalizar espaços
+    .replace(/\s{2,}/g, " ")
+    .trim();
+
+  // Limpeza de pontuação inicial residual
+  cleaned = cleaned.replace(/^[:–—\-;,.]\s*/, "").trim();
+
+  return cleaned;
+}
+
+const MODULE_LABELS: Record<string, string> = {
+  M0: "Procedimentos de Balcão",
+  "M0-CONTEXTO": "Procedimentos de Balcão",
+  M1: "Identificação do Produto",
+  "M1-PRODUTO": "Identificação do Produto",
+  M2: "Compatibilidade de Canais",
+  "M2-CANAIS": "Compatibilidade de Canais",
+  M3: "Condição Física e Etiquetas",
+  "M3-ESTADO": "Condição Física e Etiquetas",
+  M4: "Comprovativo de Compra",
+  "M4-PRAZOS_RECIBOS": "Comprovativo de Compra",
+  "M4-COMPROVATIVO": "Comprovativo de Compra",
+  M5: "Janela Temporal e Prazos",
+  "M5-PRAZO": "Janela Temporal e Prazos",
+  M6: "Trocas e Exceções",
+  "M6-EXCECOES": "Trocas e Exceções",
+  "M6-TROCAS": "Trocas e Exceções",
+  M7: "Liquidação e Pagamento",
+  "M7-TENDER_MEIOS": "Liquidação e Pagamento",
+  "M7-LIQUIDACAO": "Liquidação e Pagamento",
+  M8: "Documentação Obrigatória",
+  "M8-CONCLUSAO": "Documentação Obrigatória",
+  "M8-DOCUMENTACAO": "Documentação Obrigatória",
+  M9: "Inspeção e Encaminhamento",
+  "M9-DESTINO": "Inspeção e Encaminhamento",
+};
+
+/** Devolve rótulo legível em português europeu para módulos de regras */
+export function moduleLabel(code?: string | null): string {
+  if (!code) return "Validação Geral";
+  const upper = code.toUpperCase();
+  if (MODULE_LABELS[upper]) return MODULE_LABELS[upper];
+  for (const [key, val] of Object.entries(MODULE_LABELS)) {
+    if (upper.startsWith(key)) return val;
+  }
+  return label(code);
+}
+

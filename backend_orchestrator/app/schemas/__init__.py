@@ -68,6 +68,15 @@ from app.schemas.levis import (
     TokenResponse,
     VarianteRegraDto,
 )
+from app.schemas.inference_record import (
+    AvaliarAmbosResponse,
+    ComparacaoMotoresResponse,
+    InferenciaDetalheResponse,
+    InferenciaItem,
+    RegraItemDto,
+    SeedCenarioItem,
+    SeedResponse,
+)
 from app.schemas.retail import (
     ItemCondition,
     ItemSchema,
@@ -77,6 +86,13 @@ from app.schemas.retail import (
 from app.schemas.scenario import ScenarioInput
 
 __all__ = [
+    "AvaliarAmbosResponse",
+    "ComparacaoMotoresResponse",
+    "InferenciaDetalheResponse",
+    "InferenciaItem",
+    "RegraItemDto",
+    "SeedCenarioItem",
+    "SeedResponse",
     "DecisionEnum",
     "EngineSourceEnum",
     "EvaluationResponse",

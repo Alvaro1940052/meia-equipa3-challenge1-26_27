@@ -6,6 +6,7 @@ import glob
 import json
 import logging
 from pathlib import Path
+import time
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
@@ -33,7 +34,8 @@ from app.schemas.levis import (
 logger = logging.getLogger(__name__)
 
 # Search candidates for Levi's scenario files
-DEFAULT_SCENARIOS_DIR = (
+LOCAL_DATA_SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "data" / "cenarios"
+REPO_TEST_SCENARIOS_DIR = (
     BASE_DIR.parent
     / "drools-engine-levis-devolucoes-java"
     / "backend"
@@ -42,6 +44,11 @@ DEFAULT_SCENARIOS_DIR = (
     / "test"
     / "resources"
     / "cenarios"
+)
+DEFAULT_SCENARIOS_DIR = (
+    LOCAL_DATA_SCENARIOS_DIR
+    if LOCAL_DATA_SCENARIOS_DIR.exists() and any(LOCAL_DATA_SCENARIOS_DIR.glob("cenario-*.json"))
+    else REPO_TEST_SCENARIOS_DIR
 )
 
 
@@ -82,8 +89,24 @@ class LevisService:
         Returns:
             Structured DecisaoResponse with eligibility, refund amounts, and rule trace.
         """
+        start_t = time.perf_counter()
         raw_result = await self.levis_client.evaluate(request)
-        return DecisaoResponse.model_validate(raw_result)
+        duracao_ms = max(1, int((time.perf_counter() - start_t) * 1000))
+        decisao = DecisaoResponse.model_validate(raw_result)
+
+        # Persist Drools inference record asynchronously and safely
+        try:
+            from app.services.inferences_service import InferencesService
+            await InferencesService.record_inference_safely(
+                motor="DROOLS",
+                decisao=decisao,
+                pedido_data=request,
+                duracao_ms=duracao_ms,
+            )
+        except Exception as exc:
+            logger.warning("[LevisService] Could not persist Drools inference record: %s", exc)
+
+        return decisao
 
     async def get_evaluation(
         self,
@@ -156,7 +179,16 @@ class LevisService:
         Returns:
             ExplicacaoPorqueResponse containing question justification.
         """
-        raw_result = await self.levis_client.get_why(dado, request, locale=locale)
+        dado_limpo = (dado or "").strip().upper()
+        # Drools organizes exchange type under IN-005 (PEDIDO); map EP-001 transparently
+        dado_drools = "IN-005" if dado_limpo == "EP-001" else dado_limpo
+        raw_result = await self.levis_client.get_why(dado_drools, request, locale=locale)
+        if dado_limpo == "EP-001" and isinstance(raw_result, dict):
+            raw_result["codigo"] = "EP-001"
+            raw_result["dado"] = "EP-001"
+            raw_result["pergunta"] = "A troca solicitada é apenas de tamanho para o mesmo modelo e cor?"
+            if "EP-001" not in raw_result.get("regrasQueDependem", []):
+                raw_result.setdefault("regrasQueDependem", []).insert(0, "EP-001")
         return ExplicacaoPorqueResponse.model_validate(raw_result)
 
     async def explain_how(
@@ -288,6 +320,9 @@ class LevisService:
         scenarios: List[CenarioExemploResponse] = []
         pattern = str(self.scenarios_dir / "cenario-*.json")
         scenario_files = sorted(glob.glob(pattern))
+
+        if not scenario_files and LOCAL_DATA_SCENARIOS_DIR.exists():
+            scenario_files = sorted(glob.glob(str(LOCAL_DATA_SCENARIOS_DIR / "cenario-*.json")))
 
         if not scenario_files:
             logger.warning("No Levi's scenario files found in path '%s'", self.scenarios_dir)

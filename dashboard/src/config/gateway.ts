@@ -1,20 +1,26 @@
 // Gateway e motores: configurável via variável de ambiente ou fallback para localhost.
-export const GATEWAY_URL = process.env.GATEWAY_URL || "http://127.0.0.1:8000";
+export const GATEWAY_URL = process.env.GATEWAY_URL || "http://localhost:8000";
 
 export const GATEWAY_TIMEOUT_MS = 15_000;
 
 export type EngineId = "returns" | "prolog";
 
-type Method = "GET" | "POST";
+export type Method = "GET" | "POST";
 
-interface AllowedRoute {
+export interface AllowedRoute {
   method: Method;
-  /** Padrão relativo ao prefixo do motor; `*` casa exatamente um segmento. */
+  /** Padrão relativo ao prefixo; `*` casa exatamente um segmento. */
   pattern: string;
 }
 
-interface EngineProxyConfig {
+export interface EngineProxyConfig {
   /** Prefixo do gateway onde o motor está exposto. */
+  gatewayPrefix: string;
+  allowed: AllowedRoute[];
+}
+
+export interface AvaliacoesProxyConfig {
+  /** Prefixo do gateway para histórico unificado e comparações. */
   gatewayPrefix: string;
   allowed: AllowedRoute[];
 }
@@ -55,4 +61,15 @@ export const ENGINE_PROXY: Record<EngineId, EngineProxyConfig> = {
       { method: "GET", pattern: "health" },
     ],
   },
+};
+
+export const AVALIACOES_PROXY: AvaliacoesProxyConfig = {
+  gatewayPrefix: "/api/v1/avaliacoes",
+  allowed: [
+    { method: "GET", pattern: "" },
+    { method: "GET", pattern: "*" },
+    { method: "GET", pattern: "comparacao/*" },
+    { method: "POST", pattern: "seed" },
+    { method: "POST", pattern: "avaliar-ambos" },
+  ],
 };

@@ -81,36 +81,38 @@ perguntavel(afterpay_pede_excecao(_)).
 perguntavel(promocao_escaloes(_)).
 perguntavel(risco_fraude(_)).
 perguntavel(concluivel_no_sistema(_)).
+perguntavel(recibo_original(_)).
 
 % ==============================================================================
 % Metaknowledge: Indexing Facts to Candidate Rules (facto_dispara_regras/2)
 % ==============================================================================
 facto_dispara_regras(colaborador_autorizado(_), ['HS-006', 'CT-001', 'CT-003']).
+facto_dispara_regras(recibo_original(_), ['PT-008', 'PT-008-SEM-RECIBO', 'PT-007']).
 facto_dispara_regras(sku_reconhecido(_), ['HS-001', 'HS-004']).
 facto_dispara_regras(marca(_), ['HS-002']).
 facto_dispara_regras(personalizado_ou_alterado(_), ['HS-003']).
 facto_dispara_regras(afterpay_pede_excecao(_), ['HS-005']).
 facto_dispara_regras(categoria_produto(_), ['PC-007', 'BW-001', 'BW-002', 'BW-003', 'BW-004']).
-facto_dispara_regras(estado_produto(_), ['PC-008', 'BW-004', 'BW-001', 'BW-002', 'BW-003', 'PC-001', 'PC-002', 'PC-003', 'PC-004', 'PC-005']).
+facto_dispara_regras(estado_produto(_), ['PC-008', 'PC-008-RECUSA', 'BW-004', 'BW-001', 'BW-002', 'BW-003', 'PC-001', 'PC-002', 'PC-003', 'PC-004', 'PC-005']).
 facto_dispara_regras(defeito_fabrico(_), ['PC-006']).
-facto_dispara_regras(comprovativo(_), ['PT-001', 'PT-002', 'PT-007', 'PT-008']).
+facto_dispara_regras(comprovativo(_), ['PT-001', 'PT-002', 'PT-007', 'PT-008', 'PT-008-FOTO', 'PT-008-SEM-RECIBO']).
 facto_dispara_regras(tipo_verificacao(_), ['PT-003', 'PT-004', 'PT-005', 'PT-006', 'CH-009', 'CH-010', 'TN-001', 'TN-007', 'EP-001', 'EP-003', 'EP-004', 'CT-001', 'CT-002', 'CT-004']).
 facto_dispara_regras(elegibilidade_produto(_), ['PT-003', 'PT-004', 'PT-005', 'CH-002', 'CH-003', 'CH-004', 'CH-005', 'CH-006', 'CH-009', 'CH-010', 'EP-001', 'EP-002', 'EP-003', 'EP-004', 'EP-005', 'EP-006', 'EP-007']).
 facto_dispara_regras(dias_desde_compra(_), ['PT-003', 'PT-004', 'PT-007', 'PT-008']).
 facto_dispara_regras(dias_desde_envio(_), ['CH-005']).
 facto_dispara_regras(cliente_fornece_dados(_), ['PT-006']).
-facto_dispara_regras(tipo_pedido(_), ['PT-007', 'PT-008', 'CH-006', 'TN-006', 'TN-007', 'EP-001', 'EP-002']).
+facto_dispara_regras(tipo_pedido(_), ['PT-007', 'PT-008', 'PT-008-SEM-RECIBO', 'PT-008-FOTO', 'CH-006', 'TN-006', 'TN-007', 'EP-001', 'EP-002']).
 facto_dispara_regras(canal_compra(_), ['CH-008', 'CH-007', 'HS-004', 'CH-001', 'CH-002', 'CH-003', 'CH-004', 'CH-005', 'CH-006', 'TN-009', 'TN-010', 'TN-012', 'PT-007']).
 facto_dispara_regras(tipo_loja(_), ['CH-001', 'CH-009', 'CH-010']).
 facto_dispara_regras(encomenda_encontrada(_), ['CH-002', 'CH-003', 'CH-004']).
 facto_dispara_regras(portal_online_disponivel(_), ['CH-002', 'CH-004']).
-facto_dispara_regras(meio_pagamento(_), ['HS-005', 'TN-001', 'TN-002', 'TN-003', 'TN-004', 'TN-005', 'TN-008', 'TN-009', 'TN-010', 'TN-011', 'TN-012', 'EX-006']).
+facto_dispara_regras(meio_pagamento(_), ['HS-005', 'TN-001', 'TN-002', 'TN-003', 'TN-004', 'TN-005', 'TN-008', 'TN-009', 'TN-010', 'TN-011', 'TN-011-SEM-CARTAO', 'TN-012', 'EX-006']).
 facto_dispara_regras(cartao_perdido_ou_roubado(_), ['TN-002']).
 facto_dispara_regras(conta_cartao_ativa(_), ['TN-002', 'TN-003']).
 facto_dispara_regras(tentativa_cartao_recusada(_), ['TN-003', 'TN-004']).
 facto_dispara_regras(saldo_reembolsavel(_), ['TN-006']).
-facto_dispara_regras(mercado(_), ['TN-011', 'TN-012']).
-facto_dispara_regras(cartao_interac_presente(_), ['TN-011', 'TN-012']).
+facto_dispara_regras(mercado(_), ['TN-011', 'TN-011-SEM-CARTAO', 'TN-012']).
+facto_dispara_regras(cartao_interac_presente(_), ['TN-011', 'TN-011-SEM-CARTAO', 'TN-012']).
 facto_dispara_regras(troca_apenas_tamanho(_), ['EP-001', 'EP-002']).
 facto_dispara_regras(promocao_escaloes(_), ['EP-003', 'EP-004']).
 facto_dispara_regras(artigo_entre_canais(_), ['EP-005', 'EP-006', 'EP-007']).
@@ -151,6 +153,7 @@ regra_info('PC-005', pc, "Recusar artigo lavado sem defeito de fabrico.").
 regra_info('PC-006', pc, "Permitir reembolso ou substituição com baixa por dano para defeito de fabrico.").
 regra_info('PC-007', pc, "Permitir bodywear em qualquer estado ao abrigo da política de satisfação.").
 regra_info('PC-008', pc, "Recusar e isolar em saco de risco biológico artigos sujos ou contaminados.").
+regra_info('PC-008-RECUSA', pc, "Recusar devolução de artigo contaminado sem garantia especial nem suspeita de fraude.").
 
 regra_info('PT-001', pt, "Classificar como devolução verificada quando comprovativo válido confirma a compra.").
 regra_info('PT-002', pt, "Classificar como devolução às cegas na ausência de comprovativo verificável.").
@@ -160,6 +163,8 @@ regra_info('PT-005', pt, "Permitir exclusivamente troca ou crédito de loja ao p
 regra_info('PT-006', pt, "Selecionar 'Saltar' se cliente sem recibo não fornece dados ou há barreira linguística.").
 regra_info('PT-007', pt, "Permitir ajuste de preço único no POS até 14 dias para compra em loja com recibo.").
 regra_info('PT-008', pt, "Recusar ajuste de preço após 14 dias ou sem recibo original.").
+regra_info('PT-008-SEM-RECIBO', pt, "Recusar ajuste de preço sem recibo original físico.").
+regra_info('PT-008-FOTO', pt, "Recusar ajuste de preço com fotografia de recibo sem recibo original.").
 
 regra_info('CH-001', ch, "Aplicar regras de comprovativo e avaliação da loja recetora para Mainline e Outlet.").
 regra_info('CH-002', ch, "Encaminhar compra online verificada através da BackPocket com reembolso original.").
@@ -183,6 +188,7 @@ regra_info('TN-008', tn, "Exigir fluxo da aplicação para compras efetuadas via
 regra_info('TN-009', tn, "Processar devolução Afterpay de loja através da app com talão de devolução do POS.").
 regra_info('TN-010', tn, "Processar compra online Afterpay na BackPocket para o método original sem exceções.").
 regra_info('TN-011', tn, "Exigir presença do cartão físico Interac no Canadá para estorno de débito.").
+regra_info('TN-011-SEM-CARTAO', tn, "Rever com chefia sénior Interac no Canadá sem cartão físico original.").
 regra_info('TN-012', tn, "Processar Interac BackPocket com estorno manual na VeriFone pelo valor exato.").
 
 regra_info('EP-001', ep, "Honrar preço original ou promocional em troca com recibo que altera apenas o tamanho.").
@@ -268,18 +274,23 @@ regra 'HS-005' se [meio_pagamento(afterpay) e afterpay_pede_excecao(true)]
 % 2. FAMÍLIA PC: PRODUCT CONDITION (ESTADO FÍSICO DO PRODUTO)
 % ==============================================================================
 
-% PC-008: Risco biológico / insalubridade (Precedência 4 - sobrepõe-se a tudo)
+% PC-008: Risco biológico / insalubridade (Precedência 4 - isolamento de risco biológico)
 regra 'PC-008' se [estado_produto(sujo_contaminado_inseguro)]
-               entao [cria_facto(decisao(recusar)),
-                      cria_facto(destino_produto(isolamento_risco_biologico)),
+               entao [cria_facto(destino_produto(isolamento_risco_biologico)),
                       cria_facto(regra_disparada('PC-008')),
-                      cria_facto(motivo("[PC-008] Artigo sujo, contaminado ou inseguro: recusar manuseamento normal e isolar imediatamente em saco de risco biológico."))].
+                      cria_facto(motivo("[PC-008] Artigo sujo, contaminado ou inseguro: isolar imediatamente em saco de risco biológico e cessar manuseamento normal."))].
+
+% PC-008-RECUSA: Recusa de artigo contaminado sem garantia especial nem fraude
+regra 'PC-008-RECUSA' se [estado_produto(sujo_contaminado_inseguro) e nao categoria_produto(bodywear) e nao risco_fraude(alto) e nao decisao(rever)]
+               entao [cria_facto(decisao(recusar)),
+                      cria_facto(tipo_transacao(nenhuma)),
+                      cria_facto(motivo("[PC-008] Artigo contaminado sem garantia especial: recusar devolução."))].
 
 % PC-007: Bodywear aceite em qualquer estado (Precedência 5 - antes de PC-001 a PC-005)
-regra 'PC-007' se [categoria_produto(bodywear) e nao estado_produto(sujo_contaminado_inseguro) e nao decisao(recusar)]
+regra 'PC-007' se [categoria_produto(bodywear) e nao decisao(recusar)]
                entao [cria_facto(elegibilidade_produto(aprovada)),
                       cria_facto(regra_disparada('PC-007')),
-                      cria_facto(motivo("[PC-007] Bodywear aceite em qualquer estado ao abrigo da política de satisfação. Destino determinado pelas regras BW."))].
+                      cria_facto(motivo("[PC-007] Bodywear aceite em qualquer estado ao abrigo da política de satisfação incondicional. Destino determinado pelas regras BW."))].
 
 % PC-006: Defeito de fabrico confirmado em peça não alterada (Precedência 5)
 regra 'PC-006' se [defeito_fabrico(true) e nao personalizado_ou_alterado(true) e nao decisao(recusar)]
@@ -344,7 +355,7 @@ regra 'PT-002' se [comprovativo(nenhum) e nao tipo_pedido(ajuste_preco) e nao ca
                       cria_facto(motivo("[PT-002] Não é possível verificar a compra: processar como devolução às cegas se o artigo for elegível."))].
 
 % PT-003: Devolução verificada elegível até 30 dias (Precedência 6)
-regra 'PT-003' se [tipo_verificacao(verificada) e elegibilidade_produto(aprovada) e avalia(dias_desde_compra(=<, 30)) e nao tipo_pedido(ajuste_preco) e nao decisao(recusar) e nao decisao(encaminhar)]
+regra 'PT-003' se [tipo_verificacao(verificada) e elegibilidade_produto(aprovada) e avalia(dias_desde_compra(=<, 30)) e nao tipo_pedido(ajuste_preco) e nao decisao(recusar) e nao decisao(encaminhar) e nao decisao(rever)]
                entao [cria_facto(decisao(permitir)),
                       cria_facto(tipo_transacao(reembolso_ou_troca)),
                       cria_facto(valor_devolucao(valor_pago)),
@@ -376,19 +387,31 @@ regra 'PT-006' se [tipo_verificacao(as_cegas) e cliente_fornece_dados(false)]
                       cria_facto(motivo("[PT-006] Cliente sem recibo recusa fornecer dados ou há barreira linguística: selecionar 'Saltar' e prosseguir a devolução às cegas."))].
 
 % PT-007: Ajuste de preço de compra em loja até 14 dias com recibo original
-regra 'PT-007' se [tipo_pedido(ajuste_preco) e avalia(canal_compra(in, [mainline, outlet, loja_fisica])) e comprovativo(recibo_impresso) e avalia(dias_desde_compra(=<, 14))]
+regra 'PT-007' se [tipo_pedido(ajuste_preco) e avalia(canal_compra(in, [mainline, outlet, loja_fisica])) e comprovativo(recibo_impresso) e avalia(dias_desde_compra(=<, 14)) e nao recibo_original(false)]
                entao [cria_facto(decisao(permitir)),
                       cria_facto(tipo_transacao(ajuste_preco)),
                       cria_facto(valor_devolucao(diferenca_pos)),
                       cria_facto(regra_disparada('PT-007')),
                       cria_facto(motivo("[PT-007] Ajuste de preço de compra em loja até 14 dias com recibo original: permitir ajuste único pela diferença calculada pelo POS."))].
 
-% PT-008: Ajuste de preço após 14 dias ou sem recibo
+% PT-008: Ajuste de preço após 14 dias ou sem recibo original
 regra 'PT-008' se [tipo_pedido(ajuste_preco) e avalia(dias_desde_compra(>, 14))]
                entao [cria_facto(decisao(recusar)),
                       cria_facto(tipo_transacao(nenhuma)),
                       cria_facto(regra_disparada('PT-008')),
                       cria_facto(motivo("[PT-008] Pedido de ajuste de preço após 14 dias ou sem recibo original: recusar ajuste de preço."))].
+
+regra 'PT-008-SEM-RECIBO' se [tipo_pedido(ajuste_preco) e recibo_original(false)]
+               entao [cria_facto(decisao(recusar)),
+                      cria_facto(tipo_transacao(nenhuma)),
+                      cria_facto(regra_disparada('PT-008')),
+                      cria_facto(motivo("[PT-008] Pedido de ajuste de preço sem recibo original: recusar ajuste de preço."))].
+
+regra 'PT-008-FOTO' se [tipo_pedido(ajuste_preco) e comprovativo(foto_recibo)]
+               entao [cria_facto(decisao(recusar)),
+                      cria_facto(tipo_transacao(nenhuma)),
+                      cria_facto(regra_disparada('PT-008')),
+                      cria_facto(motivo("[PT-008] Pedido de ajuste de preço com fotografia de recibo sem recibo original: recusar ajuste de preço."))].
 
 % ==============================================================================
 % 4. FAMÍLIA CH: CHANNEL & STORE TYPE (CANAIS E TIPOS DE LOJA)
@@ -426,7 +449,7 @@ regra 'CH-004' se [avalia(canal_compra(in, [levi_com, levi_ca])) e encomenda_enc
                       cria_facto(motivo("[CH-004] Encomenda online com portal indisponível: caso sem previsão documental expressa; rever com gestão sénior."))].
 
 % CH-005: Encomenda online enviada há mais de 30 dias
-regra 'CH-005' se [avalia(canal_compra(in, [levi_com, levi_ca])) e avalia(dias_desde_envio(>, 30)) e elegibilidade_produto(aprovada)]
+regra 'CH-005' se [avalia(canal_compra(in, [levi_com, levi_ca])) e avalia(dias_desde_envio(>, 30)) e elegibilidade_produto(aprovada) e nao meio_pagamento(paypal) e nao meio_pagamento(venmo) e nao meio_pagamento(afterpay)]
                entao [cria_facto(meio_reembolso(cartao_oferta)),
                       cria_facto(regra_disparada('CH-005')),
                       cria_facto(motivo("[CH-005] Encomenda online expedida há mais de 30 dias: emitir cartão de oferta para artigo elegível."))].
@@ -543,6 +566,14 @@ regra 'TN-011' se [mercado(canada) e meio_pagamento(interac) e cartao_interac_pr
                       cria_facto(regra_disparada('TN-011')),
                       cria_facto(motivo("[TN-011] Interac Canadá em loja física: o cliente deve apresentar o mesmo cartão físico Interac utilizado na compra."))].
 
+% TN-011: Interac no Canadá sem o mesmo cartão físico presente
+regra 'TN-011-SEM-CARTAO' se [mercado(canada) e meio_pagamento(interac) e avalia(cartao_interac_presente(in, [false, nao, ausente]))]
+               entao [cria_facto(decisao(rever)),
+                      cria_facto(aprovacao(responsavel_senior)),
+                      cria_facto(meio_reembolso(sem_meio_definido)),
+                      cria_facto(regra_disparada('TN-011')),
+                      cria_facto(motivo("[TN-011] Interac Canadá sem cartão físico original: os terminais Interac não suportam tokenização; rever com a chefia sénior sem meio definido."))].
+
 % TN-012: Interac no Canadá para compra efetuada via BackPocket
 regra 'TN-012' se [mercado(canada) e meio_pagamento(interac) e canal_compra(backpocket) e cartao_interac_presente(true)]
                entao [cria_facto(processo_obrigatorio(interac_verifone)),
@@ -645,7 +676,8 @@ regra 'EX-007' se [excecao_aprovada(true)]
 
 % EX-008: Indicadores de fraude ou inconsistências materiais
 regra 'EX-008' se [risco_fraude(alto)]
-               entao [cria_facto(pausar_transacao(true)),
+               entao [cria_facto(decisao(rever)),
+                      cria_facto(pausar_transacao(true)),
                       cria_facto(aprovacao(escalamento_distrital)),
                       cria_facto(documentacao(relatar_seguranca)),
                       cria_facto(regra_disparada('EX-008')),
@@ -731,7 +763,6 @@ regra 'BW-003' se [categoria_produto(bodywear) e pecas_em_falta(true) e nao esta
 
 % BW-004: Usado e sujo, contaminado ou inseguro
 regra 'BW-004' se [categoria_produto(bodywear) e estado_produto(sujo_contaminado_inseguro)]
-               entao [cria_facto(decisao(recusar)),
-                      cria_facto(destino_produto(isolamento_risco_biologico)),
+               entao [cria_facto(destino_produto(isolamento_risco_biologico)),
                       cria_facto(regra_disparada('BW-004')),
                       cria_facto(motivo("[BW-004] Bodywear usado, sujo, contaminado ou inseguro: colocar imediatamente em saco de risco biológico e isolar."))].

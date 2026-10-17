@@ -158,9 +158,11 @@ test(scenario_06_blind_multi_item_biohazard_escalation) :-
     ]),
     retail_engine:run_engine(Result),
     assertion(Result.status == "success"),
+    assertion(has_fact(decisao(rever))),
+    assertion(has_fact(aprovacao(escalamento_distrital))),
+    assertion(\+ has_fact(decisao(recusar))),
     assertion(has_fact(regra_disparada('EX-008'))),
     assertion(has_fact(regra_disparada('PC-008'))),
-    assertion(has_fact(aprovacao(escalamento_distrital))),
     assertion(has_fact(destino_produto(isolamento_risco_biologico))).
 
 % ------------------------------------------------------------------------------
@@ -180,10 +182,14 @@ test(scenario_07_canada_interac_card_mismatch) :-
     ]),
     retail_engine:run_engine(Result),
     assertion(Result.status == "success"),
+    assertion(has_fact(decisao(rever))),
+    assertion(has_fact(aprovacao(responsavel_senior))),
+    assertion(has_fact(meio_reembolso(sem_meio_definido))),
+    assertion(\+ has_fact(decisao(permitir))),
+    assertion(has_fact(regra_disparada('TN-011'))),
     assertion(has_fact(regra_disparada('PT-001'))),
     assertion(has_fact(regra_disparada('EX-002'))),
-    assertion(has_fact(regra_disparada('CH-001'))),
-    assertion(\+ has_fact(regra_disparada('TN-011'))).
+    assertion(has_fact(regra_disparada('CH-001'))).
 
 % ------------------------------------------------------------------------------
 % Scenario 8: O ajuste de preço após alteração de promoção
@@ -218,9 +224,11 @@ test(scenario_09_bodywear_soiled_satisfaction_biohazard) :-
     ]),
     retail_engine:run_engine(Result),
     assertion(Result.status == "success"),
+    assertion(has_fact(decisao(permitir))),
+    assertion(has_fact(destino_produto(isolamento_risco_biologico))),
+    assertion(\+ has_fact(decisao(recusar))),
     assertion(has_fact(regra_disparada('PC-008'))),
-    assertion(has_fact(regra_disparada('BW-004'))),
-    assertion(has_fact(destino_produto(isolamento_risco_biologico))).
+    assertion(has_fact(regra_disparada('BW-004'))).
 
 % ------------------------------------------------------------------------------
 % Scenario 10: A troca online tardia com PayPal durante uma falha do portal
@@ -240,6 +248,8 @@ test(scenario_10_online_late_exchange_portal_down_paypal) :-
     assertion(Result.status == "success"),
     assertion(has_fact(decisao(rever))),
     assertion(has_fact(aprovacao(responsavel_senior))),
+    assertion(has_fact(processo_obrigatorio(fluxo_app))),
+    assertion(\+ has_fact(meio_reembolso(cartao_oferta))),
     assertion(has_fact(regra_disparada('CH-004'))),
     assertion(has_fact(regra_disparada('TN-008'))),
     assertion(has_fact(regra_disparada('EX-001'))),

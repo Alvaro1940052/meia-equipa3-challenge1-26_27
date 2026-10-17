@@ -16,14 +16,32 @@ export default function ResultSummary({
   meta?: string;
   children?: ReactNode;
 }) {
+  const toneBg =
+    tone === "approved"
+      ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+      : tone === "rejected"
+      ? "bg-rose-100 text-rose-800 border-rose-300"
+      : "bg-amber-100 text-amber-800 border-amber-300";
+
   return (
-    <div className="result-box">
-      <div className="presets-label">{eyebrow}</div>
-      <div className="result-header">
-        <span className={`badge-decision ${tone}`}>{headline}</span>
-        {meta && <span className="meta-info">{meta}</span>}
+    <div className="card-tactile p-6 bg-white border border-border-card rounded-2xl shadow-sm flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <span className="font-label-md text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+          {eyebrow}
+        </span>
+        {meta && (
+          <span className="font-caption text-xs text-on-surface-variant bg-surface-container px-2.5 py-1 rounded-full font-medium">
+            {meta}
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-3">
+        <span className={`px-4 py-1.5 rounded-full text-sm font-extrabold border ${toneBg}`}>
+          {headline}
+        </span>
       </div>
       {children}
     </div>
   );
 }
+

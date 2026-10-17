@@ -8,6 +8,7 @@ from app.clients.drools_client import DroolsClient
 from app.clients.inference_client import InferenceClient
 from app.clients.levis_client import LevisClient
 from app.clients.prolog_client import PrologClient
+from app.db.session import get_db  # noqa: F401
 from app.services.drools_service import DroolsService
 from app.services.inference_service import InferenceService
 from app.services.levis_service import LevisService
@@ -104,6 +105,21 @@ def get_retail_prolog_service(
     svc = RetailPrologService(prolog_client=prolog_client, levis_service=levis_service)
     request.app.state.retail_prolog_service = svc
     return svc
+
+
+def get_inferences_service(
+    request: Request,
+    levis_service: LevisService = Depends(get_levis_service),
+    retail_prolog_service=Depends(get_retail_prolog_service),
+):
+    """Provide InferencesService instance, reusing application state if available."""
+    if hasattr(request.app.state, "inferences_service") and request.app.state.inferences_service is not None:
+        return request.app.state.inferences_service
+    from app.services.inferences_service import InferencesService
+    svc = InferencesService(levis_service=levis_service, retail_service=retail_prolog_service)
+    request.app.state.inferences_service = svc
+    return svc
+
 
 
 

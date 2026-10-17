@@ -9,6 +9,11 @@ services:
       POSTGRES_DB: pericial
       POSTGRES_USER: pericial
       POSTGRES_PASSWORD: pericial
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pericial -d pericial"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     volumes:
       - levis_postgres_data:/var/lib/postgresql/data
     networks:
@@ -23,11 +28,15 @@ services:
       - "8082:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=dev
+      - SERVER_PORT=8080
       - PERICIAL_DB_URL=jdbc:postgresql://levis-postgres:5432/pericial
       - PERICIAL_DB_UTILIZADOR=pericial
       - PERICIAL_DB_PALAVRA_PASSE=pericial
+      - SPRING_FLYWAY_BASELINE_ON_MIGRATE=true
+      - SPRING_FLYWAY_BASELINE_VERSION=0
     depends_on:
-      - levis-postgres
+      levis-postgres:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - retail-network
@@ -58,12 +67,17 @@ services:
       - PROLOG_TIMEOUT_SECONDS=5.0
       - DROOLS_ENGINE_URL=http://drools-engine:8080
       - LEVIS_DROOLS_URL=http://drools-engine:8080
+      - DATABASE_URL=postgresql+asyncpg://pericial:pericial@levis-postgres:5432/pericial
       - DEBUG=true
       - CORS_ORIGINS=["http://localhost:3000","http://localhost:5173","http://localhost:8000"]
       - INFERENCE_ENGINE_ENABLED=true
     depends_on:
-      - prolog-engine
-      - drools-engine
+      prolog-engine:
+        condition: service_started
+      drools-engine:
+        condition: service_started
+      levis-postgres:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - retail-network

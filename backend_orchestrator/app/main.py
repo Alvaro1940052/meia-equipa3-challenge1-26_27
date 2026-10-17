@@ -15,6 +15,8 @@ from app.clients.drools_client import DroolsClient
 from app.clients.levis_client import LevisClient
 from app.clients.prolog_client import PrologClient
 from app.core.config import settings
+from app.db.init_db import init_db
+from app.db.session import async_engine
 from app.services.drools_service import DroolsService
 from app.services.levis_service import LevisService
 from app.services.orchestrator_service import OrchestratorService
@@ -107,9 +109,27 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         app.state.inference_client = inference_client
         app.state.inference_service = inference_service
 
+    # Initialize database tables
+    await init_db()
+
+    # Seed official test scenarios idempotently (Drools & Prolog)
+    try:
+        from app.db.seed import seed_scenarios
+
+        await seed_scenarios(
+            force=False,
+            levis_service=app.state.levis_service,
+            retail_service=app.state.retail_prolog_service,
+        )
+    except Exception as exc:
+        import logging
+
+        logging.getLogger(__name__).warning("[Startup] Could not auto-seed scenarios on startup: %s", exc)
+
     yield
 
-    # Shutdown: Cleanly release network sockets and connection pools
+    # Shutdown: Cleanly release database engine, network sockets and connection pools
+    await async_engine.dispose()
     if not http_client.is_closed:
         await http_client.aclose()
     if not drools_http_client.is_closed:
