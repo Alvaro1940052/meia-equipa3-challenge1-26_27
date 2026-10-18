@@ -295,10 +295,40 @@ export default function Step5ExchangeExceptions() {
             );
           })}
         </div>
+      </div>
+
+      {/* 3. Exceção da Gerência: 03 se for troca, 02 se não for */}
+      <div className="w-full flex flex-col gap-3">
+        {/* Typographic Section Header */}
+        <div className="flex items-center gap-2 px-1">
+          <span className="font-mono tabular-nums text-xs font-bold text-slate-400 select-none">
+            {isExchange ? "03" : "02"}
+          </span>
+          <span className="text-slate-300">/</span>
+          <h3 className="font-sans text-sm sm:text-base font-bold text-slate-900 tracking-tight">
+            Exceção da Gerência
+          </h3>
+          {state.managerException === true ? (
+            <span className="font-sans inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60 select-none">
+              <span className="material-symbols-outlined text-[13px] font-bold">check</span>
+              Autorizada
+            </span>
+          ) : state.managerException === false ? (
+            <span className="font-sans inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200/60 select-none">
+              <span className="material-symbols-outlined text-[13px] font-bold">close</span>
+              Não Autorizada
+            </span>
+          ) : (
+            <span className="font-sans inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 select-none">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+              Obrigatório
+            </span>
+          )}
+        </div>
 
         {/* Autorização de Exceção pela Gerência com SlickSlider */}
         <div
-          className={`rounded-xl p-4 sm:p-5 border transition-all duration-150 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-0.5 bg-white ${
+          className={`rounded-xl p-4 sm:p-5 border transition-all duration-150 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white ${
             state.managerException === true
               ? "border-2 border-emerald-600"
               : state.managerException === false
@@ -339,7 +369,8 @@ export default function Step5ExchangeExceptions() {
                 )}
               </div>
               <p className="font-sans text-xs text-slate-500 mt-0.5 leading-relaxed">
-                Responsável presente autoriza flexibilização de prazo ou política comercial
+                Responsável presente autoriza flexibilização de prazo ou política comercial 
+    
               </p>
             </div>
           </div>

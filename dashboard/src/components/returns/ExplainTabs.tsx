@@ -13,11 +13,11 @@ import {
 } from "@/config/returnsLabels";
 import type {
   CondicaoDto,
+  DadoEmFaltaDto,
   DadosEmFaltaResponse,
   Elegibilidade,
   ExplicacaoComoResponse,
   ExplicacaoPorqueNaoConclusaoResponse,
-  ExplicacaoPorqueResponse,
   ReturnRequest,
   SimulacaoResponse,
 } from "@/types/returns";
@@ -25,13 +25,12 @@ import type {
 const ExplainBaseContext = createContext<string>("/api/returns");
 const LOCALE = "locale=pt-PT";
 
-export type TabId = "how" | "whynot" | "faq" | "whatif" | "missing";
+export type TabId = "how" | "whynot" | "whatif" | "missing";
 
 const TABS: { id: TabId; label: string; icon: string }[] = [
-  { id: "how", label: "Como Decidiu? (como/1)", icon: "route" },
-  { id: "whynot", label: "Porque Não...? (whynot/1)", icon: "help_outline" },
-  { id: "faq", label: "Perguntas de Balcão (ACM)", icon: "contact_support" },
-  { id: "whatif", label: "E Se...? (Simulação)", icon: "science" },
+  { id: "how", label: "Como Decidiu?", icon: "route" },
+  { id: "whynot", label: "Porque Não...?", icon: "help_outline" },
+  { id: "whatif", label: "Simulação E Se...", icon: "science" },
   { id: "missing", label: "Factos e Validações", icon: "fact_check" },
 ];
 
@@ -84,14 +83,22 @@ function Status({
     return (
       <div className="flex items-center gap-2.5 p-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-xs sm:text-sm font-medium animate-pulse">
         <span className="material-symbols-outlined text-emerald-600 text-[20px] animate-spin">sync</span>
-        <span>A consultar o motor de inferência...</span>
+        <span>A consultar o motor de inferência pericial...</span>
       </div>
     );
   return null;
 }
 
 function Conditions({ items }: { items: CondicaoDto[] }) {
-  if (items.length === 0) return null;
+  if (items.length === 0) {
+    return (
+      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 text-xs text-slate-500 italic flex items-center gap-2 mt-1">
+        <span className="material-symbols-outlined text-[16px] text-slate-400 shrink-0">info</span>
+        <span>As condições estruturais desta regra não foram atingidas no contexto deste pedido.</span>
+      </div>
+    );
+  }
+
   return (
     <ul className="flex flex-col gap-2 mt-2">
       {items.map((item, index) => (
@@ -105,15 +112,20 @@ function Conditions({ items }: { items: CondicaoDto[] }) {
         >
           <span
             className={`material-symbols-outlined text-[18px] shrink-0 mt-0.5 ${
-              item.cumprida ? "text-emerald-600" : "text-rose-600"
+              item.cumprida ? "text-emerald-600" : "text-rose-500"
             }`}
           >
             {item.cumprida ? "check_circle" : "cancel"}
           </span>
-          <div className="flex flex-col flex-1">
+          <div className="flex flex-col flex-1 min-w-0">
             <span className="font-semibold text-slate-900 leading-snug">
-              {cleanRuleCodes(item.descricao ?? item.nome) || "Critério de validação"}
+              {item.nome || item.descricao || "Critério de validação"}
             </span>
+            {item.descricao && item.descricao !== item.nome && (
+              <span className="text-[11px] text-slate-600 mt-0.5">
+                {item.descricao}
+              </span>
+            )}
             {item.valor && (
               <span className="text-[11px] text-slate-500 font-sans mt-0.5">
                 Valor apurado no pedido: <strong className="text-slate-800 tabular-nums">{item.valor}</strong>
@@ -135,28 +147,44 @@ function HowTab({ evaluationId }: { evaluationId: string }) {
   );
   const { data, error, loading, retry } = useRemote(load);
 
+  // Determinar a regra terminal para o banner de conclusão
+  const lastStep = data?.passos && data.passos.length > 0 ? data.passos[data.passos.length - 1] : null;
+  const conclusionText = lastStep
+    ? `Decisão estabelecida pela Regra [${lastStep.codigoRegra ?? "NORM"}] — ${cleanRuleCodes(lastStep.nomeRegra || lastStep.mensagem || "Decisão terminal")}`
+    : data?.paragem
+    ? cleanRuleCodes(data.paragem)
+    : "Decisão pericial estabelecida";
+
   return (
     <div className="flex flex-col gap-4 text-left">
       <Status loading={loading} error={error} retry={retry} />
       {data && (
         <>
+          {/* Banner de Conclusão Elegante e Minimalista */}
+          <div className="font-sans p-3.5 sm:p-4 rounded-xl bg-emerald-50/70 border border-emerald-200/80 text-emerald-950 text-xs sm:text-sm font-medium flex items-center gap-2.5 shadow-2xs">
+            <span className="material-symbols-outlined text-emerald-600 text-[20px] shrink-0">task_alt</span>
+            <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+              <strong className="text-emerald-900 font-bold whitespace-nowrap">Cadeia Dedutiva Concluída:</strong>
+              <span className="text-emerald-800">{conclusionText}</span>
+            </div>
+          </div>
+
+          {/* Resumo Global da Cadeia */}
           {data.resumo && (
-            <div className="font-sans p-4 rounded-xl bg-slate-50 border border-slate-200/80 text-slate-700 text-xs sm:text-sm leading-relaxed">
-              <strong className="font-sans text-slate-900 block mb-0.5">Resumo da Cadeia Dedutiva:</strong>
-              {cleanRuleCodes(data.resumo)}
+            <div className="font-sans p-4 rounded-xl bg-slate-50 border border-slate-200/80 text-slate-700 text-xs sm:text-sm leading-relaxed flex items-start gap-2.5">
+              <span className="material-symbols-outlined text-slate-400 text-[18px] shrink-0 mt-0.5">account_tree</span>
+              <div className="flex flex-col gap-0.5">
+                <strong className="font-sans text-slate-900 block">Resumo do Raciocínio Normativo:</strong>
+                <span>{cleanRuleCodes(data.resumo)}</span>
+              </div>
             </div>
           )}
 
-          {data.paragem && (
-            <div className="font-sans p-3.5 rounded-xl bg-amber-50 border border-amber-200/80 text-amber-900 text-xs font-medium flex items-center gap-2">
-              <span className="material-symbols-outlined text-amber-600 text-[18px]">stop_circle</span>
-              <span>O encadeamento concluiu em: {cleanRuleCodes(data.paragem)}</span>
-            </div>
-          )}
-
+          {/* Linha Temporal de Regras Disparadas */}
           <div className="flex flex-col gap-3 relative before:absolute before:top-4 before:bottom-4 before:left-5 before:w-0.5 before:bg-slate-200 before:z-0">
             {data.passos.map((step) => {
-              const ruleTitle = cleanRuleCodes(step.nomeRegra) || moduleLabel(step.modulo);
+              const ruleCode = step.codigoRegra || (step.nomeRegra?.match(/^[A-Z]{2,4}-\d{3,4}/)?.[0] ?? null);
+              const ruleTitle = cleanRuleCodes(step.nomeRegra) || step.nomeRegra || moduleLabel(step.modulo);
               const message = cleanRuleCodes(step.mensagem);
               const isApproved = step.resultado === "PERMITIR";
               const isRejected = step.resultado === "RECUSAR";
@@ -167,6 +195,7 @@ function HowTab({ evaluationId }: { evaluationId: string }) {
                   key={step.ordem}
                   className="p-4 bg-white border border-slate-200 rounded-xl shadow-2xs relative z-10 ml-0 sm:ml-2 flex items-start gap-3.5 hover:border-slate-300 transition-all"
                 >
+                  {/* Número de Ordem */}
                   <div
                     className={`font-mono tabular-nums w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 shadow-2xs ${
                       isApproved
@@ -181,18 +210,28 @@ function HowTab({ evaluationId }: { evaluationId: string }) {
                     {step.ordem}
                   </div>
 
-                  <div className="flex flex-col flex-1 gap-1">
+                  <div className="flex flex-col flex-1 gap-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap justify-between">
-                      <span className="font-sans font-bold text-sm text-slate-900">
-                        {ruleTitle}
-                      </span>
+                      {/* Código e Título da Regra */}
+                      <div className="flex items-center gap-2 flex-wrap min-w-0">
+                        {ruleCode && (
+                          <span className="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200/90 shrink-0">
+                            {ruleCode}
+                          </span>
+                        )}
+                        <span className="font-sans font-bold text-sm text-slate-900 leading-snug">
+                          {ruleTitle}
+                        </span>
+                      </div>
+
+                      {/* Badges de Módulo e Desfecho */}
                       <div className="flex items-center gap-1.5 flex-wrap font-sans">
                         {step.modulo && (
                           <span className="px-2 py-0.5 rounded-md bg-slate-100 text-[10px] font-semibold text-slate-600 border border-slate-200/80">
                             {moduleLabel(step.modulo)}
                           </span>
                         )}
-                        {step.resultado && (
+                        {step.resultado ? (
                           <span
                             className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${
                               isApproved
@@ -204,17 +243,21 @@ function HowTab({ evaluationId }: { evaluationId: string }) {
                           >
                             {ELIGIBILITY[step.resultado]?.label ?? step.resultado}
                           </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-md bg-slate-50 text-slate-500 border border-slate-200 text-[10px] font-semibold">
+                            Conforme
+                          </span>
                         )}
                         {step.aValidar && (
                           <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 text-[10px] font-semibold border border-amber-200">
-                            Requer PIN / Validação
+                            Requer Validação
                           </span>
                         )}
                       </div>
                     </div>
 
                     {message && (
-                      <p className="font-sans text-xs sm:text-sm text-slate-600 leading-relaxed mt-0.5">
+                      <p className="font-sans text-xs sm:text-sm text-slate-600 leading-relaxed mt-1">
                         {message}
                       </p>
                     )}
@@ -254,18 +297,20 @@ function WhyNotTab({
 
   return (
     <div className="flex flex-col gap-4 text-left">
+      {/* Pílulas de Seleção de Desfecho Alternativo */}
       <div className="flex flex-col gap-1.5">
         <span className="font-sans text-xs font-semibold text-slate-500">
-          Selecione o desfecho alternativo para analisar as pré-condições que falharam:
+          Selecione o desfecho alternativo para analisar as regras e critérios não cumpridos:
         </span>
         <div className="flex flex-wrap gap-2">
           {targets.map((value) => {
             const isActive = value === target;
+            const elInfo = ELIGIBILITY[value];
             return (
               <button
                 key={value}
                 type="button"
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-sans font-bold border transition-all cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-sans font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
                   isActive
                     ? "bg-slate-900 text-white border-slate-900 shadow-2xs"
                     : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
@@ -273,7 +318,10 @@ function WhyNotTab({
                 aria-pressed={isActive}
                 onClick={() => setTarget(value)}
               >
-                Porque não &ldquo;{ELIGIBILITY[value].label}&rdquo;?
+                <span>Porque não</span>
+                <span className={isActive ? "text-emerald-300" : "text-slate-900 font-extrabold"}>
+                  &ldquo;{elInfo?.label ?? value}&rdquo;?
+                </span>
               </button>
             );
           })}
@@ -285,36 +333,66 @@ function WhyNotTab({
       {data && (
         <div className="flex flex-col gap-4">
           {data.resumo && (
-            <div className="font-sans p-4 rounded-xl bg-slate-50 border border-slate-200/80 text-slate-700 text-xs sm:text-sm leading-relaxed">
-              <strong className="font-sans text-slate-900 block mb-0.5">Diagnóstico de Falha:</strong>
-              {cleanRuleCodes(data.resumo)}
+            <div className="font-sans p-4 rounded-xl bg-slate-50 border border-slate-200/80 text-slate-700 text-xs sm:text-sm leading-relaxed flex items-start gap-2.5">
+              <span className="material-symbols-outlined text-slate-400 text-[18px] shrink-0 mt-0.5">help</span>
+              <div className="flex flex-col gap-0.5">
+                <strong className="font-sans text-slate-900 block">Diagnóstico de Não Disparo:</strong>
+                <span>{cleanRuleCodes(data.resumo)}</span>
+              </div>
             </div>
           )}
 
+          {/* Lista de Regras Candidatas com Nome Explícito e Critérios de Falha */}
           <div className="grid grid-cols-1 gap-3">
-            {data.regras.map((rule, index) => (
-              <div
-                key={index}
-                className="p-4 bg-white border border-slate-200 rounded-xl flex flex-col gap-2 shadow-2xs"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-sans font-bold text-sm text-slate-900">
-                    {cause(rule.causa)}
-                  </span>
-                  <span className="font-sans px-2 py-0.5 rounded-md bg-slate-100 text-[10px] font-semibold text-slate-600 border border-slate-200/80">
-                    Condição de Política
-                  </span>
+            {data.regras.map((rule, index) => {
+              const ruleTitle = rule.variante
+                ? rule.variante
+                : rule.codigoRegra
+                ? `${rule.codigoRegra}: ${cleanRuleCodes(rule.resumo || "Critério Alternativo")}`
+                : cause(rule.causa);
+
+              return (
+                <div
+                  key={index}
+                  className="p-4 sm:p-5 bg-white border border-slate-200 rounded-xl flex flex-col gap-2.5 shadow-2xs hover:border-slate-300 transition-all"
+                >
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap min-w-0">
+                      {rule.codigoRegra && (
+                        <span className="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200/90 shrink-0">
+                          {rule.codigoRegra}
+                        </span>
+                      )}
+                      <span className="font-sans font-bold text-sm text-slate-900 leading-snug">
+                        {rule.variante ? cleanRuleCodes(rule.variante) : ruleTitle}
+                      </span>
+                    </div>
+
+                    <span
+                      className={`font-sans px-2.5 py-0.5 rounded-md text-[11px] font-bold border shrink-0 ${
+                        target === "RECUSAR"
+                          ? "bg-rose-50 text-rose-700 border-rose-200"
+                          : target === "REVER"
+                          ? "bg-amber-50 text-amber-700 border-amber-200"
+                          : target === "PERMITIR"
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : "bg-blue-50 text-blue-700 border-blue-200"
+                      }`}
+                    >
+                      Teria resultado em: {ELIGIBILITY[target]?.label ?? target}
+                    </span>
+                  </div>
+
+                  {rule.resumo && (
+                    <p className="font-sans text-xs sm:text-sm text-slate-600 leading-relaxed">
+                      {rule.resumo}
+                    </p>
+                  )}
+
+                  <Conditions items={rule.condicoes} />
                 </div>
-
-                {rule.resumo && (
-                  <p className="font-sans text-xs sm:text-sm text-slate-600">
-                    {cleanRuleCodes(rule.resumo)}
-                  </p>
-                )}
-
-                <Conditions items={rule.condicoes} />
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -322,144 +400,11 @@ function WhyNotTab({
   );
 }
 
-/** 3. Aba Perguntas Frequentes de Balcão (ACM - MI_Perguntas_ACM) */
-function CounterFaqTab({
-  obtained,
-  paymentMethod,
-}: {
-  obtained: Elegibilidade | null;
-  paymentMethod?: string;
-}) {
-  const [openIndex, setOpenIndex] = useState<number | null>(0);
-  const [searchTerm, setSearchTerm] = useState("");
-
-  const faqs = [
-    {
-      q: "O que fazer se o cliente contestar o veredito ao balcão?",
-      tags: ["EX-002", "EX-003", "EX-004", "Contestação"],
-      a: "Segundo a norma EX-002, o colaborador deve começar por explicar a política de loja com clareza e empatia, oferecendo a melhor alternativa conforme (ex.: troca por tamanho idêntico ou crédito de loja). Se o cliente se mantiver agitado ou causar perturbação no balcão, a norma EX-003 instrui o escalonamento imediato para o responsável sénior de turno. Nota: a agitação do cliente por si só não concede elegibilidade à devolução; o líder sénior apenas aprovará exceção se não houver paragens obrigatórias violadas e o risco de fraude for diminuto (EX-004).",
-    },
-    {
-      q: "Qual o destino físico exato que devo dar ao produto em loja?",
-      tags: ["OUT-007", "CT-008", "EP-005", "PC-008", "Destino"],
-      a: "O destino do artigo depende estritamente do seu estado físico e canal: se a peça estiver perfeita e com etiquetas originais, inspecione códigos e RFID e devolva à área de vendas (CT-008). Peças sem etiqueta ou de outros canais vão para a secção de saldos com redução de 20% (EP-006). Artigos com defeito de fabrico comprovado sofrem baixa por dano de imediato (PC-006). Artigos sujos, com odor ou insalubres são obrigatoriamente colocados em saco de risco biológico, datados e armazenados em reserva até ordem de destruição (PC-008 / BW-004).",
-    },
-    {
-      q: "Quais são as assinaturas e registos documentais obrigatórios?",
-      tags: ["OUT-008", "CT-005", "CT-006", "CT-007", "Auditoria"],
-      a: "De acordo com a norma CT-005, todas as devoluções concluídas exigem obrigatoriamente: 1) Assinatura do cliente (se recusar, o operador escreve 'Recusado'); 2) Assinatura do próprio operador processador; 3) Assinatura de testemunha (ou indicação 'SSC' se estiver em cobertura de colaborador único). O recibo original do cliente deve ser agrafado ao exemplar da loja (CT-006). Todo o suporte físico ou digital deve ser mantido em arquivo de retenção durante 90 dias para auditoria interna (CT-007).",
-    },
-    {
-      q: "Porque é que o Afterpay ou métodos digitais têm regras rígidas?",
-      tags: ["HS-005", "TN-008", "TN-010", "Afterpay", "Pagamento"],
-      a: "Pelas regras HS-005 e TN-010, compras online ou em loja pagas através de Afterpay ou aplicações financeiras não admitem qualquer exceção ao meio de reembolso (é terminantemente proibido devolver em numerário, cartão de oferta ou outro cartão bancário). O cliente deve aceder à aplicação para leitura do código de devolução e o estorno é processado integralmente através da plataforma parceira.",
-    },
-    {
-      q: "Como funciona a política para artigos de vestuário interior (Bodywear)?",
-      tags: ["PC-007", "BW-001", "BW-002", "BW-003", "Bodywear"],
-      a: "Pela norma PC-007, peças de roupa íntima e bodywear são sempre aceites para devolução ao balcão para garantir a satisfação do consumidor. Contudo, para proteção sanitária, o destino do artigo em loja obedece a critérios rigorosos: apenas peças não usadas com embalagem original selada voltam à venda (BW-001); embalagens abertas mas com artigos não usados vão para saldos a 50% com código riscado (BW-002); peças usadas sofrem baixa por dano imediata (BW-003) ou isolamento biológico (BW-004).",
-    },
-    {
-      q: "Porque é que o colaborador tem de usar credenciais próprias do início ao fim?",
-      tags: ["CT-001", "CT-003", "Segurança POS"],
-      a: "A norma CT-003 estabelece que cada atendimento de devolução ou troca deve ser autenticado com o utilizador e palavra-passe do colaborador que atende o cliente, do início ao fim da transação. É expressamente proibido partilhar credenciais ou concluir devoluções na sessão de outro colega, garantindo rastreabilidade e prevenção de perdas.",
-    },
-    {
-      q: "Como proceder quando o cliente solicita um ajuste de preço?",
-      tags: ["PT-007", "PT-008", "Ajuste de Preço"],
-      a: "O ajuste de preço só é permitido uma única vez por artigo, no prazo máximo de 14 dias após a compra em loja física, mediante apresentação do recibo original (PT-007). O sistema POS calcula a diferença face ao preço promocional atual. Fora deste prazo ou sem recibo original, o ajuste é expressamente recusado (PT-008).",
-    },
-  ];
-
-  const filteredFaqs = faqs.filter(
-    (item) =>
-      item.q.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.a.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.tags.some((t) => t.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
-
-  return (
-    <div className="flex flex-col gap-4 text-left">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100">
-        <div>
-          <h4 className="font-sans font-bold text-sm text-slate-900">Perguntas Rápidas de Balcão e Políticas Oficiais</h4>
-          <p className="font-sans text-xs text-slate-500 mt-0.5">
-            Respostas imediatas baseadas na base de conhecimento e normas de atendimento:
-          </p>
-        </div>
-
-        <div className="relative w-full sm:w-64">
-          <span className="material-symbols-outlined absolute left-3 top-2.5 text-[16px] text-slate-400">
-            search
-          </span>
-          <input
-            type="text"
-            placeholder="Pesquisar pergunta ou norma..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="font-sans w-full pl-9 pr-3 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          />
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-2.5">
-        {filteredFaqs.map((faq, idx) => {
-          const isOpen = openIndex === idx;
-          return (
-            <div
-              key={idx}
-              className="rounded-xl border border-slate-200 bg-white shadow-2xs overflow-hidden transition-all"
-            >
-              <button
-                type="button"
-                onClick={() => setOpenIndex(isOpen ? null : idx)}
-                className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-slate-50/70 transition-colors cursor-pointer"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="material-symbols-outlined text-[18px] text-emerald-600 shrink-0">
-                    help_outline
-                  </span>
-                  <span className="font-sans font-bold text-xs sm:text-sm text-slate-900">
-                    {faq.q}
-                  </span>
-                </div>
-                <span className="material-symbols-outlined text-[18px] text-slate-400 shrink-0 transition-transform duration-200" style={{ transform: isOpen ? "rotate(180deg)" : "none" }}>
-                  expand_more
-                </span>
-              </button>
-
-              {isOpen && (
-                <div className="px-4 pb-4 pt-1 border-t border-slate-100 bg-slate-50/50 flex flex-col gap-2.5">
-                  <p className="font-sans text-xs sm:text-sm text-slate-700 leading-relaxed font-normal">
-                    {faq.a}
-                  </p>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="font-sans text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                      Regras associadas:
-                    </span>
-                    {faq.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="font-mono tabular-nums px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-600 text-[10px] font-semibold"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-/** 4. Aba E Se...? (whatif - Simulação) */
+/** 3. Aba E Se...? (whatif - Simulação Contrafactual) */
 function WhatIfTab({ evaluationId }: { evaluationId: string }) {
   const base = useContext(ExplainBaseContext);
   const [simulation, setSimulation] = useState<SimulacaoResponse | null>(null);
+  const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [path, setPath] = useState("");
@@ -494,35 +439,46 @@ function WhatIfTab({ evaluationId }: { evaluationId: string }) {
   }
 
   const simulated = simulation?.decisaoSimulada?.elegibilidade;
+  const realDiffs = (simulation?.diferencas || []).filter((d) => d.original !== d.simulado);
 
   return (
     <div className="flex flex-col gap-4 text-left">
-      <p className="font-sans text-xs sm:text-sm text-slate-600">
-        Simule como a decisão do motor mudaria caso um critério da peça ou da compra do cliente fosse diferente:
+      <p className="font-sans text-xs sm:text-sm text-slate-600 leading-relaxed">
+        Simule como a deliberação pericial mudaria caso os pressupostos da peça ou da compra do cliente fossem alterados:
       </p>
 
-      {/* Preset simulation buttons */}
+      {/* Cartões de Presets com Moldura Ativa */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {WHAT_IF_PRESETS.map((preset) => (
-          <button
-            key={preset.label}
-            type="button"
-            disabled={loading}
-            onClick={() => simulate(preset.changes)}
-            className="p-3.5 rounded-xl bg-white border border-slate-200 hover:border-emerald-600 hover:shadow-2xs text-left transition-all cursor-pointer disabled:opacity-50"
-          >
-            <div className="flex items-center gap-1.5 text-emerald-700 font-sans font-bold text-[10px] uppercase tracking-wider mb-1">
-              <span className="material-symbols-outlined text-[15px]">science</span>
-              <span>Hipótese</span>
-            </div>
-            <span className="font-sans font-bold text-xs sm:text-sm text-slate-900 leading-snug block">
-              {preset.label}
-            </span>
-          </button>
-        ))}
+        {WHAT_IF_PRESETS.map((preset) => {
+          const isSelected = selectedPreset === preset.label;
+          return (
+            <button
+              key={preset.label}
+              type="button"
+              disabled={loading}
+              onClick={() => {
+                setSelectedPreset(preset.label);
+                simulate(preset.changes);
+              }}
+              className={`p-4 rounded-xl text-left transition-all cursor-pointer disabled:opacity-50 border ${
+                isSelected
+                  ? "border-emerald-600 ring-2 ring-emerald-500/20 shadow-xs bg-emerald-50/30"
+                  : "bg-white border-slate-200 hover:border-emerald-500 hover:shadow-2xs"
+              }`}
+            >
+              <div className="flex items-center gap-1.5 text-emerald-700 font-sans font-bold text-[10px] uppercase tracking-wider mb-1.5">
+                <span className="material-symbols-outlined text-[15px]">science</span>
+                <span>Hipótese Rápida</span>
+              </div>
+              <span className="font-sans font-bold text-xs sm:text-sm text-slate-900 leading-snug block">
+                {preset.label}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Custom Simulator */}
+      {/* Simulador Personalizado */}
       <details className="group rounded-xl border border-slate-200 bg-slate-50/70 p-3.5">
         <summary className="font-sans text-xs font-bold uppercase tracking-wider text-slate-500 cursor-pointer flex items-center justify-between">
           <span>Personalizar Parâmetro Contrafactual</span>
@@ -549,7 +505,10 @@ function WhatIfTab({ evaluationId }: { evaluationId: string }) {
             type="button"
             className="font-sans w-full sm:w-auto px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold whitespace-nowrap cursor-pointer disabled:opacity-50 transition-colors"
             disabled={loading || !path.trim() || !value.trim()}
-            onClick={() => simulate(customChange())}
+            onClick={() => {
+              setSelectedPreset(null);
+              simulate(customChange());
+            }}
           >
             Simular Hipótese
           </button>
@@ -569,7 +528,7 @@ function WhatIfTab({ evaluationId }: { evaluationId: string }) {
         <div className="p-4 sm:p-5 bg-white border border-slate-200 rounded-xl shadow-2xs flex flex-col gap-3.5">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <span className="font-sans text-xs font-bold uppercase tracking-wider text-slate-500">
-              Resultado da Hipótese
+              Resultado da Hipótese Contrafactual
             </span>
             {simulated && (
               <span
@@ -592,23 +551,56 @@ function WhatIfTab({ evaluationId }: { evaluationId: string }) {
             </p>
           )}
 
-          {simulation.diferencas.length > 0 ? (
-            <div className="w-full overflow-x-auto rounded-xl border border-slate-200 shadow-2xs">
+          {/* Dinâmica de Regras Novas / Removidas */}
+          {(simulation.regrasNovas?.length > 0 || simulation.regrasRemovidas?.length > 0) && (
+            <div className="flex flex-wrap items-center gap-3 pt-1 text-xs font-sans">
+              {simulation.regrasNovas.length > 0 && (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-slate-500 font-medium">Regras ativadas:</span>
+                  {simulation.regrasNovas.map((code) => (
+                    <span
+                      key={code}
+                      className="font-mono text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200"
+                    >
+                      +{code}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {simulation.regrasRemovidas.length > 0 && (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-slate-500 font-medium">Regras desativadas:</span>
+                  {simulation.regrasRemovidas.map((code) => (
+                    <span
+                      key={code}
+                      className="font-mono text-[11px] font-bold text-rose-800 bg-rose-50 px-2 py-0.5 rounded border border-rose-200 line-through"
+                    >
+                      -{code}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tabela de Diferenças Significativas */}
+          {realDiffs.length > 0 ? (
+            <div className="w-full overflow-x-auto rounded-xl border border-slate-200 shadow-2xs mt-1">
               <table className="w-full text-left border-collapse text-xs font-sans tabular-nums">
                 <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
                   <tr>
                     <th scope="col" className="p-2.5">Onde</th>
-                    <th scope="col" className="p-2.5">Campo</th>
-                    <th scope="col" className="p-2.5">Antes</th>
-                    <th scope="col" className="p-2.5">Depois</th>
+                    <th scope="col" className="p-2.5">Campo Alterado</th>
+                    <th scope="col" className="p-2.5">Valor Original</th>
+                    <th scope="col" className="p-2.5">Valor Hipotético</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 bg-white">
-                  {simulation.diferencas.map((diff, index) => (
-                    <tr key={index} className="hover:bg-slate-50/60">
-                      <td className="p-2.5 font-sans font-bold text-slate-900">{diff.alvo ?? "—"}</td>
-                      <td className="p-2.5 text-slate-600">{label(diff.campo)}</td>
-                      <td className="p-2.5 text-rose-700 font-medium">{label(diff.original)}</td>
+                  {realDiffs.map((diff, index) => (
+                    <tr key={index} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="p-2.5 font-sans font-bold text-slate-900">{diff.alvo ?? "Pedido"}</td>
+                      <td className="p-2.5 text-slate-700 font-medium">{label(diff.campo)}</td>
+                      <td className="p-2.5 text-rose-700 font-semibold">{label(diff.original)}</td>
                       <td className="p-2.5 text-emerald-700 font-bold">{label(diff.simulado)}</td>
                     </tr>
                   ))}
@@ -616,9 +608,10 @@ function WhatIfTab({ evaluationId }: { evaluationId: string }) {
               </table>
             </div>
           ) : (
-            <p className="font-sans text-xs text-slate-500 italic">
-              Esta alteração pontual não modifica o veredito de elegibilidade calculado.
-            </p>
+            <div className="font-sans p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-slate-600 text-xs flex items-center gap-2 mt-1">
+              <span className="material-symbols-outlined text-[18px] text-slate-400 shrink-0">info</span>
+              <span>Esta alteração contrafactual pontual não modifica o veredito de elegibilidade calculado pelo motor pericial.</span>
+            </div>
           )}
         </div>
       )}
@@ -626,7 +619,74 @@ function WhatIfTab({ evaluationId }: { evaluationId: string }) {
   );
 }
 
-/** 5. Aba Factos e Validações (missing / dados-em-falta) */
+type RecordUnknown = Record<string, unknown>;
+
+/** Extração de Factos e Pressupostos Auditados a partir do Pedido do Wizard */
+function getAuditedFacts(request: ReturnRequest) {
+  const req = request as RecordUnknown;
+  const loja = (typeof req.loja === "object" && req.loja !== null ? req.loja : {}) as RecordUnknown;
+  const compra = (typeof req.compraOriginal === "object" && req.compraOriginal !== null ? req.compraOriginal : {}) as RecordUnknown;
+  const pagamento = (typeof compra.pagamento === "object" && compra.pagamento !== null ? compra.pagamento : {}) as RecordUnknown;
+  const comprovativo = (typeof req.comprovativo === "object" && req.comprovativo !== null ? req.comprovativo : null) as RecordUnknown | null;
+  const artigos = Array.isArray(req.artigos) ? (req.artigos as RecordUnknown[]) : [];
+  const firstArt = artigos.length > 0 ? artigos[0] : {};
+  const estadoArt = (typeof firstArt.estado === "object" && firstArt.estado !== null ? firstArt.estado : {}) as RecordUnknown;
+  const colab = (typeof req.colaborador === "object" && req.colaborador !== null ? req.colaborador : {}) as RecordUnknown;
+  const prod = (typeof firstArt.produto === "object" && firstArt.produto !== null ? firstArt.produto : {}) as RecordUnknown;
+
+  const isBlind = !comprovativo || comprovativo.tipo === "SEM_COMPROVATIVO";
+
+  return [
+    {
+      category: "Canal de Aquisição",
+      icon: "storefront",
+      value: compra.canal ? label(compra.canal) : (loja.tipoLoja ? label(loja.tipoLoja) : "Loja Própria (Mainline)"),
+      detail: compra.idTransacao ? `Transação: ${String(compra.idTransacao)}` : "Canal validado pelo motor",
+    },
+    {
+      category: "Loja de Atendimento",
+      icon: "domain",
+      value: (loja.nome as string) || (loja.tipoLoja ? `Loja ${label(loja.tipoLoja)}` : "Loja Física Oficial"),
+      detail: loja.codigo ? `Unidade: ${String(loja.codigo)} (${String(loja.mercado || "EUA")})` : "Conformidade geográfica confirmada",
+    },
+    {
+      category: "Estado Físico da Peça",
+      icon: "checkroom",
+      value: estadoArt.condicaoUso
+        ? `${label(estadoArt.condicaoUso)}, Etiquetas ${label(estadoArt.etiquetas || "COLOCADAS")}`
+        : "Artigo não usado com etiquetas originais afixadas",
+      detail: prod.sku ? `SKU: ${String(prod.sku)}` : "Inspeção física aprovada",
+    },
+    {
+      category: "Comprovativo de Compra",
+      icon: "receipt_long",
+      value: isBlind
+        ? "Sem comprovativo (Processo às Cegas)"
+        : (comprovativo?.tipo ? label(comprovativo.tipo) : "Recibo de compra apresentado"),
+      detail: comprovativo?.idComprovativo ? `Ref: ${String(comprovativo.idComprovativo)}` : "Verificação de compra apurada",
+    },
+    {
+      category: "Meio de Pagamento Original",
+      icon: "credit_card",
+      value: pagamento.meio ? label(pagamento.meio) : "Meio de pagamento verificado",
+      detail: pagamento.estadoConta ? `Conta ${label(pagamento.estadoConta).toLowerCase()}` : "Registo de liquidação validado",
+    },
+    {
+      category: "Operador de Caixa",
+      icon: "badge",
+      value: colab.nome ? String(colab.nome) : "Operador de Balcão Autorizado",
+      detail: colab.funcao ? `Função: ${label(colab.funcao)} (POS Ativo)` : "Sessão POS autenticada",
+    },
+    {
+      category: "Janela Temporal / Prazo",
+      icon: "calendar_today",
+      value: compra.dataCompra ? `Compra registada a ${String(compra.dataCompra)}` : "Dentro do prazo regulamentar",
+      detail: "Conformidade com a janela de 28 dias da política",
+    },
+  ];
+}
+
+/** 4. Aba Factos e Validações (missing / dados-em-falta) */
 function MissingTab({ request }: { request: ReturnRequest }) {
   const base = useContext(ExplainBaseContext);
   const load = useCallback(
@@ -639,61 +699,153 @@ function MissingTab({ request }: { request: ReturnRequest }) {
   );
   const { data, error, loading, retry } = useRemote(load);
 
+  const auditedFacts = getAuditedFacts(request);
+  const sortedDados = (data?.dados || []).slice().sort((a, b) => (b.obrigatorio ? 1 : 0) - (a.obrigatorio ? 1 : 0));
+
   return (
-    <div className="flex flex-col gap-4 text-left">
+    <div className="flex flex-col gap-5 text-left">
       <Status loading={loading} error={error} retry={retry} />
       {data && (
         <>
+          {/* Banner de Auditoria */}
           <div
-            className={`font-sans p-4 rounded-xl border flex items-center gap-3 text-xs sm:text-sm font-medium ${
+            className={`font-sans p-4 rounded-xl border flex items-center gap-3 text-xs sm:text-sm font-medium shadow-2xs ${
               data.completo
                 ? "bg-emerald-50/70 border-emerald-200/80 text-emerald-950"
                 : "bg-amber-50/70 border-amber-200/80 text-amber-950"
             }`}
           >
             <span
-              className={`material-symbols-outlined text-[22px] ${
+              className={`material-symbols-outlined text-[24px] shrink-0 ${
                 data.completo ? "text-emerald-600" : "text-amber-600"
               }`}
             >
               {data.completo ? "verified" : "help_center"}
             </span>
-            <span>
-              {data.completo
-                ? "O pedido tem todos os dados necessários para uma decisão pericial completa e auditável."
-                : "Existem dados complementares recomendados para assegurar conformidade integral."}{" "}
-              {cleanRuleCodes(data.resumo)}
-            </span>
+            <div className="flex flex-col gap-0.5">
+              <strong className="font-bold">
+                {data.completo
+                  ? "Auditoria Normativa Concluída com Sucesso"
+                  : "Pendências de Dados Identificadas"}
+              </strong>
+              <span className="leading-relaxed">
+                {data.completo
+                  ? "O pedido reúne a totalidade dos dados requeridos pelas políticas comerciais para uma deliberação vinculativa e auditável."
+                  : "Existem dados complementares recomendados para assegurar conformidade integral com as normas de auditoria."}{" "}
+                {cleanRuleCodes(data.resumo)}
+              </span>
+            </div>
           </div>
 
-          <div className="flex flex-col gap-2.5">
-            {data.dados.map((item) => (
-              <div
-                key={item.codigo}
-                className="p-3.5 bg-white border border-slate-200 rounded-xl flex items-center justify-between gap-3 shadow-2xs"
-              >
-                <div className="flex flex-col min-w-0">
-                  <span className="font-sans font-bold text-xs sm:text-sm text-slate-900 truncate">
-                    {item.descricao ?? "Dado de balcão"}
-                  </span>
-                  <span className="text-[11px] text-slate-500 font-sans">
-                    Código: <span className="font-mono tabular-nums">{item.codigo}</span>
-                  </span>
-                </div>
-                {item.obrigatorio ? (
-                  <span className="font-sans px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 text-[10px] font-bold uppercase tracking-wider border border-rose-200 shrink-0">
-                    Obrigatório
-                  </span>
-                ) : (
-                  <span className="font-sans px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-semibold border border-slate-200 shrink-0">
-                    Opcional
-                  </span>
-                )}
+          {/* Dados em Falta (se existirem) ordenados por prioridade */}
+          {sortedDados.length > 0 && (
+            <div className="flex flex-col gap-2.5">
+              <span className="font-sans text-xs font-bold uppercase tracking-wider text-rose-600">
+                Dados em Falta ou Recomendações Normativas
+              </span>
+              <div className="flex flex-col gap-2.5">
+                {sortedDados.map((item: DadoEmFaltaDto) => (
+                  <div
+                    key={item.codigo}
+                    className="p-4 bg-white border border-slate-200 rounded-xl flex flex-col gap-2 shadow-2xs"
+                  >
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                          {item.codigo}
+                        </span>
+                        <span className="font-sans font-bold text-xs sm:text-sm text-slate-900">
+                          {item.descricao ?? "Dado de balcão"}
+                        </span>
+                      </div>
+                      {item.obrigatorio ? (
+                        <span className="font-sans px-2.5 py-0.5 rounded-md bg-rose-50 text-rose-700 text-[10px] font-bold uppercase tracking-wider border border-rose-200 shrink-0">
+                          Obrigatório
+                        </span>
+                      ) : (
+                        <span className="font-sans px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-semibold border border-slate-200 shrink-0">
+                          Recomendado
+                        </span>
+                      )}
+                    </div>
+                    {item.porque?.resumo && (
+                      <p className="font-sans text-xs text-slate-600 leading-relaxed">
+                        <strong>Impacto Normativo:</strong> {item.porque.resumo}
+                      </p>
+                    )}
+                    {item.porque?.regrasQueDependem && item.porque.regrasQueDependem.length > 0 && (
+                      <div className="flex items-center gap-1.5 flex-wrap text-[11px] text-slate-500 font-sans">
+                        <span>Afeta as regras:</span>
+                        {item.porque.regrasQueDependem.map((r) => (
+                          <span key={r} className="font-mono text-[10px] font-bold px-1.5 py-0.5 bg-slate-100 rounded text-slate-700">
+                            {r}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
+          )}
+
+          {/* Grelha de 2 Colunas com os Factos Auditados pelo Motor */}
+          <div className="flex flex-col gap-2.5">
+            <div className="flex items-center justify-between px-1">
+              <span className="font-sans text-xs font-bold uppercase tracking-wider text-slate-500">
+                Factos e Premissas Auditados pelo Motor
+              </span>
+              <span className="font-sans text-[11px] text-slate-400">
+                {auditedFacts.length} pressupostos validados
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {auditedFacts.map((fact, idx) => (
+                <div
+                  key={idx}
+                  className="p-3.5 bg-white border border-slate-200 rounded-xl flex items-start gap-3 shadow-2xs hover:border-slate-300 transition-all"
+                >
+                  <span className="material-symbols-outlined text-[20px] text-slate-400 shrink-0 mt-0.5">
+                    {fact.icon}
+                  </span>
+                  <div className="flex flex-col flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-1 mb-0.5">
+                      <span className="font-sans text-[11px] font-semibold text-slate-400 uppercase tracking-wider truncate">
+                        {fact.category}
+                      </span>
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200 shrink-0">
+                        <span className="material-symbols-outlined text-[12px]">check</span>
+                        <span>Validado</span>
+                      </span>
+                    </div>
+                    <span className="font-sans font-bold text-xs sm:text-sm text-slate-900 leading-snug">
+                      {fact.value}
+                    </span>
+                    <span className="font-sans text-[11px] text-slate-500 mt-0.5 truncate">
+                      {fact.detail}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+function MissingEvaluationBanner({ tab }: { tab: string }) {
+  return (
+    <div className="font-sans p-5 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-xs sm:text-sm text-left flex items-start sm:items-center gap-3">
+      <span className="material-symbols-outlined text-amber-500 text-[22px] shrink-0 mt-0.5 sm:mt-0">info</span>
+      <div className="flex flex-col gap-0.5">
+        <span className="font-bold text-slate-800">Identificador de Avaliação Indisponível</span>
+        <span className="text-slate-500 leading-relaxed">
+          Não é possível carregar a análise &ldquo;{tab}&rdquo; sem um ID de avaliação registado pelo motor.
+        </span>
+      </div>
     </div>
   );
 }
@@ -703,7 +855,6 @@ export default function ExplainTabs({
   request,
   obtained,
   base = "/api/returns",
-  paymentMethod,
 }: {
   evaluationId: string;
   request: ReturnRequest;
@@ -712,6 +863,7 @@ export default function ExplainTabs({
   paymentMethod?: string;
 }) {
   const [active, setActive] = useState<TabId>("how");
+  const hasEvaluationId = Boolean(evaluationId && evaluationId.trim().length > 0);
 
   return (
     <ExplainBaseContext.Provider value={base}>
@@ -747,16 +899,25 @@ export default function ExplainTabs({
 
         {/* Tab Panels */}
         <div role="tabpanel" id="panel-how" aria-labelledby="tab-how" hidden={active !== "how"}>
-          <HowTab evaluationId={evaluationId} />
+          {hasEvaluationId ? (
+            <HowTab evaluationId={evaluationId} />
+          ) : (
+            <MissingEvaluationBanner tab="Como Decidiu" />
+          )}
         </div>
         <div role="tabpanel" id="panel-whynot" aria-labelledby="tab-whynot" hidden={active !== "whynot"}>
-          <WhyNotTab evaluationId={evaluationId} obtained={obtained} />
-        </div>
-        <div role="tabpanel" id="panel-faq" aria-labelledby="tab-faq" hidden={active !== "faq"}>
-          <CounterFaqTab obtained={obtained} paymentMethod={paymentMethod} />
+          {hasEvaluationId ? (
+            <WhyNotTab evaluationId={evaluationId} obtained={obtained} />
+          ) : (
+            <MissingEvaluationBanner tab="Porque Não" />
+          )}
         </div>
         <div role="tabpanel" id="panel-whatif" aria-labelledby="tab-whatif" hidden={active !== "whatif"}>
-          <WhatIfTab evaluationId={evaluationId} />
+          {hasEvaluationId ? (
+            <WhatIfTab evaluationId={evaluationId} />
+          ) : (
+            <MissingEvaluationBanner tab="Simulação E Se" />
+          )}
         </div>
         <div role="tabpanel" id="panel-missing" aria-labelledby="tab-missing" hidden={active !== "missing"}>
           <MissingTab request={request} />

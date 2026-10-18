@@ -101,7 +101,7 @@ facto_dispara_regras(elegibilidade_produto(_), ['PT-003', 'PT-004', 'PT-005', 'C
 facto_dispara_regras(dias_desde_compra(_), ['PT-003', 'PT-004', 'PT-007', 'PT-008']).
 facto_dispara_regras(dias_desde_envio(_), ['CH-005']).
 facto_dispara_regras(cliente_fornece_dados(_), ['PT-006']).
-facto_dispara_regras(tipo_pedido(_), ['PT-007', 'PT-008', 'PT-008-SEM-RECIBO', 'PT-008-FOTO', 'CH-006', 'TN-006', 'TN-007', 'EP-001', 'EP-002']).
+facto_dispara_regras(tipo_pedido(_), ['PT-007', 'PT-008', 'PT-008-SEM-RECIBO', 'PT-008-FOTO', 'CH-006', 'TN-001', 'TN-006', 'TN-007', 'EP-001', 'EP-002']).
 facto_dispara_regras(canal_compra(_), ['CH-008', 'CH-007', 'HS-004', 'CH-001', 'CH-002', 'CH-003', 'CH-004', 'CH-005', 'CH-006', 'TN-009', 'TN-010', 'TN-012', 'PT-007']).
 facto_dispara_regras(tipo_loja(_), ['CH-001', 'CH-009', 'CH-010']).
 facto_dispara_regras(encomenda_encontrada(_), ['CH-002', 'CH-003', 'CH-004']).
@@ -494,7 +494,7 @@ regra 'CH-010' se [tipo_loja(outlet) e avalia(canal_compra(in, [mainline, levi_c
 % ==============================================================================
 
 % TN-001: Devolução verificada em cartão de crédito ou débito
-regra 'TN-001' se [tipo_verificacao(verificada) e avalia(meio_pagamento(in, [credito, debito])) e nao decisao(recusar)]
+regra 'TN-001' se [tipo_verificacao(verificada) e avalia(meio_pagamento(in, [credito, debito])) e nao tipo_pedido(devolucao_oferta) e nao decisao(recusar)]
                entao [cria_facto(meio_reembolso(meio_original)),
                       cria_facto(procedimento_reembolso(tokenizado_sem_pedir_cartao)),
                       cria_facto(regra_disparada('TN-001')),

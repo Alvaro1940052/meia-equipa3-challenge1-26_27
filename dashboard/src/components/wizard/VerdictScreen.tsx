@@ -6,7 +6,10 @@ import ExplainTabs from "@/components/returns/ExplainTabs";
 import {
   ELIGIBILITY,
   cleanRuleCodes,
-  moduleLabel,
+  formatDocumentationDetails,
+  formatOperationalAction,
+  formatResolutionSubtext,
+  formatTenderSubtext,
   label,
 } from "@/config/returnsLabels";
 import type {
@@ -23,6 +26,7 @@ export interface VerdictScreenProps {
   durationMs?: number;
   currency?: string;
   onReset: () => void;
+  onHome?: () => void;
 }
 
 export default function VerdictScreen({
@@ -32,6 +36,7 @@ export default function VerdictScreen({
   durationMs = 0,
   currency = "USD",
   onReset,
+  onHome,
 }: VerdictScreenProps) {
   const router = useRouter();
   const [copied, setCopied] = useState<boolean>(false);
@@ -48,7 +53,28 @@ export default function VerdictScreen({
 
   // Encontrar a melhor explicação em linguagem natural, sem códigos técnicos
   const getHumanExplanation = (): string => {
-    // 1. Procurar regra com resultado coincidente
+    // 1. Priorizar regras substantivas de decisão (PT-, TN-, PC-, EX-, HS-) com resultado coincidente
+    const substantiveRule = result.regras?.find(
+      (r) =>
+        r.resultado === result.elegibilidade &&
+        r.mensagem &&
+        (r.codigoRegra?.startsWith("PT-") ||
+          r.codigoRegra?.startsWith("TN-") ||
+          r.codigoRegra?.startsWith("PC-") ||
+          r.codigoRegra?.startsWith("EX-") ||
+          r.codigoRegra?.startsWith("HS-") ||
+          r.nomeRegra?.startsWith("PT-") ||
+          r.nomeRegra?.startsWith("TN-") ||
+          r.nomeRegra?.startsWith("PC-") ||
+          r.nomeRegra?.startsWith("EX-") ||
+          r.nomeRegra?.startsWith("HS-"))
+    );
+    if (substantiveRule?.mensagem) {
+      const cleaned = cleanRuleCodes(substantiveRule.mensagem);
+      if (cleaned.length > 10) return cleaned;
+    }
+
+    // 2. Procurar regra com resultado coincidente
     const matchingRule = result.regras?.find(
       (r) => r.resultado === result.elegibilidade && r.mensagem
     );
@@ -85,6 +111,33 @@ export default function VerdictScreen({
 
   const explanation = getHumanExplanation();
 
+  // 1. Destino do Artigo (OUT-007) sem fallback cego para Área de Vendas
+  const firstArticle = result.artigos?.[0];
+  const resolvedDestino = firstArticle?.destino
+    ? label(firstArticle.destino)
+    : result.elegibilidade === "RECUSAR"
+    ? "Devolver ao cliente"
+    : "Área de Vendas";
+
+  const resolvedDestinoSubtext = firstArticle?.descontoSaldo
+    ? `Desconto de ${firstArticle.descontoSaldo}% em saldos`
+    : result.elegibilidade === "RECUSAR"
+    ? "Sem reintegração em inventário"
+    : "Reintegração em stock de loja";
+
+  // 2. Ação Imediata Operacional (OUT-006 & OUT-005)
+  const opAction = formatOperationalAction(
+    result.processo,
+    result.aprovacao,
+    result.elegibilidade
+  );
+
+  // 3. Documentação & Controlo (OUT-008)
+  const docDetails = formatDocumentationDetails(result.documentacao);
+
+  // Meio de pagamento original para contextualização pericial
+  const originalTender = (request as any)?.compraOriginal?.pagamento?.meio as string | undefined;
+
   // Copiar resumo para a área de transferência
   const handleCopySummary = async () => {
     const text = [
@@ -93,11 +146,14 @@ export default function VerdictScreen({
       `Transação: ${label(result.tipoTransacao)}`,
       `Valor: ${refundVal !== undefined ? refundVal.toFixed(2) : "0.00"} ${currency}`,
       `Meio de Reembolso: ${label(result.meioReembolso)}`,
-      `Destino: ${label(result.artigos?.[0]?.destino)}`,
+      `Destino: ${resolvedDestino}`,
       `Aprovação: ${label(result.aprovacao)}`,
       `Processo: ${label(result.processo)}`,
+      `Ação Imediata: ${opAction.action} (${opAction.hint})`,
+      `Documentação: ${docDetails.label} - ${docDetails.subtext}`,
       `Justificação: ${explanation}`,
-      `Motor: ${engine === "prolog" ? "Prolog" : "Drools"} (${durationMs} ms)`,
+      `Motor: ${engine === "prolog" ? "SWI-Prolog" : "Drools (DRL)"} (${durationMs} ms)`,
+      `Versão BC: ${result.versaoBaseConhecimento ?? "1.0.0"}`,
       `ID Avaliação: ${result.avaliacaoId ?? "N/A"}`,
     ].join("\n");
 
@@ -111,7 +167,6 @@ export default function VerdictScreen({
   };
 
   // Mapeamento dos 8 campos oficiais do sistema pericial (RPAC-Team3 OUT-001 a OUT-008)
-  const firstArticle = result.artigos?.[0];
   const outFields = [
     {
       code: "OUT-001",
@@ -131,7 +186,7 @@ export default function VerdictScreen({
       name: "Tipo de Transação",
       icon: "swap_horiz",
       value: label(result.tipoTransacao),
-      subtext: "Operação a registar no POS",
+      subtext: formatResolutionSubtext(result.tipoTransacao, result.meioReembolso, result.elegibilidade, originalTender),
       highlight: "text-slate-800 bg-slate-50 border-slate-200",
     },
     {
@@ -147,7 +202,7 @@ export default function VerdictScreen({
       name: "Meio de Reembolso",
       icon: "credit_card",
       value: label(result.meioReembolso),
-      subtext: "Canal de liquidação financeira",
+      subtext: formatTenderSubtext(result.meioReembolso, result.tipoTransacao, result.elegibilidade, originalTender),
       highlight: "text-slate-800 bg-slate-50 border-slate-200",
     },
     {
@@ -155,7 +210,7 @@ export default function VerdictScreen({
       name: "Aprovação Necessária",
       icon: "shield",
       value: label(result.aprovacao),
-      subtext: result.aprovacao === "NENHUMA" ? "Não exige chefia" : "Autorização mandatória",
+      subtext: result.aprovacao && result.aprovacao !== "NENHUMA" ? "Autorização mandatória" : "Sem escalamento de chefia",
       highlight: result.aprovacao && result.aprovacao !== "NENHUMA" ? "text-amber-800 bg-amber-50 border-amber-200" : "text-slate-700 bg-slate-50 border-slate-200",
     },
     {
@@ -163,40 +218,46 @@ export default function VerdictScreen({
       name: "Processo Obrigatório",
       icon: "point_of_sale",
       value: label(result.processo),
-      subtext: "Terminal de execução",
+      subtext: opAction.hint || "Terminal de execução",
       highlight: "text-slate-800 bg-slate-50 border-slate-200",
     },
     {
       code: "OUT-007",
       name: "Destino do Artigo",
       icon: "inventory_2",
-      value: label(firstArticle?.destino) || "Área de Vendas",
-      subtext: firstArticle?.descontoSaldo ? `Desconto de ${firstArticle.descontoSaldo}% em saldos` : "Encaminhamento físico",
+      value: resolvedDestino,
+      subtext: resolvedDestinoSubtext,
       highlight: "text-slate-800 bg-slate-50 border-slate-200",
     },
     {
       code: "OUT-008",
       name: "Documentação & Controlo",
       icon: "assignment",
-      value: result.documentacao?.reciboAgrafado ? "Agrafar Recibo e Assinar" : "Assinatura e Reter 90 Dias",
-      subtext: "Conformidade e arquivo",
+      value: docDetails.label,
+      subtext: docDetails.subtext,
       highlight: "text-slate-800 bg-slate-50 border-slate-200",
     },
   ];
 
-  const operationalAction =
-    result.elegibilidade === "PERMITIR"
-      ? "Processar no POS Regular"
-      : result.elegibilidade === "RECUSAR"
-      ? "Devolver artigo ao cliente"
-      : result.elegibilidade === "REVER"
-      ? "Solicitar PIN ao Gerente de Loja"
-      : "Encaminhar para processo dedicado";
-
   return (
     <div className="w-full flex flex-col gap-8 animate-in fade-in duration-200 text-left">
       {/* 1. Header Alinhado com o Design Minimalista do Sistema */}
-      <div className="w-full flex flex-col items-center text-center gap-2">
+      <div className="w-full flex flex-col items-center text-center gap-2.5">
+        {/* Pill de Telemetria e Identificação do Motor Pericial */}
+        <div className="inline-flex items-center flex-wrap justify-center gap-2 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200 shadow-2xs">
+          {engine === "prolog" ? (
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-2.5 py-0.5 rounded-full">
+              <span className="material-symbols-outlined text-[15px] text-indigo-600">psychology</span>
+              <span>Motor SWI-Prolog &bull; Regras Declarativas</span>
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-2.5 py-0.5 rounded-full">
+              <span className="material-symbols-outlined text-[15px] text-emerald-600">bolt</span>
+              <span>Motor Drools (DRL) &bull; Regras M0-M9</span>
+            </span>
+          )}
+
+        </div>
 
         <h1 className="font-display text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
           Veredito e Resolução de Balcão
@@ -205,7 +266,6 @@ export default function VerdictScreen({
         <p className="font-sans text-xs sm:text-sm text-slate-500 max-w-2xl leading-relaxed">
           Decisão oficial calculada pelo motor de inferência em conformidade rigorosa com a política comercial Levi Strauss &amp; Co.
         </p>
-
       </div>
 
       {/* 2. Secção 01: Veredito e Resolução Imediata (ResultCard Minimalista) */}
@@ -226,7 +286,13 @@ export default function VerdictScreen({
           paymentMethod={label(result.meioReembolso)}
           storeCredit={result.meioReembolso === "CARTAO_OFERTA" || result.meioReembolso === "CREDITO_LOJA"}
           currency={currency}
-          operationalAction={operationalAction}
+          operationalAction={opAction.action}
+          operationalHint={opAction.hint}
+          rawTransactionType={result.tipoTransacao}
+          rawRefundMethod={result.meioReembolso}
+          rawOriginalPaymentMethod={originalTender}
+          rawProcess={result.processo}
+          rawApproval={result.aprovacao}
           actions={
             <div className="w-full flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-100">
               <div className="flex items-center gap-2">
@@ -313,19 +379,19 @@ export default function VerdictScreen({
         </div>
       </div>
 
-      {/* 4. Secção 03: Módulo de Perguntas e Explicações do Motor (ACM - 5 Vias) */}
+      {/* 4. Secção 03: Módulo de Explicações do Motor (ACM) */}
       <div className="w-full flex flex-col gap-3">
         <div className="flex items-center justify-between px-1 flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <span className="font-mono tabular-nums text-xs font-bold text-slate-400 select-none">03</span>
             <span className="text-slate-300">/</span>
             <h3 className="font-sans text-sm sm:text-base font-bold text-slate-900 tracking-tight">
-              Perguntas e Explicações do Motor de Inferência (ACM)
+              Explicações do Motor de Inferência (ACM)
             </h3>
           </div>
 
           <span className="font-sans text-xs text-slate-400">
-            Como &middot; Porque Não &middot; FAQ de Balcão &middot; E Se
+            Como &middot; Porque Não &middot; E Se &middot; Factos e Validações
           </span>
         </div>
 
@@ -335,7 +401,6 @@ export default function VerdictScreen({
             request={request}
             obtained={result.elegibilidade ?? null}
             base={baseEndpoint}
-            paymentMethod={label(result.meioReembolso)}
           />
         </div>
       </div>
@@ -344,7 +409,13 @@ export default function VerdictScreen({
       <div className="w-full pt-4 pb-2 flex items-center justify-between gap-4 flex-wrap border-t border-slate-200">
         <button
           type="button"
-          onClick={() => router.push("/")}
+          onClick={() => {
+            if (onHome) {
+              onHome();
+            } else {
+              router.push("/");
+            }
+          }}
           className="font-sans px-4 py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-2xs transition-colors cursor-pointer"
         >
           <span className="material-symbols-outlined text-[18px]">home</span>

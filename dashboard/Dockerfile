@@ -17,7 +17,7 @@ ENV HOSTNAME="0.0.0.0"
 COPY package*.json ./
 RUN npm ci --only=production
 COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public 2>/dev/null || true
+COPY --from=builder /app/public ./public
 
 EXPOSE 3000
 CMD ["npm", "run", "start", "--", "-p", "3000", "-H", "0.0.0.0"]

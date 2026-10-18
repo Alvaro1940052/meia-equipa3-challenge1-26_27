@@ -9,7 +9,7 @@ import React, {
 } from "react";
 import { useRouter } from "next/navigation";
 import type { EngineId } from "@/config/gateway";
-import type { ReturnRequest } from "@/types/returns";
+import type { ReturnRequest, DecisaoResponse } from "@/types/returns";
 
 export interface WizardState {
   engine: EngineId | null;
@@ -149,22 +149,30 @@ export function getFirstIncompleteStep(state: WizardState): number {
   }
 
   // Passo 6: Valor, meio de pagamento original e estado da conta
-  if (
-    state.totalPrice === null ||
-    state.totalPrice <= 0 ||
-    !state.originalPaymentMethod ||
-    !state.accountState ||
-    (state.accountState === "ENCERRADA" && state.originalRefundRefused === null) ||
-    (state.originalPaymentMethod === "INTERAC" && state.physicalCardPresent === null) ||
-    (state.originalPaymentMethod === "PAYPAL" && state.paymentAppAccessible === null)
-  ) {
-    return 6;
+  const isGift = state.requestType === "GIFT" || state.proofOfPurchase === "RECIBO_OFERTA";
+  if (isGift) {
+    if (state.totalPrice === null || state.totalPrice <= 0) {
+      return 6;
+    }
+  } else {
+    if (
+      state.totalPrice === null ||
+      state.totalPrice <= 0 ||
+      !state.originalPaymentMethod ||
+      !state.accountState ||
+      (state.accountState === "ENCERRADA" && state.originalRefundRefused === null) ||
+      (state.originalPaymentMethod === "INTERAC" && state.physicalCardPresent === null) ||
+      (state.originalPaymentMethod === "PAYPAL" && state.paymentAppAccessible === null)
+    ) {
+      return 6;
+    }
   }
 
   return 6;
 }
 
 const STORAGE_KEY = "retailflow_wizard_state_v7";
+const EVAL_STORAGE_KEY = "retailflow_wizard_eval_v7";
 
 interface WizardContextType {
   state: WizardState;
@@ -175,6 +183,9 @@ interface WizardContextType {
   isLeaving: boolean;
   showLeaveModal: boolean;
   pendingNavigationUrl: string | null;
+  evaluationResult: DecisaoResponse | null;
+  lastRequest: ReturnRequest | null;
+  evaluationDurationMs: number;
   setShowLeaveModal: (show: boolean) => void;
   setPendingNavigationUrl: (url: string | null) => void;
   setIsLeaving: (leaving: boolean) => void;
@@ -187,6 +198,13 @@ interface WizardContextType {
   buildReturnRequest: () => ReturnRequest;
   resetWizard: () => void;
   saveDraft: () => boolean;
+  setEvaluationData: (
+    result: DecisaoResponse,
+    request?: ReturnRequest,
+    durationMs?: number
+  ) => void;
+  clearEvaluation: () => void;
+  exitTo: (targetUrl?: string) => void;
 }
 
 const WizardContext = createContext<WizardContextType | undefined>(undefined);
@@ -199,17 +217,32 @@ export function WizardProvider({ children }: { children: ReactNode }) {
   const [isLeaving, setIsLeaving] = useState<boolean>(false);
   const [showLeaveModal, setShowLeaveModal] = useState<boolean>(false);
   const [pendingNavigationUrl, setPendingNavigationUrl] = useState<string | null>(null);
+  const [evaluationResult, setEvaluationResult] = useState<DecisaoResponse | null>(null);
+  const [lastRequest, setLastRequest] = useState<ReturnRequest | null>(null);
+  const [evaluationDurationMs, setEvaluationDurationMs] = useState<number>(0);
   const totalSteps = 6;
 
-  const isDirty = Boolean(state.engine || state.marketJurisdiction);
+  // O wizard só é considerado "dirty" enquanto o utilizador está a preencher o formulário.
+  // Assim que a inferência é concluída e o veredito é gerado, a sessão está finalizada
+  // e não deve despoletar guardas nem alertas de saída com perda de dados.
+  const isDirty = Boolean(state.engine || state.marketJurisdiction) && !evaluationResult;
 
-  // Carregar rascunho anterior de sessionStorage caso exista
+  // Carregar rascunho anterior e avaliação concluída de sessionStorage caso existam
   useEffect(() => {
     try {
       const saved = sessionStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         setState((prev) => ({ ...prev, ...parsed }));
+      }
+      const savedEval = sessionStorage.getItem(EVAL_STORAGE_KEY);
+      if (savedEval) {
+        const parsedEval = JSON.parse(savedEval);
+        if (parsedEval.result) setEvaluationResult(parsedEval.result);
+        if (parsedEval.request) setLastRequest(parsedEval.request);
+        if (typeof parsedEval.durationMs === "number") {
+          setEvaluationDurationMs(parsedEval.durationMs);
+        }
       }
     } catch {
       // Ignorar erros de storage
@@ -218,7 +251,7 @@ export function WizardProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Guardar alterações automaticamente
+  // Guardar alterações de estado automaticamente
   useEffect(() => {
     try {
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -226,6 +259,26 @@ export function WizardProvider({ children }: { children: ReactNode }) {
       // Ignorar erros de storage
     }
   }, [state]);
+
+  // Sincronizar veredito avaliado com sessionStorage
+  useEffect(() => {
+    try {
+      if (evaluationResult) {
+        sessionStorage.setItem(
+          EVAL_STORAGE_KEY,
+          JSON.stringify({
+            result: evaluationResult,
+            request: lastRequest,
+            durationMs: evaluationDurationMs,
+          })
+        );
+      } else {
+        sessionStorage.removeItem(EVAL_STORAGE_KEY);
+      }
+    } catch {
+      // Ignorar erros de storage
+    }
+  }, [evaluationResult, lastRequest, evaluationDurationMs]);
 
   // Interceção de atalhos de reload do teclado (F5, Ctrl+R, Cmd+R) para exibir o modal customizado
   useEffect(() => {
@@ -249,6 +302,16 @@ export function WizardProvider({ children }: { children: ReactNode }) {
   }, [isDirty, isLeaving]);
 
   const setField = <K extends keyof WizardState>(field: K, value: WizardState[K]) => {
+    if (evaluationResult) {
+      setEvaluationResult(null);
+      setLastRequest(null);
+      setEvaluationDurationMs(0);
+      try {
+        sessionStorage.removeItem(EVAL_STORAGE_KEY);
+      } catch {
+        // Ignorar
+      }
+    }
     setState((prev) => {
       const updated = { ...prev, [field]: value };
       // Ajustar automaticamente moeda se jurisdição mudar
@@ -299,22 +362,40 @@ export function WizardProvider({ children }: { children: ReactNode }) {
   const resetWizard = () => {
     setState(defaultWizardState);
     setCurrentStep(1);
+    setEvaluationResult(null);
+    setLastRequest(null);
+    setEvaluationDurationMs(0);
     try {
       sessionStorage.removeItem(STORAGE_KEY);
+      sessionStorage.removeItem(EVAL_STORAGE_KEY);
     } catch {
       // Ignorar
     }
   };
 
-  const confirmLeave = (targetUrl?: unknown) => {
-    setIsLeaving(true);
-    const validTarget =
-      typeof targetUrl === "string" && targetUrl.trim().length > 0
-        ? targetUrl
-        : (typeof pendingNavigationUrl === "string" && pendingNavigationUrl.trim().length > 0
-            ? pendingNavigationUrl
-            : "/");
+  const setEvaluationData = (
+    result: DecisaoResponse,
+    request?: ReturnRequest,
+    durationMs?: number
+  ) => {
+    setEvaluationResult(result);
+    if (request) setLastRequest(request);
+    if (typeof durationMs === "number") setEvaluationDurationMs(durationMs);
+  };
 
+  const clearEvaluation = () => {
+    setEvaluationResult(null);
+    setLastRequest(null);
+    setEvaluationDurationMs(0);
+    try {
+      sessionStorage.removeItem(EVAL_STORAGE_KEY);
+    } catch {
+      // Ignorar
+    }
+  };
+
+  const exitTo = (targetUrl: string = "/") => {
+    setIsLeaving(true);
     setShowLeaveModal(false);
     setPendingNavigationUrl(null);
     resetWizard();
@@ -324,7 +405,7 @@ export function WizardProvider({ children }: { children: ReactNode }) {
       window.onbeforeunload = null;
     }
 
-    if (validTarget === "__RELOAD__") {
+    if (targetUrl === "__RELOAD__") {
       if (typeof window !== "undefined") {
         window.location.reload();
       }
@@ -332,7 +413,18 @@ export function WizardProvider({ children }: { children: ReactNode }) {
     }
 
     // Navegação SPA suave com Next.js Router (sem provocar o alerta nativo do browser)
-    router.push(validTarget);
+    router.push(targetUrl);
+  };
+
+  const confirmLeave = (targetUrl?: unknown) => {
+    const validTarget =
+      typeof targetUrl === "string" && targetUrl.trim().length > 0
+        ? targetUrl
+        : (typeof pendingNavigationUrl === "string" && pendingNavigationUrl.trim().length > 0
+            ? pendingNavigationUrl
+            : "/");
+
+    exitTo(validTarget);
   };
 
   const cancelLeave = () => {
@@ -416,18 +508,22 @@ function mapTipoPedidoToResolucaoPedida(
       ? null
       : "RECIBO_IMPRESSO"; // fallback seguro
 
+    const isGift = state.requestType === "GIFT" || state.proofOfPurchase === "RECIBO_OFERTA";
+
     const effectiveTipoPedido = isOnline
       ? state.requestType === "TROCA" || state.onlineInStoreExchange
         ? "TROCA"
         : "DEVOLUCAO"
-      : state.requestType === "GIFT"
+      : isGift
       ? "DEVOLUCAO_OFERTA"
       : state.requestType ?? "DEVOLUCAO";
 
-    const effectiveResolucaoPedida = mapTipoPedidoToResolucaoPedida(
-      isOnline && state.onlineInStoreExchange ? "TROCA" : state.requestType,
-      state.exchangeOption
-    );
+    const effectiveResolucaoPedida = isGift
+      ? "CREDITO_LOJA"
+      : mapTipoPedidoToResolucaoPedida(
+          isOnline && state.onlineInStoreExchange ? "TROCA" : state.requestType,
+          state.exchangeOption
+        );
 
     const meioPagamentoOnline =
       state.onlinePaymentMethod === "BNPL"
@@ -490,20 +586,22 @@ function mapTipoPedidoToResolucaoPedida(
         dataCompra: isBlind ? null : formattedPurchaseDate,
         dataEnvio: isOnline ? formattedPurchaseDate : null,
         encomendaEncontrada: isOnline ? state.onlineOrderFound : true,
-        compraOferta: effectiveTipoPedido === "DEVOLUCAO_OFERTA",
+        compraOferta: isGift || effectiveTipoPedido === "DEVOLUCAO_OFERTA",
         moeda: state.currency,
         valorTotal: effectivePrice,
         pagamento: {
           meio:
             state.originalPaymentMethod ||
-            (state.refundMethod === "VALE_LOJA"
+            (isGift
+              ? "CREDITO"
+              : state.refundMethod === "VALE_LOJA"
               ? "CARTAO_OFERTA"
               : isOnline
               ? meioPagamentoOnline
               : "CREDITO"),
           valorPago: effectivePrice,
-          estadoConta: state.accountState || (state.refundMethod === "CARTAO_ENCERRADO" ? "ENCERRADA" : "ATIVA"),
-          cartaoFisicoPresente: state.physicalCardPresent ?? true,
+          estadoConta: isGift ? "ATIVA" : (state.accountState || (state.refundMethod === "CARTAO_ENCERRADO" ? "ENCERRADA" : "ATIVA")),
+          cartaoFisicoPresente: isGift ? false : (state.physicalCardPresent ?? true),
           reembolsoOriginalRecusado: state.originalRefundRefused ?? false,
           acessoAplicacaoPagamento: state.paymentAppAccessible ?? true,
         },
@@ -535,6 +633,7 @@ function mapTipoPedidoToResolucaoPedida(
             marca: state.brandAllowed === false ? "OUTRA" : "LEVIS",
             categoria: state.intimateUnderwear ? "BODYWEAR" : "VESTUARIO",
             vendidoNaLoja: true,
+            produtoFranquia: state.purchaseChannel === "FRANQUIA_CA",
             pvpOriginal: effectivePrice,
             precoAtual: state.precoAtualProduto ?? effectivePrice,
           },
@@ -603,6 +702,14 @@ function mapTipoPedidoToResolucaoPedida(
             contornaProcessoObrigatorio: shouldContornarObrigatorio,
             resolucaoPedida: effectiveResolucaoPedida,
           }
+        : isGift
+        ? {
+            motivo: "Devolução de oferta com recibo: cliente optou por crédito de loja",
+            resolucaoPedida: "CREDITO_LOJA",
+            concluivelNoSistema: true,
+            aprovada: true,
+            contornaProcessoObrigatorio: false,
+          }
         : isAfterpayOnlineExchange
         ? {
             motivo: "Exige troca em loja para compra online paga com Afterpay e contorna o processo obrigatório",
@@ -653,6 +760,12 @@ function mapTipoPedidoToResolucaoPedida(
         buildReturnRequest,
         resetWizard,
         saveDraft,
+        evaluationResult,
+        lastRequest,
+        evaluationDurationMs,
+        setEvaluationData,
+        clearEvaluation,
+        exitTo,
       }}
     >
       {children}

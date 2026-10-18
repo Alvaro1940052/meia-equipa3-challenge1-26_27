@@ -552,6 +552,14 @@ class PedidoAvaliacaoRequest(LevisBaseModel):
         default=None, description="Indicadores de risco de fraude."
     )
 
+    @model_validator(mode="after")
+    def _align_franquia_artigos(self) -> "PedidoAvaliacaoRequest":
+        if self.compraOriginal and self.compraOriginal.canal == CanalCompraEnum.FRANQUIA_CANADA:
+            for artigo in self.artigos:
+                if artigo.produto:
+                    artigo.produto.produtoFranquia = True
+        return self
+
 
 # ==============================================================================
 # 3. DECISÃO E RESPOSTA (RESPONSES)

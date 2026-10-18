@@ -9,13 +9,21 @@ import type { DecisaoResponse } from "@/types/returns";
 
 export default function OnlinePath() {
   const router = useRouter();
-  const { state, setField, buildReturnRequest, resetWizard } = useWizard();
+  const {
+    state,
+    setField,
+    buildReturnRequest,
+    resetWizard,
+    evaluationResult,
+    lastRequest,
+    evaluationDurationMs,
+    setEvaluationData,
+    exitTo,
+  } = useWizard();
 
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [evaluationResult, setEvaluationResult] = useState<DecisaoResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [durationMs, setDurationMs] = useState<number>(0);
-  const [lastRequest, setLastRequest] = useState<Record<string, unknown> | null>(null);
 
   // Manipular processamento na BackPocket
   const handleProcessBackPocket = async () => {
@@ -45,7 +53,6 @@ export default function OnlinePath() {
     }
 
     const payload = buildReturnRequest();
-    setLastRequest(payload);
 
     const endpoint =
       state.engine === "prolog"
@@ -58,8 +65,10 @@ export default function OnlinePath() {
         method: "POST",
         body: payload,
       });
-      setDurationMs(Math.round(performance.now() - startTime));
-      setEvaluationResult(response);
+      const duration = Math.round(performance.now() - startTime);
+      setDurationMs(duration);
+      setEvaluationData(response, payload, duration);
+      router.push("/novo-atendimento/veredito");
     } catch (err: unknown) {
       let msg = "Não foi possível concluir o processamento no motor.";
       if (err instanceof ApiClientError) {
@@ -73,7 +82,7 @@ export default function OnlinePath() {
     }
   };
 
-  // Se já temos veredito avaliado pelo motor
+  // Se já temos veredito avaliado pelo motor (fallback inline)
   if (evaluationResult) {
     return (
       <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 py-4">
@@ -81,12 +90,13 @@ export default function OnlinePath() {
           result={evaluationResult}
           request={lastRequest || buildReturnRequest()}
           engine={state.engine || "returns"}
-          durationMs={durationMs}
+          durationMs={durationMs || evaluationDurationMs}
           currency={state.currency}
           onReset={() => {
-            setEvaluationResult(null);
-            resetWizard();
-            router.push("/novo-atendimento/passo/1");
+            exitTo("/novo-atendimento/passo/1");
+          }}
+          onHome={() => {
+            exitTo("/");
           }}
         />
       </div>

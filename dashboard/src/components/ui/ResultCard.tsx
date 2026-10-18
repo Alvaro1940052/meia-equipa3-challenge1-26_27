@@ -2,16 +2,29 @@
 
 import React, { ReactNode } from "react";
 import { Elegibilidade } from "@/types/returns";
+import {
+  formatResolutionSubtext,
+  formatTenderSubtext,
+  formatOperationalAction,
+} from "@/config/returnsLabels";
 
 export interface ResultCardProps {
   eligibility: Elegibilidade;
   refundValue?: number;
-  explanation: string;
+  explanation?: string;
   remedy?: string;
+  remedySubtext?: string;
   paymentMethod?: string;
+  tenderSubtext?: string;
   storeCredit?: boolean;
   currency?: string;
   operationalAction?: string;
+  operationalHint?: string;
+  rawTransactionType?: string | null;
+  rawRefundMethod?: string | null;
+  rawOriginalPaymentMethod?: string | null;
+  rawProcess?: string | null;
+  rawApproval?: string | null;
   onNewRequest?: () => void;
   onPrint?: () => void;
   actions?: ReactNode;
@@ -23,52 +36,61 @@ export default function ResultCard({
   refundValue,
   explanation,
   remedy,
+  remedySubtext,
   paymentMethod,
+  tenderSubtext,
   storeCredit = false,
   currency = "USD",
   operationalAction,
-  onNewRequest,
-  onPrint,
+  operationalHint,
+  rawTransactionType,
+  rawRefundMethod,
+  rawOriginalPaymentMethod,
+  rawProcess,
+  rawApproval,
   actions,
   className = "",
 }: ResultCardProps) {
   const isApproved = eligibility === "PERMITIR";
   const isRejected = eligibility === "RECUSAR";
   const isReview = eligibility === "REVER";
-  const isRoute = eligibility === "ENCAMINHAR";
+
+  const effectiveExplanation = explanation && explanation.trim().length > 0
+    ? explanation.trim()
+    : null;
 
   const statusConfig = isApproved
     ? {
         label: "Devolução Aprovada",
-        eyebrow: "Conformidade Validada",
-        subtitle: "Todos os critérios de elegibilidade foram validados com sucesso no motor de inferência.",
-        badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200/80",
+        subtitle:
+          effectiveExplanation ||
+          "Todos os critérios de elegibilidade foram validados com sucesso no motor de inferência.",
         iconContainerClass: "bg-emerald-50 text-emerald-700 border-emerald-200/60",
         icon: "check_circle",
       }
     : isRejected
     ? {
         label: "Devolução Recusada",
-        eyebrow: "Recusa Obrigatória de Política",
-        subtitle: "O pedido não cumpre os critérios normativos da política comercial padrão da loja.",
-        badgeClass: "bg-rose-50 text-rose-700 border-rose-200/80",
+        subtitle:
+          effectiveExplanation ||
+          "O pedido não cumpre os critérios normativos da política comercial padrão da loja.",
         iconContainerClass: "bg-rose-50 text-rose-700 border-rose-200/60",
         icon: "cancel",
       }
     : isReview
     ? {
         label: "Requer Análise de Exceção",
-        eyebrow: "Critério de Gestão Necessário",
-        subtitle: "A situação apresentada exige validação presencial do gestor de loja antes da liquidação.",
-        badgeClass: "bg-amber-50 text-amber-700 border-amber-200/80",
+        subtitle:
+          effectiveExplanation ||
+          "A situação apresentada exige validação presencial do gestor de loja antes da liquidação.",
         iconContainerClass: "bg-amber-50 text-amber-700 border-amber-200/60",
         icon: "shield",
       }
     : {
         label: "Encaminhamento de Pedido",
-        eyebrow: "Processo Obrigatório Separado",
-        subtitle: "A transação deve ser processada através do canal específico dedicado.",
-        badgeClass: "bg-sky-50 text-sky-700 border-sky-200/80",
+        subtitle:
+          effectiveExplanation ||
+          "A transação deve ser processada através do canal específico dedicado.",
         iconContainerClass: "bg-sky-50 text-sky-700 border-sky-200/60",
         icon: "forward",
       };
@@ -85,23 +107,30 @@ export default function ResultCard({
       ? "Sem Devolução Autorizada"
       : "A Decidir pela Gestão");
 
-  const resolutionSubtext = isApproved
-    ? storeCredit
-      ? "Validade de 1 ano em todas as lojas físicas e online"
-      : "Creditado automaticamente na conta de origem"
-    : isRejected
-    ? "Devolver artigo ao cliente com comprovativo"
-    : "Conforme avaliação do gestor de turno";
+  const effectiveResolutionSubtext =
+    remedySubtext ||
+    formatResolutionSubtext(
+      rawTransactionType ?? remedy ?? (storeCredit ? "CREDITO_LOJA" : undefined),
+      rawRefundMethod ?? paymentMethod ?? (storeCredit ? "CARTAO_OFERTA" : undefined),
+      eligibility,
+      rawOriginalPaymentMethod
+    );
 
-  const resolvedAction =
-    operationalAction ||
-    (isApproved
-      ? "Concluir transação no terminal POS regular"
-      : isRejected
-      ? "Devolver artigo ao cliente e emitir comprovativo de recusa"
-      : isReview
-      ? "Solicitar PIN ou assinatura de autorização do gestor"
-      : "Iniciar processo obrigatório na aplicação dedicada");
+  const tenderMode =
+    paymentMethod || (storeCredit ? "Crédito de Loja" : isApproved ? "Meio Original" : "Nenhum");
+
+  const effectiveTenderSubtext =
+    tenderSubtext ||
+    formatTenderSubtext(
+      rawRefundMethod ?? paymentMethod ?? (storeCredit ? "CARTAO_OFERTA" : undefined),
+      rawTransactionType ?? remedy ?? (storeCredit ? "CREDITO_LOJA" : undefined),
+      eligibility,
+      rawOriginalPaymentMethod
+    );
+
+  const defaultOp = formatOperationalAction(rawProcess, rawApproval, eligibility);
+  const resolvedAction = operationalAction || defaultOp.action;
+  const resolvedHint = operationalHint || defaultOp.hint;
 
   return (
     <div
@@ -121,15 +150,7 @@ export default function ResultCard({
           </div>
 
           <div className="flex flex-col min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span
-                className={`font-sans inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider border ${statusConfig.badgeClass}`}
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                {statusConfig.eyebrow}
-              </span>
-            </div>
-            <h2 className="font-sans font-bold text-slate-900 text-xl sm:text-2xl tracking-tight mt-1">
+            <h2 className="font-sans font-bold text-slate-900 text-xl sm:text-2xl tracking-tight">
               {statusConfig.label}
             </h2>
             <p className="font-sans text-xs sm:text-sm text-slate-500 mt-0.5 leading-relaxed">
@@ -166,11 +187,11 @@ export default function ResultCard({
             <span className="font-sans font-bold"><span className="font-mono tabular-nums">02</span> / Transação</span>
             <span className="material-symbols-outlined text-[16px] text-slate-400">swap_horiz</span>
           </div>
-          <span className="font-sans font-bold text-slate-900 text-sm sm:text-base leading-snug my-1 line-clamp-2">
+          <span className="font-sans font-bold text-slate-900 text-sm sm:text-base leading-snug my-1 line-clamp-2" title={resolutionMode}>
             {resolutionMode}
           </span>
-          <span className="font-sans text-[11px] text-slate-500 font-medium truncate" title={resolutionSubtext}>
-            {resolutionSubtext}
+          <span className="font-sans text-[11px] text-slate-500 font-medium truncate" title={effectiveResolutionSubtext}>
+            {effectiveResolutionSubtext}
           </span>
         </div>
 
@@ -180,11 +201,11 @@ export default function ResultCard({
             <span className="font-sans font-bold"><span className="font-mono tabular-nums">03</span> / Liquidação</span>
             <span className="material-symbols-outlined text-[16px] text-slate-400">credit_card</span>
           </div>
-          <span className="font-sans font-bold text-slate-900 text-sm sm:text-base leading-snug my-1 truncate">
-            {paymentMethod || (storeCredit ? "Crédito de Loja" : "Meio Original")}
+          <span className="font-sans font-bold text-slate-900 text-sm sm:text-base leading-snug my-1 truncate" title={tenderMode}>
+            {tenderMode}
           </span>
-          <span className="font-sans text-[11px] text-slate-500 font-medium truncate">
-            {isApproved ? "Estorno seguro por tokenização" : "Processamento conforme política"}
+          <span className="font-sans text-[11px] text-slate-500 font-medium truncate" title={effectiveTenderSubtext}>
+            {effectiveTenderSubtext}
           </span>
         </div>
 
@@ -194,24 +215,13 @@ export default function ResultCard({
             <span className="font-sans font-bold"><span className="font-mono tabular-nums">04</span> / Ação Imediata</span>
             <span className="material-symbols-outlined text-[16px] text-slate-400">point_of_sale</span>
           </div>
-          <span className="font-sans font-bold text-slate-900 text-sm leading-snug my-1 line-clamp-2">
+          <span className="font-sans font-bold text-slate-900 text-sm leading-snug my-1 line-clamp-2" title={resolvedAction}>
             {resolvedAction}
           </span>
-          <span className="font-sans text-[11px] text-slate-500 font-medium truncate">
-            {isReview ? "PIN obrigatório no POS" : "Executar no fluxo padrão"}
+          <span className="font-sans text-[11px] text-slate-500 font-medium truncate" title={resolvedHint}>
+            {resolvedHint}
           </span>
         </div>
-      </div>
-
-      {/* 3. Justificação da Decisão em Linguagem Natural */}
-      <div className="p-4 sm:p-5 rounded-xl bg-slate-50/80 border border-slate-200/80 flex flex-col gap-2">
-        <div className="font-sans flex items-center gap-1.5 text-slate-500 text-[11px] font-bold uppercase tracking-wider">
-          <span className="material-symbols-outlined text-[16px] text-emerald-600">gavel</span>
-          <span>Justificação da Política Comercial</span>
-        </div>
-        <p className="font-sans text-xs sm:text-sm text-slate-700 leading-relaxed font-medium">
-          {explanation}
-        </p>
       </div>
 
       {/* 4. Alerta Operacional quando Exige Revisão do Gestor (REVER) */}

@@ -88,29 +88,34 @@ flowchart TD
           ("Troca por Artigo")                     ("Devolução Standard", "Oferta", "Ajuste")
                      │                                             │
                      ▼                                             ▼
-         [Passo 5: Layout com 2 Secções]              [Passo 5: Layout com 1 Secção]
+         [Passo 5: Layout com 3 Secções]               [Passo 5: Layout com 2 Secções]
     ┌────────────────────────────────────────┐    ┌────────────────────────────────────────┐
     │ 01 / Modalidade de Troca               │    │ 01 / Situação do Cliente no Balcão     │
     │   • Mesmo Modelo / Tamanho (EP-001)    │    │   • Conforme / Aceite                  │
     │   • Outro Artigo Diferente (EP-002)    │    │   • Contesta Política (EX-002)         │
     │                                        │    │   • Chamar Gerência (EX-003)           │
-    │ 02 / Situação do Cliente no Balcão     │    │   • Exceção Gerência Autorizada?       │
-    │   • Conforme / Contesta / Gerência     │    └────────────────────────────────────────┘
-    │   • Exceção Gerência Autorizada?       │
+    │ 02 / Situação do Cliente no Balcão     │    │                                        │
+    │   • Conforme / Contesta / Gerência     │    │ 02 / Exceção da Gerência               │
+    │                                        │    │   • Exceção de Gerência Autorizada?    │
+    │ 03 / Exceção da Gerência               │    │     (Não / Autorizada) [EX-001]        │
+    │   • Exceção de Gerência Autorizada?    │    └────────────────────────────────────────┘
+    │     (Não / Autorizada) [EX-001]        │
     └────────────────────────────────────────┘
 ```
 
 1. **Cenário A: `state.requestType === "TROCA"`:**
-   * A secção 01 passa a intitular-se **`01 / Modalidade de Troca`**.
+   * A secção 01 intitula-se **`01 / Modalidade de Troca`**.
    * Exibe **apenas 2 opções** (sem o cartão "Não, Devolução Normal"):
      * `MESMO_MODELO`: "Mesmo Modelo / Tamanho" (Badge: `Troca Direta • EP-001`).
      * `OUTRO_ARTIGO`: "Outro Artigo Diferente" (Badge: `Acerto Saldo • EP-002`).
-   * A secção seguinte é numerada como **`02 / Situação do Cliente no Balcão`**.
+   * A secção 02 é numerada como **`02 / Situação do Cliente no Balcão`** (avaliação de recetividade/contestação do cliente, `EX-002`).
+   * A secção 03 é o subtópico independente **`03 / Exceção da Gerência`** (autorização da chefia de loja com seletor `SlickSlider`, `EX-001`).
    * O subtítulo do passo adapta-se: *"Selecione a modalidade da peça de troca e indique se há contestação a requerer exceção"*.
 
 2. **Cenário B: `state.requestType !== "TROCA"` (`DEVOLUCAO`, `GIFT`, `AJUSTE_PRECO`):**
    * A secção de troca é **completamente suprimida**.
-   * O ecrã foca-se exclusivamente na interação humana: **`01 / Situação do Cliente no Balcão`**.
+   * A secção 01 foca-se na interação com o cliente: **`01 / Situação do Cliente no Balcão`** (`EX-002`).
+   * A secção 02 é o subtópico independente **`02 / Exceção da Gerência`** (`EX-001`).
    * O estado de troca é mantido limpo: `exchangeOption = "NENHUMA"`.
    * O subtítulo do passo adapta-se: *"Indique a recetividade do cliente e se há contestação ou exceção de gerência a registar"*.
 
@@ -199,10 +204,12 @@ graph TD
    * Se `isExchange`:
      * Renderizar Secção com prefixo `01 /` e título `Modalidade de Troca`.
      * Grid de 2 colunas com os 2 cartões (`MESMO_MODELO` e `OUTRO_ARTIGO`).
-     * Secção de Situação do Cliente numerada como `02 / Situação do Cliente no Balcão`.
+     * Secção de Situação do Cliente numerada como `02 / Situação do Cliente no Balcão` (`EX-002`).
+     * Secção de Exceção da Gerência numerada como `03 / Exceção da Gerência` (`EX-001`).
    * Se `!isExchange`:
      * Ocultar completamente o bloco de troca.
-     * Renderizar diretamente a Secção de Situação do Cliente numerada como `01 / Situação do Cliente no Balcão`.
+     * Renderizar diretamente a Secção de Situação do Cliente numerada como `01 / Situação do Cliente no Balcão` (`EX-002`).
+     * Renderizar a Secção de Exceção da Gerência numerada como `02 / Exceção da Gerência` (`EX-001`).
 3. **Garantia de Tipografia e Acessibilidade:**
    * Manter o padrão estético minimalista estabelecido nos Passos 2, 3 e 4 (bordas `border-slate-200`, foco `focus-visible:outline-emerald-600`, badges de estado).
 

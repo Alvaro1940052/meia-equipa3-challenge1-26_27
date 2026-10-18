@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import time
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Union
@@ -11,6 +12,7 @@ from uuid import UUID, uuid4
 from app.clients.prolog_client import PrologClient
 from app.schemas.levis import (
     BaseValorEnum,
+    CausaNaoDisparoEnum,
     CenarioExemploResponse,
     CondicaoDto,
     DadoEmFaltaDto,
@@ -684,6 +686,93 @@ class RetailPrologService:
         entry = self._evaluations_cache.get(str(evaluation_id))
         return entry["decision"] if entry else None
 
+    @staticmethod
+    def _humanize_prolog_condition(raw_text: str) -> str:
+        """Translate raw Prolog condition or premise into operational store Portuguese."""
+        s = raw_text.strip()
+        if s.startswith("Condition "):
+            s = s[len("Condition "):].strip()
+        elif s.startswith("Premise "):
+            s = s[len("Premise "):].strip()
+        if s.endswith(" is false"):
+            s = s[:-9].strip()
+
+        # Domain condition mappings
+        if "marca" in s:
+            return "Artigo pertence a uma marca não autorizada para devolução"
+        if "sku_reconhecido" in s:
+            return "Código SKU não reconhecido no catálogo do sistema POS"
+        if "sujo_contaminado_inseguro" in s:
+            return "Artigo com sujidade ou risco biológico de manuseamento"
+        if "comprovativo(nenhum)" in s:
+            return "Ausência de comprovativo válido de compra"
+        if "comprovativo" in s and ("recibo" in s or "fatura" in s):
+            return "Apresentação de recibo válido (físico ou digital)"
+        if "dias_desde_compra" in s:
+            return "Prazo decorrido desde a compra superior ao limite regulamentar"
+        if "dias_desde_envio" in s:
+            return "Prazo decorrido desde o envio da encomenda online"
+        if "elegibilidade_produto(aprovada)" in s:
+            return "Condição de elegibilidade do artigo aprovada (etiquetas intactas)"
+        if "categoria_produto(bodywear)" in s:
+            return "Artigo pertence à categoria Bodywear / Roupa Interior"
+        if "defeito_fabrico" in s:
+            return "Presença de defeito ou vício de fabrico comprovado"
+        if "estado_produto(nao_usado_com_etiquetas)" in s:
+            return "Artigo novo com todas as etiquetas originais afixadas"
+        if "estado_produto(nao_usado_etiquetas_soltas)" in s:
+            return "Artigo não usado mas com etiquetas soltas"
+        if "estado_produto(claramente_usado)" in s:
+            return "Artigo com sinais evidentes de uso"
+        if "estado_produto(lavado)" in s:
+            return "Artigo lavado sem defeito de fabrico"
+        if "tipo_verificacao(as_cegas)" in s:
+            return "Classificação como devolução às cegas (sem comprovativo)"
+        if "tipo_verificacao(verificada)" in s:
+            return "Classificação como devolução verificada com comprovativo"
+        if "canal_compra" in s and ("levi_com" in s or "online" in s):
+            return "Compra efetuada através do canal oficial online (levi.com)"
+        if "canal_compra(franquia_canada)" in s:
+            return "Compra efetuada em loja franquiada no Canadá"
+        if "canal_compra(grossista)" in s:
+            return "Artigo adquirido através de revendedor grossista"
+        if "canal_compra" in s and "mainline" in s:
+            return "Compra efetuada em loja física própria (Mainline)"
+        if "canal_compra" in s and "outlet" in s:
+            return "Compra efetuada em loja outlet oficial"
+        if "encomenda_encontrada" in s:
+            return "Número de encomenda online localizado no sistema"
+        if "portal_online_disponivel" in s:
+            return "Portal online BackPocket disponível e operacional"
+        if "decisao(rever)" in s or "decisao(recusar)" in s:
+            return "Inexistência de decisão impeditiva prévia de recusa ou revisão"
+        if "colaborador_autorizado" in s:
+            return "Colaborador autorizado com credenciais próprias de POS"
+        if "sessao_pos_propria" in s:
+            return "Operação conduzida na sessão própria do operador"
+        if "personalizado_ou_alterado" in s:
+            return "Artigo personalizado, estampado ou alterado"
+        if "cliente_fornece_dados" in s:
+            return "Identificação do cliente fornecida no balcão"
+        if "cliente_contesta" in s:
+            return "Contestação ou desacordo manifestado pelo cliente"
+        if "cliente_agitado" in s:
+            return "Comportamento agitado ou conflituoso do cliente"
+        if "afterpay_pede_excecao" in s:
+            return "Pedido de exceção de balcão para pagamento Afterpay"
+        if "cartao_interac" in s or "interac" in s:
+            return "Apresentação do cartão físico Interac para estorno"
+        if "recibo_original" in s:
+            return "Apresentação de recibo ou fatura original"
+        if "troca_apenas_tamanho" in s:
+            return "Troca direta de tamanho do mesmo artigo"
+        if "risco_fraude" in s:
+            return "Ausência de indicadores de fraude ou abuso de devoluções"
+
+        # Fallback: humanize raw syntax
+        clean = s.replace("nao ", "ausência de ").replace("_", " ").replace("(", ": ").replace(")", "").strip()
+        return f"Critério não verificado: {clean}"
+
     async def explain_how(self, evaluation_id: Union[str, UUID]) -> ExplicacaoComoResponse:
         """Provide How causal rule trace from the Prolog evaluation."""
         entry = self._evaluations_cache.get(str(evaluation_id))
@@ -713,18 +802,27 @@ class RetailPrologService:
             if mod not in modulos:
                 modulos.append(mod)
 
+            rule_info = PROLOG_RULE_DETAILS.get(rule_id, {})
+            rule_title = rule_info.get("nome", f"Critério {rule_id}")
+
             passos.append(
                 PassoExplicacaoDto(
                     ordem=idx,
                     modulo=mod,
                     codigoRegra=rule_id,
-                    nomeRegra=f"Regra {rule_id}",
+                    nomeRegra=f"{rule_id} {rule_title}",
                     mensagem=msg,
                     aValidar=False,
                 )
             )
 
-        paragem = f"Decisão terminal fixada por {passos[-1].codigoRegra}" if passos else "Conclusão alcançada"
+        if passos:
+            last_code = passos[-1].codigoRegra
+            last_rule_name = PROLOG_RULE_DETAILS.get(last_code, {}).get("nome", last_code)
+            paragem = f"Decisão terminal fixada por: {last_rule_name}"
+        else:
+            paragem = "Conclusão alcançada"
+
         resumo = f"O motor SWI-Prolog avaliou {raw.get('total_facts', 0)} factos e disparou {len(passos)} regras normativas."
 
         return ExplicacaoComoResponse(
@@ -762,38 +860,41 @@ class RetailPrologService:
         current_rule: Optional[str] = None
         current_conds: List[CondicaoDto] = []
 
-        for line in lines:
-            if "Because by rule [" in line:
-                if current_rule:
-                    regras.append(
-                        ExplicacaoPorqueNaoResponse(
-                            codigoRegra=current_rule,
-                            causa="CONDICOES_FALHADAS",
-                            condicoes=current_conds,
-                            resumo=f"A regra {current_rule} não disparou por premissas não satisfeitas.",
-                        )
-                    )
-                current_rule = line.split("[")[1].split("]")[0]
-                current_conds = []
-            elif "Condition" in line:
-                cond_text = line.replace("Condition", "").strip()
-                current_conds.append(
-                    CondicaoDto(
-                        nome=cond_text,
-                        descricao=f"Condição requerida: {cond_text}",
-                        cumprida=False,
-                    )
-                )
-
-        if current_rule:
+        def _append_current_rule():
+            nonlocal current_rule, current_conds
+            if not current_rule:
+                return
+            rule_info = PROLOG_RULE_DETAILS.get(current_rule, {})
+            rule_name = rule_info.get("nome", current_rule)
+            variante = f"{current_rule}: {rule_name}"
+            resumo = f"A regra '{rule_name}' não disparou porque os critérios exigidos não se verificaram no pedido."
             regras.append(
                 ExplicacaoPorqueNaoResponse(
                     codigoRegra=current_rule,
-                    causa="CONDICOES_FALHADAS",
+                    causa=CausaNaoDisparoEnum.CONDICOES_FALHADAS,
+                    variante=variante,
                     condicoes=current_conds,
-                    resumo=f"A regra {current_rule} não disparou por premissas não satisfeitas.",
+                    resumo=resumo,
                 )
             )
+
+        for line in lines:
+            if "Because by rule [" in line:
+                _append_current_rule()
+                current_rule = line.split("[")[1].split("]")[0].strip()
+                current_conds = []
+            elif "Condition" in line or "Premise" in line:
+                human_text = self._humanize_prolog_condition(line)
+                if not any(c.nome == human_text for c in current_conds):
+                    current_conds.append(
+                        CondicaoDto(
+                            nome=human_text,
+                            descricao=f"Condição requerida: {human_text}",
+                            cumprida=False,
+                        )
+                    )
+
+        _append_current_rule()
 
         return ExplicacaoPorqueNaoConclusaoResponse(
             conclusao=target or f"OUT-001:{target_atom.upper()}",
@@ -801,7 +902,7 @@ class RetailPrologService:
             obtida=False,
             propostaPor=[],
             regras=regras,
-            resumo=f"A conclusão '{target_atom}' não foi alcançada devido a condições não satisfeitas nas regras candidatas.",
+            resumo=f"A conclusão '{target_atom.upper()}' não foi alcançada devido a condições não satisfeitas nas regras candidatas.",
         )
 
     async def simulate_whatif(
@@ -817,12 +918,68 @@ class RetailPrologService:
         remove_facts: List[str] = []
 
         for k, v in alteracoes.items():
-            if str(v).lower() in ["intactas", "nao_usado_com_etiquetas", "true"]:
-                add_facts.append(f"estado_produto(nao_usado_com_etiquetas)")
-                remove_facts.append("estado_produto(nao_usado_etiquetas_soltas)")
-            elif str(v).lower() in ["recibo_impresso", "recibo_digital"]:
-                add_facts.append(f"comprovativo({v})")
-                remove_facts.append("comprovativo(nenhum)")
+            k_lower = str(k).lower().strip()
+            v_str = str(v).lower().strip()
+
+            # 1. Etiquetas e Estado de Uso
+            if "etiqueta" in k_lower or "condicaouso" in k_lower or "estado" in k_lower:
+                if v_str in ["colocadas", "colocada", "intactas", "nao_usado_com_etiquetas", "true", "nao_usado"]:
+                    add_facts.append("estado_produto(nao_usado_com_etiquetas)")
+                    remove_facts.extend([
+                        "estado_produto(nao_usado_etiquetas_soltas)",
+                        "estado_produto(sem_etiquetas)",
+                        "estado_produto(claramente_usado)",
+                        "estado_produto(lavado)",
+                    ])
+                elif v_str in ["soltas", "nao_usado_etiquetas_soltas"]:
+                    add_facts.append("estado_produto(nao_usado_etiquetas_soltas)")
+                    remove_facts.extend([
+                        "estado_produto(nao_usado_com_etiquetas)",
+                        "estado_produto(sem_etiquetas)",
+                        "estado_produto(claramente_usado)",
+                    ])
+                elif v_str in ["usado", "claramente_usado"]:
+                    add_facts.append("estado_produto(claramente_usado)")
+                    remove_facts.extend([
+                        "estado_produto(nao_usado_com_etiquetas)",
+                        "estado_produto(nao_usado_etiquetas_soltas)",
+                    ])
+                elif v_str in ["sem_etiquetas", "sem_etiqueta"]:
+                    add_facts.append("estado_produto(sem_etiquetas)")
+                    remove_facts.extend([
+                        "estado_produto(nao_usado_com_etiquetas)",
+                        "estado_produto(nao_usado_etiquetas_soltas)",
+                    ])
+
+            # 2. Portal Online
+            elif "portalonline" in k_lower or "portal_online" in k_lower:
+                if v_str in ["true", "1", "sim", "disponivel"]:
+                    add_facts.append("portal_online_disponivel(true)")
+                    remove_facts.append("portal_online_disponivel(false)")
+                else:
+                    add_facts.append("portal_online_disponivel(false)")
+                    remove_facts.append("portal_online_disponivel(true)")
+
+            # 3. Comprovativo
+            elif "comprovativo" in k_lower or "recibo" in k_lower:
+                if v_str in ["sem_comprovativo", "nenhum", "sem_recibo", "false"]:
+                    add_facts.append("comprovativo(nenhum)")
+                    remove_facts.extend([
+                        "comprovativo(recibo_impresso)",
+                        "comprovativo(recibo_digital)",
+                        "comprovativo(fatura_digital)",
+                        "tipo_verificacao(verificada)",
+                    ])
+                elif v_str in ["recibo_impresso", "impresso"]:
+                    add_facts.append("comprovativo(recibo_impresso)")
+                    remove_facts.extend(["comprovativo(nenhum)", "tipo_verificacao(as_cegas)"])
+                elif v_str in ["recibo_digital", "digital"]:
+                    add_facts.append("comprovativo(recibo_digital)")
+                    remove_facts.extend(["comprovativo(nenhum)", "tipo_verificacao(as_cegas)"])
+
+            # 4. Fallback if user passes direct fact string (e.g. "sku_reconhecido(false)")
+            elif "(" in k and ")" in k:
+                add_facts.append(k)
 
         whatif_raw = await self.prolog_client.whatif_retail({
             "base_facts": {"facts": base_facts},
@@ -833,14 +990,21 @@ class RetailPrologService:
         base_dec = whatif_raw.get("baseline_decision", "rever")
         sim_dec = whatif_raw.get("simulated_decision", "permitir")
 
-        diferencas: List[DiferencaDto] = [
-            DiferencaDto(
-                alvo="Elegibilidade",
-                campo="elegibilidade",
-                original=base_dec.upper(),
-                simulado=sim_dec.upper(),
+        base_rules = set(re.findall(r"\[([A-Z]{2,4}-\d{3,4}(?:-[A-Z0-9]+)?)\]", str(whatif_raw.get("baseline_justification", []))))
+        sim_rules = set(re.findall(r"\[([A-Z]{2,4}-\d{3,4}(?:-[A-Z0-9]+)?)\]", str(whatif_raw.get("simulated_justification", []))))
+        regras_novas = sorted(list(sim_rules - base_rules))
+        regras_removidas = sorted(list(base_rules - sim_rules))
+
+        diferencas: List[DiferencaDto] = []
+        if base_dec.strip().upper() != sim_dec.strip().upper():
+            diferencas.append(
+                DiferencaDto(
+                    alvo="Elegibilidade",
+                    campo="elegibilidade",
+                    original=base_dec.upper(),
+                    simulado=sim_dec.upper(),
+                )
             )
-        ]
 
         sim_eleg = (
             ElegibilidadeEnum.PERMITIR
@@ -861,9 +1025,13 @@ class RetailPrologService:
 
         return SimulacaoResponse(
             diferencas=diferencas,
-            regrasNovas=["PT-003", "PC-001"],
-            regrasRemovidas=["PC-002"],
-            resumo=whatif_raw.get("impact_summary") or f"A decisão mudou de '{base_dec}' para '{sim_dec}' com a simulação contrafactual.",
+            regrasNovas=regras_novas,
+            regrasRemovidas=regras_removidas,
+            resumo=whatif_raw.get("impact_summary") or (
+                f"A decisão manteve-se inalterada em '{base_dec}'."
+                if base_dec.strip().upper() == sim_dec.strip().upper()
+                else f"A decisão mudou de '{base_dec}' para '{sim_dec}' com a simulação contrafactual."
+            ),
             decisaoSimulada=decisao_sim,
         )
 
@@ -1066,18 +1234,17 @@ class RetailPrologService:
             and (pedido.get("tipoPedido") or "").lower() in ["devolucao", "devolucao_oferta"]
         ):
             meio_reembolso = MeioReembolsoEnum.CREDITO_LOJA
+        elif tipo_transacao == TipoTransacaoEnum.CREDITO_LOJA or any(
+            "meio_reembolso(vale_loja)" in f or "meio_reembolso(credito_loja)" in f or "credito_loja" in f
+            for f in fact_strings
+        ):
+            meio_reembolso = MeioReembolsoEnum.CREDITO_LOJA
+        elif any("meio_reembolso(cartao_oferta)" in f for f in fact_strings):
+            meio_reembolso = MeioReembolsoEnum.CARTAO_OFERTA
+        elif any("meio_reembolso(meio_original)" in f for f in fact_strings):
+            meio_reembolso = MeioReembolsoEnum.MEIO_ORIGINAL
         else:
             meio_reembolso = MeioReembolsoEnum.MEIO_ORIGINAL
-            for f in fact_strings:
-                if "meio_reembolso(cartao_oferta)" in f:
-                    meio_reembolso = MeioReembolsoEnum.CARTAO_OFERTA
-                    break
-                elif "meio_reembolso(vale_loja)" in f or "credito_loja" in f:
-                    meio_reembolso = MeioReembolsoEnum.CREDITO_LOJA
-                    break
-                elif "meio_reembolso(meio_original)" in f:
-                    meio_reembolso = MeioReembolsoEnum.MEIO_ORIGINAL
-                    break
 
         # 4. Extract approval level (OUT-005)
         # Strict hierarchy: DISTRICT_AREA > RESPONSAVEL_SENIOR > XSTORE_MANAGER > NENHUMA

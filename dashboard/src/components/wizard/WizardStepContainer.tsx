@@ -82,13 +82,15 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
     goToStep,
     resetWizard,
     buildReturnRequest,
+    evaluationResult,
+    lastRequest,
+    evaluationDurationMs,
+    setEvaluationData,
+    exitTo,
   } = useWizard();
 
   const [isEvaluating, setIsEvaluating] = useState<boolean>(false);
-  const [evaluationResult, setEvaluationResult] = useState<DecisaoResponse | null>(null);
   const [evaluationError, setEvaluationError] = useState<string | null>(null);
-  const [evaluationDurationMs, setEvaluationDurationMs] = useState<number>(0);
-  const [lastRequest, setLastRequest] = useState<Record<string, unknown> | null>(null);
 
   // Guarda Sequencial de Passos (Step Guard):
   // Impede que um utilizador aceda diretamente via URL sem ter completado os passos obrigatórios anteriores
@@ -130,19 +132,23 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
     state.managerException !== null
   );
 
+  const isGift = state.requestType === "GIFT" || state.proofOfPurchase === "RECIBO_OFERTA";
+
   const isInteracValid = state.originalPaymentMethod !== "INTERAC" || state.physicalCardPresent !== null;
   const isPaypalValid = state.originalPaymentMethod !== "PAYPAL" || state.paymentAppAccessible !== null;
   const isEncerradaValid = state.accountState !== "ENCERRADA" || state.originalRefundRefused !== null;
 
-  const isStep6Valid = Boolean(
-    state.totalPrice !== null &&
-    state.totalPrice > 0 &&
-    state.originalPaymentMethod &&
-    state.accountState &&
-    isInteracValid &&
-    isPaypalValid &&
-    isEncerradaValid
-  );
+  const isStep6Valid = isGift
+    ? Boolean(state.totalPrice !== null && state.totalPrice > 0)
+    : Boolean(
+        state.totalPrice !== null &&
+        state.totalPrice > 0 &&
+        state.originalPaymentMethod &&
+        state.accountState &&
+        isInteracValid &&
+        isPaypalValid &&
+        isEncerradaValid
+      );
 
   const isCurrentStepValid =
     stepNumber === 1 ? isStep1Valid :
@@ -159,7 +165,7 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
         setPendingNavigationUrl("/");
         setShowLeaveModal(true);
       } else {
-        router.push("/");
+        exitTo("/");
       }
     } else {
       router.push(`/novo-atendimento/passo/${stepNumber - 1}`);
@@ -261,17 +267,19 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
     if (stepNumber === 6) {
       if (!isStep6Valid) {
         const missing: string[] = [];
-        if (state.totalPrice === null || state.totalPrice <= 0) missing.push("Valor");
-        if (!state.originalPaymentMethod) missing.push("Meio de Pagamento");
-        if (!state.accountState) missing.push("Estado da Conta");
-        if (state.accountState === "ENCERRADA" && state.originalRefundRefused === null) {
-          missing.push("Recusa no Terminal");
-        }
-        if (state.originalPaymentMethod === "INTERAC" && state.physicalCardPresent === null) {
-          missing.push("Cartão Físico");
-        }
-        if (state.originalPaymentMethod === "PAYPAL" && state.paymentAppAccessible === null) {
-          missing.push("Acesso App");
+        if (state.totalPrice === null || state.totalPrice <= 0) missing.push("Valor do Artigo");
+        if (!isGift) {
+          if (!state.originalPaymentMethod) missing.push("Meio de Pagamento");
+          if (!state.accountState) missing.push("Estado da Conta");
+          if (state.accountState === "ENCERRADA" && state.originalRefundRefused === null) {
+            missing.push("Recusa no Terminal");
+          }
+          if (state.originalPaymentMethod === "INTERAC" && state.physicalCardPresent === null) {
+            missing.push("Cartão Físico");
+          }
+          if (state.originalPaymentMethod === "PAYPAL" && state.paymentAppAccessible === null) {
+            missing.push("Acesso App");
+          }
         }
         return `Obrigatório: selecionar ${missing.slice(0, 2).join(", ")}${missing.length > 2 ? "..." : ""}`;
       }
@@ -285,7 +293,6 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
     setEvaluationError(null);
 
     const requestPayload = buildReturnRequest();
-    setLastRequest(requestPayload);
     const endpoint =
       state.engine === "prolog"
         ? "/api/prolog/avaliar"
@@ -297,8 +304,9 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
         method: "POST",
         body: requestPayload,
       });
-      setEvaluationDurationMs(Math.round(performance.now() - startTime));
-      setEvaluationResult(response);
+      const duration = Math.round(performance.now() - startTime);
+      setEvaluationData(response, requestPayload, duration);
+      router.push("/novo-atendimento/veredito");
     } catch (err: unknown) {
       let msg = "Não foi possível concluir a avaliação.";
       if (err instanceof ApiClientError) {
@@ -350,9 +358,10 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
           durationMs={evaluationDurationMs}
           currency={state.currency}
           onReset={() => {
-            setEvaluationResult(null);
-            resetWizard();
-            router.push("/novo-atendimento/passo/1");
+            exitTo("/novo-atendimento/passo/1");
+          }}
+          onHome={() => {
+            exitTo("/");
           }}
         />
       </div>

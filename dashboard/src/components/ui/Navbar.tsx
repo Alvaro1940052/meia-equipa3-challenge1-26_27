@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useOptionalWizard } from "@/components/wizard/WizardContext";
 
 export interface NavbarProps {
@@ -24,6 +25,7 @@ export default function Navbar({
   operatorName = "Tiago M.",
   operatorRole = "Operador N2",
 }: NavbarProps) {
+  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const wizard = useOptionalWizard();
 
@@ -34,6 +36,11 @@ export default function Navbar({
       wizard.setPendingNavigationUrl(target);
       wizard.setShowLeaveModal(true);
       if (mobileMenuOpen) setMobileMenuOpen(false);
+    } else if (wizard && wizard.evaluationResult) {
+      e.preventDefault();
+      if (mobileMenuOpen) setMobileMenuOpen(false);
+      const target = href === "/novo-atendimento" ? "/novo-atendimento/passo/1" : href;
+      wizard.exitTo(target);
     }
   };
 

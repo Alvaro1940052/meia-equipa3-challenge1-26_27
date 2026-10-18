@@ -21,11 +21,11 @@ export const STEP_INPUT_MAPPING: Record<number, StepInputItem[]> = {
   ],
   5: [
     { code: "EP-001", label: "01 / Modalidade de Troca" },
-    { code: "EX-002", label: "02 / Contestação do Cliente" },
-    { code: "EX-001", label: "03 / Exceção de Balcão e Gerência" },
+    { code: "EX-002", label: "02 / Situação do Cliente no Balcão" },
+    { code: "EX-001", label: "03 / Exceção da Gerência" },
   ],
   6: [
-    { code: "IN-009", label: "01 / Meio de Pagamento Original" },
+    { code: "IN-009", label: "02 / Meio de Pagamento Original" },
   ],
 };
 
@@ -55,13 +55,13 @@ export function getInputsForStep(
     if (requestType === "TROCA") {
       return [
         { code: "EP-001", label: "01 / Modalidade de Troca" },
-        { code: "EX-002", label: "02 / Contestação do Cliente" },
-        { code: "EX-001", label: "03 / Exceção de Balcão e Gerência" },
+        { code: "EX-002", label: "02 / Situação do Cliente no Balcão" },
+        { code: "EX-001", label: "03 / Exceção da Gerência" },
       ];
     }
     return [
-      { code: "EX-002", label: "01 / Contestação do Cliente" },
-      { code: "EX-001", label: "02 / Exceção de Balcão e Gerência" },
+      { code: "EX-002", label: "01 / Situação do Cliente no Balcão" },
+      { code: "EX-001", label: "02 / Exceção da Gerência" },
     ];
   }
   return STEP_INPUT_MAPPING[stepNumber] || [];
