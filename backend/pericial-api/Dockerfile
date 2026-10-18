@@ -1,7 +1,7 @@
 # Imagem da API. Contexto de build: a raiz do repositório (projeto Maven multi-módulo).
 #   docker build -f backend/pericial-api/Dockerfile -t pericial-api .
 
-FROM maven:3.9-eclipse-temurin-21 AS build
+FROM maven:3.9-eclipse-temurin-25 AS build
 WORKDIR /src
 # Dependências primeiro, para aproveitar a cache das camadas
 COPY pom.xml .
@@ -12,7 +12,7 @@ RUN --mount=type=cache,target=/root/.m2 \
     mvn -B -ntp -pl backend/pericial-api -am package \
         -DskipTests -Djacoco.skip=true -Dspotless.check.skip=true -Dcheckstyle.skip=true
 
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:25-jre
 RUN groupadd --system pericial && useradd --system --gid pericial pericial
 WORKDIR /app
 COPY --from=build /src/backend/pericial-api/target/pericial-api-*.jar app.jar
