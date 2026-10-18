@@ -123,12 +123,16 @@ export function getFirstIncompleteStep(state: WizardState): number {
   }
 
   // Passo 3: Condição física e elegibilidade
+  const isResellRequired =
+    state.physicalCondition === "NOVO_ETIQUETAS_SOLTAS" ||
+    state.physicalCondition === "NOVO_SEM_ETIQUETAS";
+
   if (
     state.barcodeRecognized === null ||
     state.brandAllowed === null ||
     state.alteredOrHemmed === null ||
     !state.physicalCondition ||
-    state.readyToResell === null
+    (isResellRequired && state.readyToResell === null)
   ) {
     return 3;
   }
@@ -536,7 +540,11 @@ function mapTipoPedidoToResolucaoPedida(
           },
           quantidade: 1,
           precoPago: effectivePrice,
-          revendivel: state.readyToResell ?? (state.physicalCondition === "NOVO_ETIQUETAS" || state.physicalCondition === "NOVO_ETIQUETAS_SOLTAS"),
+          revendivel:
+            state.physicalCondition === "NOVO_ETIQUETAS_SOLTAS" ||
+            state.physicalCondition === "NOVO_SEM_ETIQUETAS"
+              ? state.readyToResell
+              : state.physicalCondition === "NOVO_ETIQUETAS",
           estado: {
             condicaoUso,
             etiquetas,
@@ -548,7 +556,11 @@ function mapTipoPedidoToResolucaoPedida(
             danificado: state.physicalCondition === "MANCHADO",
             bainhaFeitaOuAlterada: Boolean(state.alteredOrHemmed),
             temDefeitoFabrico: Boolean(state.manufacturingDefect),
-            revendivel: state.readyToResell ?? (state.physicalCondition === "NOVO_ETIQUETAS" || state.physicalCondition === "NOVO_ETIQUETAS_SOLTAS"),
+            revendivel:
+              state.physicalCondition === "NOVO_ETIQUETAS_SOLTAS" ||
+              state.physicalCondition === "NOVO_SEM_ETIQUETAS"
+                ? state.readyToResell
+                : state.physicalCondition === "NOVO_ETIQUETAS",
           },
           entreCanais: state.purchaseChannel !== "FISICA",
         },

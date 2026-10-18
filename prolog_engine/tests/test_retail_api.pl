@@ -258,7 +258,47 @@ test(whynot_explains_failed_premises) :-
     assertion(WhyNotReply.explanation \== []).
 
 % ------------------------------------------------------------------------------
-% 6. GET /retail/facts & POST /retail/reset Tests
+% 6. POST /retail/why Tests
+% ------------------------------------------------------------------------------
+
+test(why_endpoint_with_partial_facts_identifies_waiting_rule) :-
+    test_retail_port(Port),
+    format(atom(WhyUrl), 'http://127.0.0.1:~w/retail/why', [Port]),
+    Payload = _{
+        dado: "IN-001",
+        base_facts: _{
+            meio_pagamento: "interac",
+            cartao_interac_presente: true
+        }
+    },
+    http_post(WhyUrl, json(Payload), Reply, [json_object(dict)]),
+    assertion(Reply.status == "success"),
+    assertion(Reply.codigo == "IN-001"),
+    assertion(Reply.dado == "mercado"),
+    assertion(is_list(Reply.regras_dependentes)),
+    assertion(member("TN-011", Reply.regras_dependentes)),
+    assertion(is_list(Reply.regras_em_espera)),
+    assertion(Reply.regras_em_espera \== []),
+    once((
+        member(Espera, Reply.regras_em_espera),
+        ( Espera.codigoRegra == "TN-011" ; Espera.codigo_regra == "TN-011" ),
+        assertion(Espera.modulo == "tn")
+    )).
+
+test(why_endpoint_missing_dado_returns_400) :-
+    test_retail_port(Port),
+    format(atom(WhyUrl), 'http://127.0.0.1:~w/retail/why', [Port]),
+    catch(
+        (
+            http_post(WhyUrl, json(_{base_facts: []}), _Reply, [json_object(dict)]),
+            fail
+        ),
+        error(existence_error(url, _), _),
+        true
+    ).
+
+% ------------------------------------------------------------------------------
+% 7. GET /retail/facts & POST /retail/reset Tests
 % ------------------------------------------------------------------------------
 
 test(facts_and_reset_lifecycle) :-

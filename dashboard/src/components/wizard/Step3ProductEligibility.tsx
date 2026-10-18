@@ -76,6 +76,17 @@ export default function Step3ProductEligibility() {
     state.brandAllowed !== null &&
     state.alteredOrHemmed !== null;
 
+  const isResellApplicable =
+    state.physicalCondition === "NOVO_ETIQUETAS_SOLTAS" ||
+    state.physicalCondition === "NOVO_SEM_ETIQUETAS";
+
+  const handleSelectCondition = (condId: PhysicalConditionItem["id"]) => {
+    setField("physicalCondition", condId);
+    if (condId !== "NOVO_ETIQUETAS_SOLTAS" && condId !== "NOVO_SEM_ETIQUETAS") {
+      setField("readyToResell", null);
+    }
+  };
+
   return (
     <div className="w-full flex flex-col gap-6">
       {/* 1. Validação Inicial da Peça */}
@@ -359,11 +370,11 @@ export default function Step3ProductEligibility() {
                 role="radio"
                 aria-checked={isSelected}
                 tabIndex={0}
-                onClick={() => setField("physicalCondition", cond.id)}
+                onClick={() => handleSelectCondition(cond.id)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
-                    setField("physicalCondition", cond.id);
+                    handleSelectCondition(cond.id);
                   }
                 }}
                 className={`group rounded-xl p-4 sm:p-4.5 cursor-pointer flex items-center justify-between gap-3.5 transition-all duration-150 focus-visible:outline-2 bg-white ${
@@ -425,48 +436,77 @@ export default function Step3ProductEligibility() {
             );
           })}
         </div>
-
-        {/* Aptidão para voltar a ser vendida na área de vendas */}
-        <div
-          className={`rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-200 mt-0.5 bg-white ${
-            state.readyToResell === false
-              ? "border-2 border-amber-500"
-              : "border border-slate-200 hover:border-slate-300"
-          }`}
-        >
-          <div className="flex items-center gap-3.5 min-w-0">
-            <div
-              className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-                state.readyToResell === true
-                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
-                  : state.readyToResell === false
-                  ? "bg-amber-50 text-amber-700 border border-amber-200/60"
-                  : "bg-slate-100 text-slate-500 border border-slate-200/60"
-              }`}
-            >
-              <span className="material-symbols-outlined text-[22px]">store</span>
-            </div>
-            <div className="flex flex-col min-w-0">
-              <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight leading-snug">
-                Pronta para voltar a ser vendida na área de vendas?
-              </h4>
-              <p className="font-sans text-xs text-slate-500 mt-0.5 leading-relaxed">
-                Peça limpa, sem cheiros e apta para voltar ao expositor da loja
-              </p>
-            </div>
-          </div>
-          <SlickSlider
-            options={[
-              { label: "Sim", value: true, tone: "success", icon: "check" },
-              { label: "Não", value: false, tone: "warning", icon: "warning" },
-            ]}
-            value={state.readyToResell}
-            onChange={(val) => setField("readyToResell", val)}
-            ariaLabel="Pronta para voltar a ser vendida na área de vendas"
-            width="w-full sm:w-[192px]"
-          />
-        </div>
       </div>
+
+      {/* 3. Possibilidade de Revenda (apenas aplicável quando sem etiqueta ou com etiquetas soltas) */}
+      {isResellApplicable && (
+        <div className="w-full flex flex-col gap-3">
+          {/* Typographic Section Header */}
+          <div className="flex items-center gap-2 px-1">
+            <span className="font-mono tabular-nums text-xs font-bold text-slate-400 select-none">
+              03
+            </span>
+            <span className="text-slate-300">/</span>
+            <h3 className="font-sans text-sm sm:text-base font-bold text-slate-900 tracking-tight">
+              Possibilidade de Revenda
+            </h3>
+            {state.readyToResell !== null ? (
+              <span className="font-sans inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60 select-none">
+                <span className="material-symbols-outlined text-[13px] font-bold">check</span>
+                Definido
+              </span>
+            ) : (
+              <span className="font-sans inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 select-none">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                Obrigatório
+              </span>
+            )}
+          </div>
+
+          {/* Card da pergunta de revenda */}
+          <div
+            className={`rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-200 bg-white ${
+              state.readyToResell === false
+                ? "border-2 border-amber-500"
+                : state.readyToResell === true
+                ? "border-2 border-emerald-600"
+                : "border border-slate-200 hover:border-slate-300"
+            }`}
+          >
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div
+                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                  state.readyToResell === true
+                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
+                    : state.readyToResell === false
+                    ? "bg-amber-50 text-amber-700 border border-amber-200/60"
+                    : "bg-slate-100 text-slate-500 border border-slate-200/60"
+                }`}
+              >
+                <span className="material-symbols-outlined text-[22px]">store</span>
+              </div>
+              <div className="flex flex-col min-w-0">
+                <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight leading-snug">
+                  O artigo pode ser verificado, reetiquetado e revendido?
+                </h4>
+                <p className="font-sans text-xs text-slate-500 mt-0.5 leading-relaxed">
+                  Peça limpa, sem cheiros e apta para voltar ao expositor da loja
+                </p>
+              </div>
+            </div>
+            <SlickSlider
+              options={[
+                { label: "Sim", value: true, tone: "success", icon: "check" },
+                { label: "Não", value: false, tone: "warning", icon: "warning" },
+              ]}
+              value={state.readyToResell}
+              onChange={(val) => setField("readyToResell", val)}
+              ariaLabel="O artigo pode ser verificado, reetiquetado e revendido"
+              width="w-full sm:w-[192px]"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

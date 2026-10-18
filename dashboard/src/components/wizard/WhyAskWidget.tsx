@@ -11,6 +11,7 @@ export interface WhyAskWidgetProps {
   engine: "returns" | "prolog" | string;
   returnRequest?: Record<string, unknown>;
   requestType?: string;
+  physicalCondition?: string | null;
 }
 
 // Mapeamento semântico de módulos de regras para áreas de política de loja
@@ -298,28 +299,25 @@ function cleanCounterText(text?: string | null): string {
   if (!text) return "";
   let s = text;
 
-  // 1. Templates padrão do Drools (substitui frases pré-formatadas antes de remoção de tokens)
-  if (/é usada pelas regras/i.test(s)) {
-    return "Esta informação é avaliada pelas políticas comerciais da loja; no pedido atual, nenhuma decisão terminal está pendente desta resposta.";
-  }
-  if (/decisão\(ões\) deste pedido dependem da resposta/i.test(s)) {
-    return "A resposta a esta pergunta é necessária para determinar imediatamente as condições de devolução no pedido em curso.";
-  }
-
-  // 2. Remove sufixos de debug de perguntas (ex: "(eua/canada/porquê)")
+  // 1. Remove sufixos de debug de perguntas (ex: "(eua/canada/porquê)")
   s = s.replace(/\s*\([a-z_/]+porquê\)/gi, "");
 
-  // 3. Remove listas de códigos de regra entre parênteses: (CH-007, HS-004), (TN-011), etc.
+  // 2. Remove listas de códigos de regra entre parênteses: (CH-007, HS-004), (TN-011), etc.
   s = s.replace(/\s*\(\s*[A-Z]{2,4}-\d{3,4}(?:-[A-Z0-9]+)?(?:\s*,\s*[A-Z]{2,4}-\d{3,4}(?:-[A-Z0-9]+)?)*\s*\)/g, "");
 
-  // 4. Remove "via CH-008", "regra CH-001", etc.
+  // 3. Remove "via CH-008", "regra CH-001", etc.
   s = s.replace(/\b(?:via|regra|regras)\s+[A-Z]{2,4}-\d{3,4}(?:-[A-Z0-9]+)?\b/gi, "");
 
-  // 5. Limpeza geral de quaisquer códigos residuais XX-YYY
+  // 4. Limpeza geral de quaisquer códigos residuais XX-YYY
   s = s.replace(/\b[A-Z]{2,4}-\d{3,4}(?:-[A-Z0-9]+)?\b/g, "");
+
+  // 5. Humanizar conclusões técnicas em colchetes se presentes (ex: "→ [REEMBOLSO_DEBITO_INTERAC]" -> ": Reembolso debito interac")
+  s = s.replace(/:\s*→\s*\[([A-Z0-9_]+)\]/g, (_, code) => `: ${label(code)}`);
+  s = s.replace(/→\s*\[([A-Z0-9_]+)\]/g, (_, code) => `(${label(code)})`);
 
   // 6. Normalizar pontuação e espaços residuais
   s = s
+    .replace(/:\s*→/g, ":")
     .replace(/\(\s*\)/g, "")
     .replace(/\s+([,.;:])/g, "$1")
     .replace(/,\s*,/g, ",")
@@ -334,17 +332,48 @@ export default function WhyAskWidget({
   engine,
   returnRequest,
   requestType,
+  physicalCondition,
 }: WhyAskWidgetProps) {
   const effectiveRequestType =
     requestType || (returnRequest?.tipoPedido as string) || undefined;
-  const inputs: StepInputItem[] = getInputsForStep(stepNumber, effectiveRequestType);
+  const effectivePhysicalCondition =
+    physicalCondition ||
+    (returnRequest?.artigos as Array<Record<string, any>>)?.[0]?.estado?.condicaoUso ||
+    undefined;
+  const inputs: StepInputItem[] = getInputsForStep(
+    stepNumber,
+    effectiveRequestType,
+    effectivePhysicalCondition
+  );
 
   const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [isRendered, setIsRendered] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsRendered(true);
+    } else if (isRendered) {
+      // Fallback de segurança para garantir desmontagem limpa caso animationend não dispare
+      const timer = setTimeout(() => {
+        setIsRendered(false);
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, isRendered]);
+
+  const handleAnimationEnd = (e: React.AnimationEvent<HTMLDivElement>) => {
+    // Apenas responde a animações do próprio contentor do popup
+    if (e.target !== e.currentTarget) return;
+    if (!isOpen) {
+      setIsRendered(false);
+    }
+  };
+
   const [selectedCodeOverride, setSelectedCodeOverride] = useState<string | null>(null);
 
   useEffect(() => {
     setSelectedCodeOverride(null);
-  }, [stepNumber, effectiveRequestType]);
+  }, [stepNumber, effectiveRequestType, effectivePhysicalCondition]);
   const [data, setData] = useState<ExplicacaoPorqueResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -590,13 +619,16 @@ export default function WhyAskWidget({
       className="fixed bottom-6 right-6 z-40"
     >
       {/* 1. Popover Flutuante Minimalista */}
-      {isOpen && (
+      {isRendered && (
         <div
           ref={popoverRef}
           role="dialog"
           aria-labelledby="why-ask-title"
           aria-modal="false"
-          className="fixed bottom-18 right-4 sm:bottom-20 sm:right-6 z-50 w-[420px] max-w-[calc(100vw-2rem)] max-h-[75vh] flex flex-col rounded-xl bg-white border border-slate-200 shadow-lg overflow-hidden animate-in fade-in duration-150"
+          onAnimationEnd={handleAnimationEnd}
+          className={`fixed bottom-18 right-4 sm:bottom-20 sm:right-6 z-50 w-[420px] max-w-[calc(100vw-2rem)] max-h-[75vh] flex flex-col rounded-xl bg-white border border-slate-200 shadow-lg overflow-hidden ${
+            isOpen ? "animate-why-ask-in" : "animate-why-ask-out"
+          }`}
         >
           {/* Header Minimalista e Profissional */}
           <header className="px-4 py-3.5 border-b border-slate-100 flex items-center justify-between gap-3 bg-white shrink-0">

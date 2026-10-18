@@ -12,7 +12,7 @@ export const STEP_INPUT_MAPPING: Record<number, StepInputItem[]> = {
   3: [
     { code: "IN-007", label: "01 / Identificação & Marca" },
     { code: "IN-008", label: "02 / Estado Físico do Artigo" },
-    { code: "IN-010", label: "03 / Aptidão para Revenda" },
+    { code: "IN-010", label: "03 / Possibilidade de Revenda" },
   ],
   4: [
     { code: "IN-005", label: "01 / Tipo de Pedido Formulado" },
@@ -31,8 +31,26 @@ export const STEP_INPUT_MAPPING: Record<number, StepInputItem[]> = {
 
 export function getInputsForStep(
   stepNumber: number,
-  requestType?: string
+  requestType?: string,
+  physicalCondition?: string | null
 ): StepInputItem[] {
+  if (stepNumber === 3) {
+    const isResellApplicable =
+      !physicalCondition ||
+      physicalCondition === "NOVO_ETIQUETAS_SOLTAS" ||
+      physicalCondition === "NOVO_SEM_ETIQUETAS";
+    if (isResellApplicable) {
+      return [
+        { code: "IN-007", label: "01 / Identificação & Marca" },
+        { code: "IN-008", label: "02 / Estado Físico do Artigo" },
+        { code: "IN-010", label: "03 / Possibilidade de Revenda" },
+      ];
+    }
+    return [
+      { code: "IN-007", label: "01 / Identificação & Marca" },
+      { code: "IN-008", label: "02 / Estado Físico do Artigo" },
+    ];
+  }
   if (stepNumber === 5) {
     if (requestType === "TROCA") {
       return [

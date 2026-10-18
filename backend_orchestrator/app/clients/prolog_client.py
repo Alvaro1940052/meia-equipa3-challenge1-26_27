@@ -187,6 +187,10 @@ class PrologClient:
         """Analyze failed candidate rule premises via POST /retail/whynot."""
         return await self._post("/retail/whynot", payload)
 
+    async def why_retail(self, payload: Union[Dict[str, Any], Any]) -> Dict[str, Any]:
+        """Query why an input premise is requested via POST /retail/why."""
+        return await self._post("/retail/why", payload)
+
     async def facts_retail(self) -> Dict[str, Any]:
         """Retrieve all current facts from working memory via GET /retail/facts."""
         return await self._get("/retail/facts")

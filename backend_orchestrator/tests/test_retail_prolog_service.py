@@ -10,7 +10,7 @@ from app.services.retail_prolog_service import RetailPrologService, pedido_to_pr
 
 
 def _get_service() -> RetailPrologService:
-    url = getattr(settings, "prolog_engine_url", "http://prolog-engine:8080")
+    url = getattr(settings, "PROLOG_ENGINE_URL", getattr(settings, "prolog_engine_url", "http://localhost:8080"))
     client = PrologClient(base_url=url)
     return RetailPrologService(prolog_client=client)
 
@@ -140,12 +140,34 @@ async def test_explain_why_all_input_codes():
         assert resp.pergunta is not None and len(resp.pergunta) > 10
         assert resp.resumo is not None and len(resp.resumo) > 15
         assert len(resp.regrasQueDependem) > 0
-        assert len(resp.regrasEmEspera) > 0
-        # Verify waiting rules have valid structure
-        first_wait = resp.regrasEmEspera[0]
-        assert first_wait.codigoRegra is not None
-        assert first_wait.modulo is not None
-        assert len(first_wait.condicoesDoDado) > 0
+        if resp.regrasEmEspera:
+            first_wait = resp.regrasEmEspera[0]
+            assert first_wait.codigoRegra is not None
+            assert first_wait.modulo is not None
+            assert len(first_wait.condicoesDoDado) > 0
+
+
+@pytest.mark.asyncio
+async def test_explain_why_with_dynamic_waiting_rules():
+    """Verify explain_why dynamically evaluates rules in waiting when scenario facts are present."""
+    service = _get_service()
+    # Scenario where payment is Interac with physical card present, but mercado is pending (IN-001)
+    interac_pending_market_payload = {
+        "compraOriginal": {
+            "pagamento": {
+                "meio": "interac",
+                "cartaoFisicoPresente": True,
+            }
+        },
+    }
+    # When asking why IN-001 (mercado) is needed, TN-011 is waiting solely for mercado(canada)
+    resp = await service.explain_why("IN-001", interac_pending_market_payload)
+    assert resp.codigo == "IN-001"
+    assert "TN-011" in resp.regrasQueDependem
+    assert len(resp.regrasEmEspera) >= 1
+    waiting_rule_codes = [r.codigoRegra for r in resp.regrasEmEspera]
+    assert "TN-011" in waiting_rule_codes
+    assert "TN-011" in resp.resumo
 
 
 @pytest.mark.asyncio

@@ -171,6 +171,111 @@ test(why_ask_active_rule_during_candidate_evaluation) :-
     retail_engine:why_ask(InactiveWhy),
     assertion(sub_string(InactiveWhy, _, _, _, "Não há nenhuma regra candidata ativa")).
 
+test(why_ask_dynamic_premise_mercado_without_and_with_waiting_rules) :-
+    retail_engine:load_knowledge_base(retail_rules),
+
+    % Case A: Empty facts -> dependent rules found, but none waiting
+    retail_engine:explain_why_premise("IN-001", [], Resp1),
+    assertion(Resp1.status == "success"),
+    assertion(Resp1.codigo == "IN-001"),
+    assertion(Resp1.dado == "mercado"),
+    assertion(contains_substr(Resp1.pergunta, "mercado")),
+    assertion(member("TN-011", Resp1.regras_dependentes)),
+    assertion(member("TN-012", Resp1.regras_dependentes)),
+    assertion(Resp1.regras_em_espera == []),
+    assertion(contains_substr(Resp1.resumo, "políticas da loja")),
+
+    % Case B: Facts satisfy other conditions of TN-011 -> TN-011 is em espera!
+    retail_engine:explain_why_premise(
+        "IN-001",
+        [meio_pagamento(interac), cartao_interac_presente(true)],
+        Resp2
+    ),
+    assertion(Resp2.status == "success"),
+    assertion(Resp2.regras_em_espera \== []),
+    once((
+        member(Espera, Resp2.regras_em_espera),
+        Espera.codigoRegra == "TN-011",
+        contains_substr(Espera.nomeRegra, "Interac"),
+        Espera.modulo == "tn",
+        assertion(member("meio_reembolso(meio_original)", Espera.conclusoes)),
+        assertion(member("processo_obrigatorio(pos)", Espera.conclusoes)),
+        once((
+            member(Cond, Espera.condicoesDoDado),
+            Cond.nome == "mercado",
+            Cond.cumprida == false
+        ))
+    )),
+    assertion(contains_substr(Resp2.resumo, "TN-011")),
+    assertion(contains_substr(Resp2.resumo, "determinante")).
+
+test(why_ask_dynamic_premise_timeframe_with_verified_facts) :-
+    retail_engine:load_knowledge_base(retail_rules),
+
+    % With verified return facts asserted, PT-003 and PT-004 are waiting solely for timeframe
+    BaseFacts = [
+        colaborador_autorizado(true),
+        sku_reconhecido(true),
+        estado_produto(nao_usado_com_etiquetas),
+        comprovativo(recibo_impresso)
+    ],
+    retail_engine:explain_why_premise("IN-006", BaseFacts, Resp),
+    assertion(Resp.status == "success"),
+    assertion(Resp.codigo == "IN-006"),
+    assertion(Resp.dado == "dias_desde_compra"),
+    assertion(member("PT-003", Resp.regras_dependentes)),
+    assertion(member("PT-004", Resp.regras_dependentes)),
+    % Both PT-003 (<=30) and PT-004 (>30) are candidate waiting rules
+    findall(Code, (
+        member(E, Resp.regras_em_espera),
+        Code = E.codigoRegra
+    ), WaitingCodes),
+    assertion(member("PT-003", WaitingCodes)),
+    assertion(member("PT-004", WaitingCodes)),
+    assertion(contains_substr(Resp.resumo, "PT-003")).
+
+test(why_ask_dynamic_premise_attribute_aliases_and_casing) :-
+    retail_engine:load_knowledge_base(retail_rules),
+
+    % Query by lowercase string "in-001"
+    retail_engine:explain_why_premise("in-001", [], R1),
+    assertion(R1.codigo == "IN-001"),
+
+    % Query by attribute name "mercado"
+    retail_engine:explain_why_premise("mercado", [], R2),
+    assertion(R2.codigo == "IN-001"),
+    assertion(R2.dado == "mercado"),
+
+    % Query by atom compound mercado(_)
+    retail_engine:explain_why_premise(mercado(_), [], R3),
+    assertion(R3.codigo == "IN-001"),
+
+    % Query by condition name "estado_produto"
+    retail_engine:explain_why_premise("estado_produto", [], R4),
+    assertion(R4.codigo == "IN-008"),
+    assertion(R4.dado == "estado_produto").
+
+test(why_ask_dynamic_premise_sandbox_zero_pollution) :-
+    setup_baseline_facts([
+        colaborador_autorizado(true),
+        sku_reconhecido(true),
+        estado_produto(lavado)
+    ]),
+    retail_engine:count_facts(CountBefore),
+
+    % Execute why ask evaluation with a different scenario
+    retail_engine:explain_why_premise(
+        "IN-001",
+        [meio_pagamento(interac), cartao_interac_presente(true)],
+        _
+    ),
+
+    % Working memory must be strictly restored to baseline
+    retail_engine:count_facts(CountAfter),
+    assertion(CountAfter == CountBefore),
+    assertion(has_fact(estado_produto(lavado))),
+    assertion(\+ has_fact(meio_pagamento(interac))).
+
 % ==============================================================================
 % 3. VIA 3: PORQUÊ DA DECISÃO? (OUTPUT WHY) — EXECUTIVE SUMMARY
 % ==============================================================================

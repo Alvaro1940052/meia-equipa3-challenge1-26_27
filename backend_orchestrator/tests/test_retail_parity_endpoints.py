@@ -70,3 +70,57 @@ async def test_retail_health(async_client: AsyncClient):
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "UP"
+
+
+@pytest.mark.asyncio
+async def test_retail_porque_empty_payload(async_client: AsyncClient):
+    """Ensure /api/v1/retail/porque returns dependent rules and empty waiting rules on empty payload."""
+    resp = await async_client.post("/api/v1/retail/porque?dado=IN-001", json={})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["codigo"] == "IN-001"
+    assert data["dado"] == "IN-001"
+    assert "TN-011" in data["regrasQueDependem"]
+    assert len(data["regrasEmEspera"]) == 0
+    assert "TN-011" in data["resumo"]
+
+
+@pytest.mark.asyncio
+async def test_retail_porque_dynamic_waiting_rules(async_client: AsyncClient):
+    """Ensure /api/v1/retail/porque dynamically deduces rules waiting on IN-001 with Interac facts."""
+    payload = {
+        "compraOriginal": {
+            "pagamento": {
+                "meio": "interac",
+                "cartaoFisicoPresente": True,
+            }
+        }
+    }
+    resp = await async_client.post("/api/v1/retail/porque?dado=IN-001", json=payload)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["codigo"] == "IN-001"
+    assert "TN-011" in data["regrasQueDependem"]
+    assert len(data["regrasEmEspera"]) >= 1
+
+    waiting_codes = [r["codigoRegra"] for r in data["regrasEmEspera"]]
+    assert "TN-011" in waiting_codes
+    assert "TN-011" in data["resumo"]
+
+    first_wait = data["regrasEmEspera"][0]
+    assert "TN-011" in first_wait["nomeRegra"]
+    assert first_wait["modulo"] == "tn"
+    assert len(first_wait["condicoesDoDado"]) > 0
+    assert first_wait["condicoesDoDado"][0]["nome"] == "mercado"
+
+
+@pytest.mark.asyncio
+async def test_retail_porque_in008_product_condition(async_client: AsyncClient):
+    """Ensure /api/v1/retail/porque for IN-008 queries product condition policy rules."""
+    resp = await async_client.post("/api/v1/retail/porque?dado=IN-008", json={})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["codigo"] == "IN-008"
+    assert len(data["regrasQueDependem"]) > 0
+    assert any(r.startswith("PC-") for r in data["regrasQueDependem"])
+

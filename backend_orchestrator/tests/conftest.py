@@ -85,6 +85,75 @@ def mock_prolog_client() -> AsyncMock:
         "impact_summary": "A decisão mudou de rever para permitir.",
     }
     mock.reset_retail.return_value = {"status": "success", "message": "Reset"}
+
+    async def _mock_why_retail(payload: Dict[str, Any]) -> Dict[str, Any]:
+        dado = str(payload.get("dado", "IN-001")).upper()
+        facts = payload.get("base_facts", []) or []
+        facts_str = " ".join(facts)
+        if dado == "IN-001":
+            is_interac = "interac" in facts_str
+            espera = [
+                {
+                    "codigoRegra": "TN-011",
+                    "codigo_regra": "TN-011",
+                    "nomeRegra": "[TN-011] Exigir presença do cartão físico Interac no Canadá para estorno de débito.",
+                    "nome_regra": "[TN-011] Exigir presença do cartão físico Interac no Canadá para estorno de débito.",
+                    "modulo": "tn",
+                    "artigoId": None,
+                    "conclusoes": ["meio_reembolso(meio_original)", "processo_obrigatorio(pos)"],
+                    "condicoesDoDado": [
+                        {
+                            "nome": "mercado",
+                            "descricao": "mercado(canada)",
+                            "cumprida": False,
+                            "valor": None,
+                            "artigoId": None,
+                        }
+                    ],
+                }
+            ] if is_interac else []
+            resumo = (
+                "A pergunta \"Qual é o mercado da transação de retalho?\" é determinante para 1 regra(s) em espera (TN-011) no pedido atual."
+                if is_interac
+                else "A pergunta \"Qual é o mercado da transação de retalho?\" é avaliada pelas políticas da loja (TN-011, TN-011-SEM-CARTAO, TN-012); no pedido atual, nenhuma decisão terminal está imediatamente dependente desta resposta porque os restantes requisitos ainda não foram avaliados."
+            )
+            return {
+                "status": "success",
+                "codigo": "IN-001",
+                "dado": "mercado",
+                "pergunta": "Qual é o mercado da transação de retalho? (eua/canada/porquê)",
+                "regrasQueDependem": ["TN-011", "TN-011-SEM-CARTAO", "TN-012"],
+                "regras_dependentes": ["TN-011", "TN-011-SEM-CARTAO", "TN-012"],
+                "regrasEmEspera": espera,
+                "regras_em_espera": espera,
+                "resumo": resumo,
+            }
+        elif dado == "IN-008":
+            return {
+                "status": "success",
+                "codigo": "IN-008",
+                "dado": "estado_produto",
+                "pergunta": "Qual é o estado físico do produto? (nao_usado/usado/danificado)",
+                "regrasQueDependem": ["PC-001", "PC-002", "PC-003"],
+                "regras_dependentes": ["PC-001", "PC-002", "PC-003"],
+                "regrasEmEspera": [],
+                "regras_em_espera": [],
+                "resumo": "A pergunta é avaliada pelas regras de integridade do produto (PC-001, PC-002, PC-003).",
+            }
+        else:
+            return {
+                "status": "success",
+                "codigo": dado,
+                "dado": dado.lower(),
+                "pergunta": f"Qual é o valor para o atributo {dado}?",
+                "regrasQueDependem": [],
+                "regras_dependentes": [],
+                "regrasEmEspera": [],
+                "regras_em_espera": [],
+                "resumo": f"A pergunta {dado} é requerida pelo sistema pericial.",
+            }
+
+    mock.why_retail.side_effect = _mock_why_retail
     return mock
 
 

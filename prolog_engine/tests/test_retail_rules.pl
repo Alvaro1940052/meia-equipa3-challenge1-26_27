@@ -54,7 +54,7 @@ has_fact(Fact) :-
 test(all_71_rules_loaded) :-
     retail_engine:load_knowledge_base(retail_rules),
     aggregate_all(count, retail_engine:regra(_), Count),
-    assertion(Count == 73).
+    assertion(Count == 75).
 
 test(nine_families_exact_counts) :-
     retail_engine:load_knowledge_base(retail_rules),
@@ -69,7 +69,7 @@ test(nine_families_exact_counts) :-
     aggregate_all(count, retail_engine:regra_info(_, bw, _), BwCount),
     assertion(HsCount == 6),
     assertion(PcCount == 9),
-    assertion(PtCount == 8),
+    assertion(PtCount == 10),
     assertion(ChCount == 10),
     assertion(TnCount == 13),
     assertion(EpCount == 7),

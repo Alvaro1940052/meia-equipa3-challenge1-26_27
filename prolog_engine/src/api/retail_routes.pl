@@ -4,6 +4,7 @@
     handle_retail_whatif/1,
     handle_retail_how/1,
     handle_retail_whynot/1,
+    handle_retail_why/1,
     handle_retail_facts/1,
     handle_retail_reset/1
 ]).
@@ -37,6 +38,7 @@
     explain_how/2,
     why_ask/1,
     why_ask/2,
+    explain_why_premise/3,
     output_why/1,
     explain_whynot/2,
     what_if/3,
@@ -64,6 +66,7 @@
 :- http_handler(root('retail/whatif'),      handle_retail_whatif,      [method(post)]).
 :- http_handler(root('retail/how'),         handle_retail_how,         [method(post)]).
 :- http_handler(root('retail/whynot'),      handle_retail_whynot,      [method(post)]).
+:- http_handler(root('retail/why'),         handle_retail_why,         [method(post)]).
 :- http_handler(root('retail/facts'),       handle_retail_facts,       [method(get)]).
 :- http_handler(root('retail/reset'),       handle_retail_reset,       [method(post)]).
 
@@ -342,6 +345,67 @@ handle_retail_whynot(Request) :-
                 message: "Missing required parameter 'fact' or 'decision'"
             }, [status(400)])
         )
+    ).
+
+% ==============================================================================
+% 6. POST /retail/why — Dynamic Why Ask Explicability (Via 2: Why Ask)
+% ==============================================================================
+
+%!  handle_retail_why(+Request) is det.
+%
+%   Processes Why Ask explicability queries (Via 2: Why Ask).
+%   Given an input premise code or attribute (e.g. "IN-001" or "mercado")
+%   and optional base facts from the current return evaluation session,
+%   dynamically determines candidate dependent rules, active waiting rules,
+%   and normative causal justification.
+handle_retail_why(Request) :-
+    read_json_or_empty(Request, PayloadDict, StatusCode),
+    (   StatusCode =:= 400
+    ->  reply_json_dict(_{
+            status: "error",
+            message: "Invalid JSON payload"
+        }, [status(400)])
+    ;   extract_why_dado(PayloadDict, DadoRaw),
+        (   DadoRaw == none
+        ->  reply_json_dict(_{
+                status: "error",
+                message: "Missing required parameter 'dado' or 'codigo'"
+            }, [status(400)])
+        ;   extract_why_base_facts(PayloadDict, BaseFacts),
+            catch(
+                (
+                    explain_why_premise(DadoRaw, BaseFacts, ResponseDict),
+                    reply_json_dict(ResponseDict)
+                ),
+                WhyError,
+                (
+                    format(user_error, '~N[RETAIL ROUTES ERROR] explain_why_premise failed: ~w~n', [WhyError]),
+                    reply_json_dict(_{
+                        status: "error",
+                        message: "Explain why processing failed"
+                    }, [status(500)])
+                )
+            )
+        )
+    ).
+
+extract_why_dado(PayloadDict, Dado) :-
+    (   get_dict(dado, PayloadDict, D) -> Dado = D
+    ;   get_dict(codigo, PayloadDict, D) -> Dado = D
+    ;   get_dict(attribute, PayloadDict, D) -> Dado = D
+    ;   get_dict(dado_codigo, PayloadDict, D) -> Dado = D
+    ;   get_dict(input, PayloadDict, D) -> Dado = D
+    ;   Dado = none
+    ).
+
+extract_why_base_facts(PayloadDict, BaseFacts) :-
+    (   get_dict(base_facts, PayloadDict, Raw)
+    ->  dict_to_retail_facts(Raw, BaseFacts)
+    ;   get_dict(facts, PayloadDict, Raw)
+    ->  dict_to_retail_facts(Raw, BaseFacts)
+    ;   get_dict(initial_facts, PayloadDict, Raw)
+    ->  dict_to_retail_facts(Raw, BaseFacts)
+    ;   BaseFacts = []
     ).
 
 % ==============================================================================

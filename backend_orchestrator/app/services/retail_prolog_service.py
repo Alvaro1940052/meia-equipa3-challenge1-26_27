@@ -589,6 +589,9 @@ def pedido_to_prolog_facts(pedido: Dict[str, Any]) -> List[str]:
     return facts
 
 
+_map_pedido_to_prolog_facts = pedido_to_prolog_facts
+
+
 class RetailPrologService:
     """Service layer adapting the Levi's Prolog inference engine to the returns dashboard API contract."""
 
@@ -864,25 +867,26 @@ class RetailPrologService:
             decisaoSimulada=decisao_sim,
         )
 
+    def _map_pedido_to_prolog_facts(self, payload: Dict[str, Any]) -> List[str]:
+        """Convert input payload to Prolog facts."""
+        return pedido_to_prolog_facts(payload) if payload else []
+
     async def missing_data(self, payload: Dict[str, Any]) -> DadosEmFaltaResponse:
         """Check for missing data using Prolog interactive ACM mechanics."""
-        facts = pedido_to_prolog_facts(payload)
+        facts = self._map_pedido_to_prolog_facts(payload)
         resp = await self.prolog_client.interactive_retail({"initial_facts": facts})
 
         if resp.get("status") == "question" and "question" in resp:
             q = resp["question"]
             attr = q.get("attribute", "comprovativo")
+            code = "IN-004" if "comprovativo" in attr else "IN-010"
+            porque_exp = await self.explain_why(code, payload)
             dado = DadoEmFaltaDto(
-                codigo="IN-004" if "comprovativo" in attr else "IN-010",
+                codigo=code,
                 caminho=f"artigos[0].{attr}",
                 descricao=q.get("prompt", "Dado pendente para avaliação completa"),
                 obrigatorio=True,
-                porque=ExplicacaoPorqueResponse(
-                    codigo="IN-004" if "comprovativo" in attr else "IN-010",
-                    pergunta=q.get("prompt"),
-                    resumo=q.get("why"),
-                    regrasQueDependem=[q.get("rule_active", "PT-003")],
-                ),
+                porque=porque_exp,
             )
             return DadosEmFaltaResponse(
                 dados=[dado],
@@ -898,16 +902,43 @@ class RetailPrologService:
 
     async def explain_why(self, dado: str, payload: Dict[str, Any]) -> ExplicacaoPorqueResponse:
         """Explain why a particular input premise is needed (Why Ask)."""
-        dado_clean = (dado or "IN-004").strip().upper()
+        dado_clean = (dado or "IN-004").strip()
+        facts = self._map_pedido_to_prolog_facts(payload)
 
-        info = PROLOG_INPUT_KNOWLEDGE.get(dado_clean)
+        # 1. Attempt dynamic causal Why Ask reasoning via SWI-Prolog microservice
+        try:
+            prolog_resp = await self.prolog_client.why_retail({
+                "dado": dado_clean,
+                "base_facts": facts,
+            })
+            if isinstance(prolog_resp, dict) and prolog_resp.get("status") == "success":
+                code_ret = prolog_resp.get("codigo") or dado_clean
+                if str(code_ret).upper() == dado_clean.upper():
+                    prolog_resp["codigo"] = dado_clean
+                    prolog_resp["dado"] = dado_clean
+                else:
+                    prolog_resp["codigo"] = code_ret
+                    prolog_resp["dado"] = prolog_resp.get("dado") or code_ret
+
+                if dado_clean not in prolog_resp.get("pergunta", "") and dado_clean.lower() in prolog_resp.get("pergunta", ""):
+                    prolog_resp["pergunta"] = prolog_resp["pergunta"].replace(dado_clean.lower(), dado_clean)
+
+                return ExplicacaoPorqueResponse.model_validate(prolog_resp)
+        except Exception as exc:
+            logger.warning(
+                "[RetailPrologService] SWI-Prolog /retail/why unavailable or error (%s). Falling back to resilient knowledge catalog.",
+                exc,
+            )
+
+        # 2. Resilient fallback using PROLOG_INPUT_KNOWLEDGE if SWI-Prolog is unreachable
+        dado_upper = dado_clean.upper()
+        info = PROLOG_INPUT_KNOWLEDGE.get(dado_upper)
         if not info:
-            # Fallback for unknown input codes
             return ExplicacaoPorqueResponse(
-                codigo=dado_clean,
-                dado=dado_clean,
-                pergunta=f"Qual é o valor do atributo {dado_clean}?",
-                resumo=f"O atributo {dado_clean} é requerido pelo motor pericial para validar as regras normativas de devolução.",
+                codigo=dado_upper,
+                dado=dado_upper,
+                pergunta=f"Qual é o valor do atributo {dado_upper}?",
+                resumo=f"O atributo {dado_upper} é requerido pelo motor pericial para validar as regras normativas de devolução.",
                 regrasQueDependem=[],
                 regrasEmEspera=[],
             )
@@ -941,8 +972,8 @@ class RetailPrologService:
             )
 
         return ExplicacaoPorqueResponse(
-            codigo=dado_clean,
-            dado=dado_clean,
+            codigo=dado_upper,
+            dado=dado_upper,
             pergunta=pergunta,
             resumo=resumo,
             regrasQueDependem=regras_dependentes,

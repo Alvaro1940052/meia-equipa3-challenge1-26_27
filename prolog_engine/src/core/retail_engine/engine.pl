@@ -11,7 +11,9 @@
     como/1,                     % +FactInput — prints terminal deductive explanation in Portuguese (Via 1: How)
     why_ask/1,                  % -ExplanationText — explains why the active rule is querying (Via 2: Why Ask)
     why_ask/2,                  % +RuleId, -ExplanationText — explains why a given rule queries (Via 2: Why Ask)
+    why_ask/3,                  % +DadoInput, +BaseFacts, -ResponseDict — Why Ask dynamic causal explanation
     why_ask/0,                  % prints active Why Ask explanation to stdout (Via 2: Why Ask)
+    explain_why_premise/3,      % +DadoInput, +BaseFacts, -ResponseDict — Why Ask dynamic causal explanation
     output_why/1,               % -JustificationList — synthesizes executive decision justifications (Via 3: Output Why)
     output_why/0,               % prints executive decision justifications to stdout (Via 3: Output Why)
     decision_justification/2,   % -Decision, -JustificationList — retrieves decision and justification (Via 3: Output Why)
@@ -71,6 +73,7 @@
 % Import interactive dialogue manager
 :- use_module(interactive, [
     perguntar/3,
+    formatar_pergunta/2,
     explicar_porque_pergunta/2,
     set_mock_answers/1,
     clear_mock_answers/0,
@@ -462,6 +465,249 @@ why_ask :-
     why_ask(Text),
     format("~s~n", [Text]).
 
+%!  why_ask(+DadoInput, +BaseFacts, -ResponseDict) is det.
+%!  explain_why_premise(+DadoInput, +BaseFacts, -ResponseDict) is det.
+%
+%   Dynamically deduces Why Ask causal explanation for an input premise code
+%   (e.g. "IN-001" or "mercado") given a partial set of observed base facts.
+%   Identifies candidate rules reading this input (regras_dependentes), evaluates
+%   rules whose remaining conditions are already satisfied in working memory
+%   (regras_em_espera), and builds a structured explanation response.
+explain_why_premise(DadoInput, BaseFacts, ResponseDict) :-
+    ensure_kb_loaded,
+    snapshot_working_memory(Snapshot),
+    setup_call_cleanup(
+        true,
+        executar_explain_why(DadoInput, BaseFacts, ResponseDict),
+        restore_working_memory(Snapshot)
+    ).
+
+why_ask(DadoInput, BaseFacts, ResponseDict) :-
+    explain_why_premise(DadoInput, BaseFacts, ResponseDict).
+
+executar_explain_why(DadoInput, BaseFacts, ResponseDict) :-
+    resolve_dado_info(DadoInput, Codigo, DadoStr, Template, AttrList),
+    (   catch(formatar_pergunta(Template, PerguntaText), _, fail)
+    ->  true
+    ;   format(string(PerguntaText), "Qual é o valor para o atributo ~w?", [DadoStr])
+    ),
+
+    % Setup partial scenario in working memory and deduce derived facts
+    reset_session,
+    normalize_fact_list(BaseFacts, ParsedFacts),
+    assert_initial_facts_list(ParsedFacts),
+    run_engine(_),
+
+    % 1. Find all rules dependent on this premise's attribute(s)
+    findall(RuleID, (
+        regra RuleID se LHS entao _,
+        flatten_lhs(LHS, Flat),
+        member(P, Flat),
+        premise_is_in_attrs(AttrList, P)
+    ), DepRulesRaw),
+    sort(DepRulesRaw, DepRulesSorted),
+    maplist(term_to_string_safe, DepRulesSorted, RegrasDependentes),
+
+    % 2. Find rules waiting solely for this premise
+    findall(EsperaDict, (
+        member(RuleID, DepRulesSorted),
+        regra RuleID se LHS entao RHS,
+        \+ facto(_, regra_disparada(RuleID)),
+        flatten_lhs(LHS, Flat),
+        partition(premise_is_in_attrs(AttrList), Flat, CondsDado, OtherConds),
+        CondsDado \== [],
+        forall(member(C, OtherConds), condicao_satisfeita(C)),
+        term_to_string_safe(RuleID, RuleIDStr),
+        extract_rule_conclusions(RHS, Conclusoes),
+        format_condicoes_do_dado(CondsDado, CondicoesDoDado),
+        (   regra_info(RuleID, Familia, Desc)
+        ->  format(string(NomeRegra), "[~w] ~w", [RuleID, Desc]),
+            term_to_string_safe(Familia, ModuloStr)
+        ;   format(string(NomeRegra), "[~w] Regra ~w", [RuleID, RuleID]),
+            ModuloStr = "geral"
+        ),
+        EsperaDict = _{
+            codigoRegra: RuleIDStr,
+            codigo_regra: RuleIDStr,
+            nomeRegra: NomeRegra,
+            nome_regra: NomeRegra,
+            modulo: ModuloStr,
+            artigoId: null,
+            artigo_id: null,
+            conclusoes: Conclusoes,
+            condicoesDoDado: CondicoesDoDado,
+            condicoes_do_dado: CondicoesDoDado
+        }
+    ), RegrasEmEspera),
+
+    % 3. Formulate natural language summary with causal grounding
+    (   RegrasEmEspera \== []
+    ->  length(RegrasEmEspera, NumEspera),
+        maplist(get_rule_code_from_espera, RegrasEmEspera, RuleCodes),
+        atomic_list_concat(RuleCodes, ', ', RuleCodesStr),
+        (   RegrasEmEspera = [FirstEspera|_],
+            get_dict(codigoRegra, FirstEspera, FirstCode),
+            regra_info(FirstCode, _, FirstDesc)
+        ->  format(string(ResumoText),
+                "A pergunta \"~w\" é determinante para ~w regra(s) em espera (~w). Fundamento: ~w",
+                [PerguntaText, NumEspera, RuleCodesStr, FirstDesc])
+        ;   format(string(ResumoText),
+                "A pergunta \"~w\" é determinante para ~w regra(s) em espera (~w) no pedido atual.",
+                [PerguntaText, NumEspera, RuleCodesStr])
+        )
+    ;   (   RegrasDependentes \== []
+        ->  atomic_list_concat(RegrasDependentes, ', ', RegrasDepStr),
+            format(string(ResumoText),
+                "A pergunta \"~w\" é avaliada pelas políticas da loja (~w); no pedido atual, nenhuma decisão terminal está imediatamente dependente desta resposta porque os restantes requisitos ainda não foram avaliados.",
+                [PerguntaText, RegrasDepStr])
+        ;   format(string(ResumoText),
+                "A pergunta \"~w\" é requerida pelo sistema pericial para validação das regras de devolução.",
+                [PerguntaText])
+        )
+    ),
+
+    ResponseDict = _{
+        status: "success",
+        codigo: Codigo,
+        dado: DadoStr,
+        pergunta: PerguntaText,
+        resumo: ResumoText,
+        regras_dependentes: RegrasDependentes,
+        regrasQueDependem: RegrasDependentes,
+        regras_em_espera: RegrasEmEspera,
+        regrasEmEspera: RegrasEmEspera
+    }.
+
+dado_catalog("IN-001", mercado, mercado(_), [mercado]).
+dado_catalog("IN-002", tipo_loja, tipo_loja(_), [tipo_loja]).
+dado_catalog("IN-003", canal_compra, canal_compra(_), [canal_compra]).
+dado_catalog("IN-004", comprovativo, comprovativo(_), [comprovativo, recibo_original]).
+dado_catalog("IN-005", tipo_pedido, tipo_pedido(_), [tipo_pedido]).
+dado_catalog("IN-006", dias_desde_compra, dias_desde_compra(_), [dias_desde_compra, dias_desde_envio]).
+dado_catalog("IN-007", sku_reconhecido, sku_reconhecido(_), [sku_reconhecido, marca, categoria_produto]).
+dado_catalog("IN-008", estado_produto, estado_produto(_), [estado_produto, defeito_fabrico, personalizado_ou_alterado]).
+dado_catalog("IN-009", meio_pagamento, meio_pagamento(_), [meio_pagamento, cartao_interac_presente, cartao_perdido_ou_roubado, conta_cartao_ativa, tentativa_cartao_recusada, saldo_reembolsavel, afterpay_pede_excecao]).
+dado_catalog("IN-010", revendivel, revendivel(_), [revendivel]).
+dado_catalog("HS-006", colaborador_autorizado, colaborador_autorizado(_), [colaborador_autorizado, funcao_colaborador, sessao_pos_propria]).
+dado_catalog("EX-001", pedido_excecao, pedido_excecao(_), [pedido_excecao, concluivel_no_sistema]).
+dado_catalog("EX-002", cliente_contesta, cliente_contesta(_), [cliente_contesta, cliente_agitado, cliente_fornece_dados, barreira_linguistica]).
+dado_catalog("EX-008", risco_fraude, risco_fraude(_), [risco_fraude]).
+dado_catalog("CH-002", encomenda_encontrada, encomenda_encontrada(_), [encomenda_encontrada, portal_online_disponivel]).
+dado_catalog("EP-001", troca_apenas_tamanho, troca_apenas_tamanho(_), [troca_apenas_tamanho]).
+
+resolve_dado_info(DadoInput, Codigo, DadoStr, Template, AttrList) :-
+    normalize_dado_string(DadoInput, NormStr),
+    upcase_atom(NormStr, UpperAtom),
+    atom_string(UpperAtom, UpperStr),
+    (   dado_catalog(UpperStr, Attr, Templ, Attrs)
+    ->  Codigo = UpperStr,
+        atom_string(Attr, DadoStr),
+        Template = Templ,
+        AttrList = Attrs
+    ;   downcase_atom(NormStr, LowerAtom),
+        dado_catalog(Code, LowerAtom, Templ, Attrs)
+    ->  Codigo = Code,
+        atom_string(LowerAtom, DadoStr),
+        Template = Templ,
+        AttrList = Attrs
+    ;   compound(DadoInput)
+    ->  functor(DadoInput, Functor, _),
+        downcase_atom(Functor, LowFunctor),
+        (   dado_catalog(Code, LowFunctor, Templ, Attrs)
+        ->  Codigo = Code,
+            atom_string(LowFunctor, DadoStr),
+            Template = Templ,
+            AttrList = Attrs
+        ;   atom_string(LowFunctor, DadoStr),
+            Codigo = DadoStr,
+            Template =.. [LowFunctor, _],
+            AttrList = [LowFunctor]
+        )
+    ;   downcase_atom(NormStr, LowAtom),
+        atom_string(LowAtom, DadoStr),
+        Codigo = DadoStr,
+        Template =.. [LowAtom, _],
+        AttrList = [LowAtom]
+    ).
+
+normalize_dado_string(Input, Str) :-
+    (   string(Input) -> normalize_space(string(Str), Input)
+    ;   atom(Input) -> atom_string(Input, S), normalize_space(string(Str), S)
+    ;   term_string(Input, S), normalize_space(string(Str), S)
+    ).
+
+flatten_lhs([], []) :- !.
+flatten_lhs([H|T], Flat) :-
+    !,
+    flatten_lhs(H, FlatH),
+    flatten_lhs(T, FlatT),
+    append(FlatH, FlatT, Flat).
+flatten_lhs(X e Y, Flat) :-
+    !,
+    flatten_lhs(X, FlatX),
+    flatten_lhs(Y, FlatY),
+    append(FlatX, FlatY, Flat).
+flatten_lhs(Single, [Single]).
+
+premise_attribute(nao avalia(Expr), Attr) :- !, premise_attribute(avalia(Expr), Attr).
+premise_attribute(avalia(Expr), Attr) :- !,
+    (   compound(Expr)
+    ->  Expr =.. [Attr|_]
+    ;   Attr = Expr
+    ).
+premise_attribute(nao Fact, Attr) :- !, premise_attribute(Fact, Attr).
+premise_attribute(Fact, Attr) :-
+    compound(Fact),
+    !,
+    functor(Fact, Attr, _).
+premise_attribute(Atom, Atom) :-
+    atom(Atom),
+    !.
+
+premise_is_in_attrs(Attrs, P) :-
+    premise_attribute(P, Attr),
+    member(Attr, Attrs).
+
+extract_rule_conclusions(RHS, Conclusoes) :-
+    findall(ConcStr, (
+        member(cria_facto(F), RHS),
+        \+ (F =.. [regra_disparada|_]),
+        \+ (F =.. [motivo|_]),
+        term_to_string_safe(F, ConcStr)
+    ), ConclusoesRaw),
+    (   ConclusoesRaw \== []
+    ->  Conclusoes = ConclusoesRaw
+    ;   findall(ConcStr, (
+            member(cria_facto(F), RHS),
+            \+ (F =.. [regra_disparada|_]),
+            term_to_string_safe(F, ConcStr)
+        ), Conclusoes)
+    ).
+
+format_condicoes_do_dado(CondsDado, CondicoesDoDado) :-
+    maplist(format_single_condicao, CondsDado, CondicoesDoDado).
+
+format_single_condicao(Cond, Dict) :-
+    premise_attribute(Cond, Attr),
+    atom_string(Attr, AttrStr),
+    term_to_string_safe(Cond, CondStr),
+    (   condicao_satisfeita(Cond)
+    ->  Cumprida = true
+    ;   Cumprida = false
+    ),
+    Dict = _{
+        nome: AttrStr,
+        descricao: CondStr,
+        cumprida: Cumprida,
+        valor: null,
+        artigoId: null
+    }.
+
+get_rule_code_from_espera(EsperaDict, Code) :-
+    (   get_dict(codigoRegra, EsperaDict, Code) -> true
+    ;   get_dict(codigo_regra, EsperaDict, Code)
+    ).
+
 % ------------------------------------------------------------------------------
 % VIA 3: Porquê da Decisão? (Output Why — Justificação Executiva da Conclusão)
 % ------------------------------------------------------------------------------
@@ -724,6 +970,7 @@ matches_removal(RemPatterns, AddList, Fact) :-
 
 term_to_string_safe(Term, Str) :-
     (   string(Term) -> Str = Term
+    ;   atom(Term) -> atom_string(Term, Str)
     ;   term_string(Term, Str)
     ).
 

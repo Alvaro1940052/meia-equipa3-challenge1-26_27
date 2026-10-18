@@ -107,12 +107,15 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
   const isStep2Valid = Boolean(
     state.marketJurisdiction && state.storeType && state.purchaseChannel
   );
+  const isResellRequired =
+    state.physicalCondition === "NOVO_ETIQUETAS_SOLTAS" ||
+    state.physicalCondition === "NOVO_SEM_ETIQUETAS";
   const isStep3Valid = Boolean(
     state.barcodeRecognized !== null &&
     state.brandAllowed !== null &&
     state.alteredOrHemmed !== null &&
     state.physicalCondition &&
-    state.readyToResell !== null
+    (!isResellRequired || state.readyToResell !== null)
   );
   const isStep4Valid = Boolean(
     state.requestType &&
@@ -228,7 +231,7 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
         if (state.brandAllowed === null) missing.push("Marca");
         if (state.alteredOrHemmed === null) missing.push("Bainhas");
         if (!state.physicalCondition) missing.push("Estado Físico");
-        if (state.readyToResell === null) missing.push("Revenda");
+        if (isResellRequired && state.readyToResell === null) missing.push("Revenda");
         return `Obrigatório: selecionar ${missing.slice(0, 2).join(", ")}${missing.length > 2 ? "..." : ""}`;
       }
       return meta.nextHint;
@@ -472,6 +475,7 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
           engine={state.engine || "returns"}
           returnRequest={buildReturnRequest()}
           requestType={state.requestType || undefined}
+          physicalCondition={state.physicalCondition || undefined}
         />
       )}
     </div>
