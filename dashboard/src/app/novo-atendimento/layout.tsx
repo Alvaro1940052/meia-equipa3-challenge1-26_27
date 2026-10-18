@@ -3,7 +3,19 @@
 import React from "react";
 import Navbar from "@/components/ui/Navbar";
 import StatusFooter from "@/components/ui/StatusFooter";
-import { WizardProvider } from "@/components/wizard/WizardContext";
+import { WizardProvider, useWizard } from "@/components/wizard/WizardContext";
+import ConfirmLeaveModal from "@/components/wizard/ConfirmLeaveModal";
+
+function WizardLeaveModalGlobal() {
+  const { showLeaveModal, confirmLeave, cancelLeave } = useWizard();
+  return (
+    <ConfirmLeaveModal
+      isOpen={showLeaveModal}
+      onConfirm={() => confirmLeave()}
+      onCancel={() => cancelLeave()}
+    />
+  );
+}
 
 export default function NovoAtendimentoLayout({
   children,
@@ -28,6 +40,9 @@ export default function NovoAtendimentoLayout({
 
         {/* Bottom Engine Health Footer */}
         <StatusFooter droolsStatus="online" prologStatus="online" />
+
+        {/* Modal Global de Confirmação de Saída Tátil */}
+        <WizardLeaveModalGlobal />
       </div>
     </WizardProvider>
   );

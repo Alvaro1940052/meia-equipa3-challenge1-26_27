@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useWizard, getFirstIncompleteStep } from "./WizardContext";
-import ConfirmLeaveModal from "./ConfirmLeaveModal";
 import Step1EngineSelect from "./Step1EngineSelect";
 import Step2MarketStore from "./Step2MarketStore";
 import Step3ProductEligibility from "./Step3ProductEligibility";
@@ -77,8 +76,7 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
     totalSteps,
     isHydrated,
     isDirty,
-    showLeaveModal,
-    pendingNavigationUrl,
+    isLeaving,
     setShowLeaveModal,
     setPendingNavigationUrl,
     goToStep,
@@ -95,14 +93,14 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
   // Guarda Sequencial de Passos (Step Guard):
   // Impede que um utilizador aceda diretamente via URL sem ter completado os passos obrigatórios anteriores
   useEffect(() => {
-    if (!isHydrated) return;
+    if (!isHydrated || isLeaving) return;
     const allowedStep = getFirstIncompleteStep(state);
     if (stepNumber > allowedStep) {
       router.replace(`/novo-atendimento/passo/${allowedStep}`);
     } else {
       goToStep(stepNumber);
     }
-  }, [stepNumber, state, router, goToStep, isHydrated]);
+  }, [stepNumber, state, router, goToStep, isHydrated, isLeaving]);
 
   // Validações de obrigatoriedade por etapa (conforme especificações RPAC-Team3)
   const isStep1Valid = Boolean(state.engine);
@@ -131,19 +129,6 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
   const handleLeave = () => {
     setPendingNavigationUrl("/");
     setShowLeaveModal(true);
-  };
-
-  const handleConfirmLeave = () => {
-    const target = pendingNavigationUrl || "/";
-    setShowLeaveModal(false);
-    setPendingNavigationUrl(null);
-    resetWizard();
-    router.push(target);
-  };
-
-  const handleCancelLeave = () => {
-    setShowLeaveModal(false);
-    setPendingNavigationUrl(null);
   };
 
   const handleNext = async () => {
@@ -236,7 +221,7 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
 
   // Se ainda estiver a carregar do sessionStorage ou a redirecionar por guarda de passos, mostrar loading discreto
   const allowedStep = getFirstIncompleteStep(state);
-  const isGuarded = isHydrated && stepNumber > allowedStep;
+  const isGuarded = isHydrated && !isLeaving && stepNumber > allowedStep;
 
   if (!isHydrated || isGuarded) {
     return (
@@ -384,13 +369,6 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
           requestType={state.requestType}
         />
       )}
-
-      {/* Modal Customizado de Confirmação de Saída Tátil */}
-      <ConfirmLeaveModal
-        isOpen={showLeaveModal}
-        onConfirm={handleConfirmLeave}
-        onCancel={handleCancelLeave}
-      />
     </div>
   );
 }

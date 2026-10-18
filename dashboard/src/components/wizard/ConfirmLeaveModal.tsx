@@ -8,18 +8,22 @@ export interface ConfirmLeaveModalProps {
   onCancel: () => void;
   title?: string;
   description?: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
 }
 
 export default function ConfirmLeaveModal({
   isOpen,
   onConfirm,
   onCancel,
-  title = "Tem a certeza de que pretende sair?",
-  description = "Os dados recolhidos para esta devolução serão descartados e terá de reiniciar a introdução desde o início.",
+  title = "Sair do atendimento?",
+  description = "Os dados recolhidos nesta sessão serão perdidos.",
+  confirmLabel = "Sair e descartar",
+  cancelLabel = "Continuar atendimento",
 }: ConfirmLeaveModalProps) {
   const safeButtonRef = useRef<HTMLButtonElement>(null);
 
-  // Focus automático na ação segura (Continuar Atendimento) para proteção do operador
+  // Focus automático na ação segura para proteção do operador
   useEffect(() => {
     if (isOpen) {
       safeButtonRef.current?.focus();
@@ -61,59 +65,62 @@ export default function ConfirmLeaveModal({
       onClick={handleBackdropClick}
       className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
     >
-      <div className="card-tactile bg-white rounded-3xl p-6 sm:p-7 max-w-md w-full border border-slate-200 shadow-2xl flex flex-col gap-5 animate-in zoom-in-95 duration-150">
-        {/* Cabeçalho com Ícone Badge e Título */}
-        <div className="flex items-start gap-4">
+      <div className="bg-white rounded-2xl p-6 sm:p-7 max-w-sm sm:max-w-md w-full border border-slate-200/90 shadow-xl shadow-slate-900/10 flex flex-col gap-5 animate-in zoom-in-95 duration-150">
+        {/* Top bar com Ícone Minimalista e Botão Fechar */}
+        <div className="flex items-start justify-between gap-4">
           <div
-            className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200/60 flex items-center justify-center shadow-2xs shrink-0"
+            className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0"
             aria-hidden="true"
           >
-            <span className="material-symbols-outlined text-[28px]">warning</span>
+            <span className="material-symbols-outlined text-[20px]">logout</span>
           </div>
 
-          <div className="flex flex-col gap-1">
-            <span className="font-label-md text-[11px] font-bold text-amber-700 uppercase tracking-wider">
-              Atendimento em Curso
-            </span>
-            <h3
-              id="confirm-leave-title"
-              className="font-sans font-headline-sm text-slate-900 text-lg font-bold tracking-tight"
-            >
-              {title}
-            </h3>
-          </div>
-        </div>
-
-        {/* Descrição de Impacto */}
-        <p
-          id="confirm-leave-desc"
-          className="font-sans font-body-md text-slate-500 text-xs sm:text-sm leading-relaxed"
-        >
-          {description}
-        </p>
-
-        {/* Botões Táteis com Micro-interações */}
-        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-2">
-          {/* Ação Destrutiva (Sair e Descartar) */}
           <button
             type="button"
-            onClick={onConfirm}
-            className="font-sans px-5 py-2.5 rounded-xl bg-white hover:bg-rose-50 active:bg-rose-100 text-rose-600 hover:text-rose-700 font-bold text-sm border border-slate-200 hover:border-rose-200 shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+            onClick={onCancel}
+            aria-label="Fechar"
+            className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer"
           >
-            <span className="material-symbols-outlined text-[18px]">delete_sweep</span>
-            <span>Sair e Descartar</span>
+            <span className="material-symbols-outlined text-[18px]">close</span>
+          </button>
+        </div>
+
+        {/* Título e Descrição Concisa */}
+        <div className="flex flex-col gap-1.5">
+          <h3
+            id="confirm-leave-title"
+            className="font-sans font-bold text-slate-900 text-lg tracking-tight"
+          >
+            {title}
+          </h3>
+          <p
+            id="confirm-leave-desc"
+            className="font-sans text-slate-500 text-sm leading-relaxed"
+          >
+            {description}
+          </p>
+        </div>
+
+        {/* Ações com Hierarquia Visual Clara */}
+        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-2">
+          {/* Ação Destrutiva Secundária (Discreta, tom rose apenas no hover) */}
+          <button
+            type="button"
+            onClick={() => onConfirm()}
+            className="font-sans px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-600 hover:text-rose-600 font-semibold text-sm border border-slate-200 hover:border-rose-200/80 transition-colors cursor-pointer"
+          >
+            {confirmLabel}
           </button>
 
-          {/* Ação Segura (Continuar Atendimento) */}
+          {/* Ação Segura Principal (Foco automático, sólido elegante) */}
           <button
             ref={safeButtonRef}
             type="button"
             autoFocus
-            onClick={onCancel}
-            className="font-sans px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-sm shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer focus-visible:outline-2 focus-visible:outline-emerald-600"
+            onClick={() => onCancel()}
+            className="font-sans px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-black text-white font-semibold text-sm shadow-xs transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-slate-900"
           >
-            <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-            <span>Continuar Atendimento</span>
+            {cancelLabel}
           </button>
         </div>
       </div>

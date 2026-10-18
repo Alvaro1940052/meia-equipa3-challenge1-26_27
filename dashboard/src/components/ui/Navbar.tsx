@@ -28,9 +28,10 @@ export default function Navbar({
   const wizard = useOptionalWizard();
 
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-    if (wizard && wizard.isDirty && href !== "/novo-atendimento") {
+    if (wizard && wizard.isDirty) {
       e.preventDefault();
-      wizard.setPendingNavigationUrl(href);
+      const target = href === "/novo-atendimento" ? "/novo-atendimento/passo/1" : href;
+      wizard.setPendingNavigationUrl(target);
       wizard.setShowLeaveModal(true);
       if (mobileMenuOpen) setMobileMenuOpen(false);
     }

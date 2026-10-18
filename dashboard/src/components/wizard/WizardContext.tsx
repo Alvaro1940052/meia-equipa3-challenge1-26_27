@@ -7,6 +7,7 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
+import { useRouter } from "next/navigation";
 import type { EngineId } from "@/config/gateway";
 import type { ReturnRequest } from "@/types/returns";
 
@@ -140,10 +141,14 @@ interface WizardContextType {
   totalSteps: number;
   isHydrated: boolean;
   isDirty: boolean;
+  isLeaving: boolean;
   showLeaveModal: boolean;
   pendingNavigationUrl: string | null;
   setShowLeaveModal: (show: boolean) => void;
   setPendingNavigationUrl: (url: string | null) => void;
+  setIsLeaving: (leaving: boolean) => void;
+  confirmLeave: (targetUrl?: string) => void;
+  cancelLeave: () => void;
   setField: <K extends keyof WizardState>(field: K, value: WizardState[K]) => void;
   goToStep: (step: number) => void;
   nextStep: () => void;
@@ -156,9 +161,11 @@ interface WizardContextType {
 const WizardContext = createContext<WizardContextType | undefined>(undefined);
 
 export function WizardProvider({ children }: { children: ReactNode }) {
+  const router = useRouter();
   const [state, setState] = useState<WizardState>(defaultWizardState);
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [isHydrated, setIsHydrated] = useState<boolean>(false);
+  const [isLeaving, setIsLeaving] = useState<boolean>(false);
   const [showLeaveModal, setShowLeaveModal] = useState<boolean>(false);
   const [pendingNavigationUrl, setPendingNavigationUrl] = useState<string | null>(null);
   const totalSteps = 6;
@@ -189,18 +196,19 @@ export function WizardProvider({ children }: { children: ReactNode }) {
     }
   }, [state]);
 
-  // Proteção contra Saída Acidental (beforeunload listener)
+  // Proteção contra Saída Acidental externa (fechar aba ou recarregar página)
   useEffect(() => {
-    if (!isDirty) return;
+    if (!isDirty || isLeaving) return;
 
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isLeaving) return;
       e.preventDefault();
       e.returnValue = "";
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [isDirty]);
+  }, [isDirty, isLeaving]);
 
   const setField = <K extends keyof WizardState>(field: K, value: WizardState[K]) => {
     setState((prev) => {
@@ -258,6 +266,33 @@ export function WizardProvider({ children }: { children: ReactNode }) {
     } catch {
       // Ignorar
     }
+  };
+
+  const confirmLeave = (targetUrl?: unknown) => {
+    setIsLeaving(true);
+    const validTarget =
+      typeof targetUrl === "string" && targetUrl.trim().length > 0
+        ? targetUrl
+        : (typeof pendingNavigationUrl === "string" && pendingNavigationUrl.trim().length > 0
+            ? pendingNavigationUrl
+            : "/");
+
+    setShowLeaveModal(false);
+    setPendingNavigationUrl(null);
+    resetWizard();
+
+    // Desarmar qualquer listener residual no objeto window
+    if (typeof window !== "undefined") {
+      window.onbeforeunload = null;
+    }
+
+    // Navegação SPA suave com Next.js Router (sem provocar o alerta nativo do browser)
+    router.push(validTarget);
+  };
+
+  const cancelLeave = () => {
+    setShowLeaveModal(false);
+    setPendingNavigationUrl(null);
   };
 
 function mapTipoPedidoToResolucaoPedida(
@@ -546,10 +581,14 @@ function mapTipoPedidoToResolucaoPedida(
         totalSteps,
         isHydrated,
         isDirty,
+        isLeaving,
         showLeaveModal,
         pendingNavigationUrl,
         setShowLeaveModal,
         setPendingNavigationUrl,
+        setIsLeaving,
+        confirmLeave,
+        cancelLeave,
         setField,
         goToStep,
         nextStep,
