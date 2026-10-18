@@ -55,7 +55,7 @@ export default function TrainingModal({ isOpen, onClose }: TrainingModalProps) {
               </span>
               <h3
                 id="training-modal-title"
-                className="font-headline-sm text-on-surface text-lg md:text-xl font-bold"
+                className="font-sans font-headline-sm text-on-surface text-lg md:text-xl font-bold"
               >
                 Simular Cenário de Treino
               </h3>
@@ -72,7 +72,7 @@ export default function TrainingModal({ isOpen, onClose }: TrainingModalProps) {
           </button>
         </div>
 
-        <p className="font-body-md text-on-surface-variant text-xs md:text-sm">
+        <p className="font-sans font-body-md text-on-surface-variant text-xs md:text-sm">
           O modo de treino permite exercitar os fluxos de balcão e os motores de decisão formal
           sem registar movimentos na caixa real ou alterar o inventário físico.
         </p>
@@ -82,7 +82,7 @@ export default function TrainingModal({ isOpen, onClose }: TrainingModalProps) {
           {scenarios.map((sc, i) => (
             <div
               key={i}
-              className="p-3.5 rounded-2xl bg-surface-container-low border border-border-card flex items-start gap-3"
+              className="p-3.5 rounded-2xl bg-surface-container-low border border-border-card flex items-start gap-3 font-sans"
             >
               <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center shadow-xs border border-border-card flex-shrink-0">
                 <span className={`material-symbols-outlined text-[20px] ${sc.color}`}>
@@ -91,14 +91,14 @@ export default function TrainingModal({ isOpen, onClose }: TrainingModalProps) {
               </div>
               <div className="flex flex-col gap-0.5">
                 <div className="flex items-center gap-2">
-                  <h4 className="font-label-lg text-xs font-bold text-on-surface">
+                  <h4 className="font-sans font-label-lg text-xs font-bold text-on-surface">
                     {sc.title}
                   </h4>
-                  <span className="px-2 py-0.2 rounded-full bg-surface-container-highest text-on-surface font-caption text-[10px] font-bold">
+                  <span className="font-sans px-2 py-0.2 rounded-full bg-surface-container-highest text-on-surface font-caption text-[10px] font-bold">
                     {sc.badge}
                   </span>
                 </div>
-                <p className="font-caption text-xs text-on-surface-variant">
+                <p className="font-sans font-caption text-xs text-on-surface-variant">
                   {sc.desc}
                 </p>
               </div>
@@ -107,11 +107,11 @@ export default function TrainingModal({ isOpen, onClose }: TrainingModalProps) {
         </div>
 
         {/* Action Button */}
-        <div className="flex items-center justify-between gap-3 pt-3 border-t border-border-card">
+        <div className="flex items-center justify-between gap-3 pt-3 border-t border-border-card font-sans">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-full bg-surface-container text-on-surface font-label-md text-xs font-bold cursor-pointer"
+            className="font-sans px-4 py-2 rounded-full bg-surface-container text-on-surface font-label-md text-xs font-semibold cursor-pointer"
           >
             Voltar
           </button>
@@ -119,7 +119,7 @@ export default function TrainingModal({ isOpen, onClose }: TrainingModalProps) {
           <Link
             href="/novo-atendimento"
             onClick={onClose}
-            className="px-6 py-2.5 rounded-full bg-primary-container text-white font-label-md text-xs font-bold shadow-[0_3px_0_0_#059669] hover:translate-y-[1px] transition-all flex items-center gap-2 cursor-pointer"
+            className="font-sans px-6 py-2.5 rounded-full bg-primary-container text-white font-label-md text-xs font-semibold shadow-[0_3px_0_0_#059669] hover:translate-y-[1px] transition-all flex items-center gap-2 cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">play_circle</span>
             <span>Iniciar no Wizard</span>

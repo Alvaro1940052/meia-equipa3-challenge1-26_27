@@ -97,18 +97,18 @@ export default function Step4ReceiptTimeline() {
       <div className="w-full flex flex-col gap-3">
         {/* Typographic Section Header */}
         <div className="flex items-center gap-2 px-1">
-          <span className="text-xs font-bold text-slate-400 select-none">01</span>
+          <span className="font-mono tabular-nums text-xs font-bold text-slate-400 select-none">01</span>
           <span className="text-slate-300">/</span>
-          <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
+          <h3 className="font-sans text-sm sm:text-base font-bold text-slate-900 tracking-tight">
             Tipo de Pedido
           </h3>
           {state.requestType ? (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60 select-none">
+            <span className="font-sans inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60 select-none">
               <span className="material-symbols-outlined text-[13px] font-bold">check</span>
               Definido
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 select-none">
+            <span className="font-sans inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 select-none">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
               Obrigatório
             </span>
@@ -174,14 +174,14 @@ export default function Step4ReceiptTimeline() {
                   </div>
                   <div className="flex flex-col min-w-0">
                     <div className="flex items-center gap-2">
-                      <h4 className="font-bold text-slate-900 text-sm sm:text-base tracking-tight">
+                      <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight">
                         {item.title}
                       </h4>
-                      <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
+                      <span className="font-sans text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
                         {item.badge}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                    <p className="font-sans text-xs text-slate-500 mt-0.5 leading-relaxed">
                       {item.subtitle}
                     </p>
                   </div>
@@ -205,18 +205,18 @@ export default function Step4ReceiptTimeline() {
       <div className="w-full flex flex-col gap-3">
         {/* Typographic Section Header */}
         <div className="flex items-center gap-2 px-1">
-          <span className="text-xs font-bold text-slate-400 select-none">02</span>
+          <span className="font-mono tabular-nums text-xs font-bold text-slate-400 select-none">02</span>
           <span className="text-slate-300">/</span>
-          <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
+          <h3 className="font-sans text-sm sm:text-base font-bold text-slate-900 tracking-tight">
             Comprovativo de Compra
           </h3>
           {state.proofOfPurchase ? (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60 select-none">
+            <span className="font-sans inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60 select-none">
               <span className="material-symbols-outlined text-[13px] font-bold">check</span>
               Definido
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 select-none">
+            <span className="font-sans inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 select-none">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
               Obrigatório
             </span>
@@ -275,14 +275,14 @@ export default function Step4ReceiptTimeline() {
                   </div>
                   <div className="flex flex-col min-w-0">
                     <div className="flex items-center gap-2">
-                      <h4 className="font-bold text-slate-900 text-sm sm:text-base tracking-tight">
+                      <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight">
                         {item.title}
                       </h4>
-                      <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
+                      <span className="font-sans text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
                         {item.badge}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                    <p className="font-sans text-xs text-slate-500 mt-0.5 leading-relaxed">
                       {item.subtitle}
                     </p>
                   </div>
@@ -306,18 +306,18 @@ export default function Step4ReceiptTimeline() {
       <div className="w-full flex flex-col gap-3">
         {/* Typographic Section Header */}
         <div className="flex items-center gap-2 px-1">
-          <span className="text-xs font-bold text-slate-400 select-none">03</span>
+          <span className="font-mono tabular-nums text-xs font-bold text-slate-400 select-none">03</span>
           <span className="text-slate-300">/</span>
-          <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
+          <h3 className="font-sans text-sm sm:text-base font-bold text-slate-900 tracking-tight">
             Janela Temporal desde a Compra
           </h3>
           {state.daysSincePurchase <= 30 ? (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60 select-none">
+            <span className="font-sans inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60 select-none">
               <span className="material-symbols-outlined text-[13px] font-bold">check</span>
               Regular (≤ 30d)
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 select-none">
+            <span className="font-sans inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 select-none">
               <span className="material-symbols-outlined text-[13px] font-bold">warning</span>
               Fora de Prazo ({state.daysSincePurchase}d)
             </span>
@@ -356,14 +356,14 @@ export default function Step4ReceiptTimeline() {
               </div>
               <div className="flex flex-col min-w-0">
                 <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-slate-900 text-sm sm:text-base tracking-tight">
+                  <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight">
                     Até 30 Dias
                   </h4>
-                  <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
+                  <span className="font-sans text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
                     Janela Regular
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                <p className="font-sans text-xs text-slate-500 mt-0.5 leading-relaxed">
                   Compra efetuada há menos de 30 dias. Elegível para reembolso integral ou troca
                 </p>
               </div>
@@ -413,14 +413,14 @@ export default function Step4ReceiptTimeline() {
               </div>
               <div className="flex flex-col min-w-0">
                 <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-slate-900 text-sm sm:text-base tracking-tight">
+                  <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight">
                     Mais de 30 Dias
                   </h4>
-                  <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
+                  <span className="font-sans text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
                     Fora de Prazo
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                <p className="font-sans text-xs text-slate-500 mt-0.5 leading-relaxed">
                   Compra efetuada há mais de 30 dias. Sujeito a crédito em loja ou valor residual
                 </p>
               </div>
@@ -449,14 +449,14 @@ export default function Step4ReceiptTimeline() {
             </div>
             <div className="flex flex-col min-w-0">
               <div className="flex items-center gap-2">
-                <h4 className="font-bold text-slate-900 text-sm sm:text-base tracking-tight leading-snug">
+                <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight leading-snug">
                   Dias exatos decorridos
                 </h4>
-                <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-full">
+                <span className="font-sans tabular-nums text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-full">
                   {state.daysSincePurchase} {state.daysSincePurchase === 1 ? "dia" : "dias"}
                 </span>
               </div>
-              <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+              <p className="font-sans text-xs text-slate-500 mt-0.5 leading-relaxed">
                 Ajuste rápido caso o talão indique uma data ou intervalo específico
               </p>
             </div>
@@ -470,7 +470,7 @@ export default function Step4ReceiptTimeline() {
                   key={dias}
                   type="button"
                   onClick={() => setField("daysSincePurchase", dias)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-emerald-600 ${
+                  className={`font-sans tabular-nums px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-emerald-600 ${
                     isSelected
                       ? "bg-slate-900 text-white shadow-2xs font-extrabold"
                       : "bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200/70"

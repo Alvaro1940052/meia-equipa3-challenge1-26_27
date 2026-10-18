@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useOptionalWizard } from "@/components/wizard/WizardContext";
 
 export interface NavbarProps {
   activeRoute?: "painel" | "novo-atendimento" | "decisoes" | string;
@@ -24,6 +25,16 @@ export default function Navbar({
   operatorRole = "Operador N2",
 }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const wizard = useOptionalWizard();
+
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (wizard && wizard.isDirty && href !== "/novo-atendimento") {
+      e.preventDefault();
+      wizard.setPendingNavigationUrl(href);
+      wizard.setShowLeaveModal(true);
+      if (mobileMenuOpen) setMobileMenuOpen(false);
+    }
+  };
 
   const navLinks = [
     { href: "/", key: "painel", label: "Painel Principal" },
@@ -54,10 +65,11 @@ export default function Navbar({
         <div className="flex items-center">
           <Link
             href="/"
+            onClick={(e) => handleNavClick(e, "/")}
             aria-label="Ir para a página inicial do RetailFlow"
             className="flex items-center gap-2 select-none focus-visible:outline-2 focus-visible:outline-primary rounded"
           >
-            <span className="font-bold text-lg tracking-tight text-slate-900">
+            <span className="font-display font-bold text-lg tracking-tight text-slate-900">
               RetailFlow
             </span>
           </Link>
@@ -66,7 +78,7 @@ export default function Navbar({
         {/* Minimalist Desktop Navigation (clean text tabs, no pills, no boxes) */}
         <nav
           aria-label="Navegação Principal"
-          className="hidden md:flex items-center gap-8 h-16"
+          className="hidden md:flex items-center gap-8 h-16 font-sans"
         >
           {navLinks.map((item) => {
             const isActive = activeRoute === item.key;
@@ -74,6 +86,7 @@ export default function Navbar({
               <Link
                 key={item.key}
                 href={item.href}
+                onClick={(e) => handleNavClick(e, item.href)}
                 aria-current={isActive ? "page" : undefined}
                 className={`relative inline-flex items-center h-full text-sm transition-colors select-none focus-visible:outline-2 focus-visible:outline-primary ${
                   isActive
@@ -94,7 +107,7 @@ export default function Navbar({
         </nav>
 
         {/* Right side: Operator profile & mobile toggle */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 font-sans">
           {/* Operator Profile */}
           <div className="flex items-center gap-2.5 select-none">
             <div className="relative">
@@ -144,7 +157,10 @@ export default function Navbar({
               <Link
                 key={item.key}
                 href={item.href}
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={(e) => {
+                  setMobileMenuOpen(false);
+                  handleNavClick(e, item.href);
+                }}
                 aria-current={isActive ? "page" : undefined}
                 className={`px-3 py-2 rounded-md text-sm transition-colors focus-visible:outline-2 focus-visible:outline-primary ${
                   isActive

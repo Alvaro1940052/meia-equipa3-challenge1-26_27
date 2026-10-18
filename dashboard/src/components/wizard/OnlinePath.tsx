@@ -158,10 +158,10 @@ export default function OnlinePath() {
               </span>
             </div>
             <div className="flex flex-col gap-1">
-              <h3 className="font-headline-md text-on-surface text-xl font-bold">
+              <h3 className="font-sans text-on-surface text-xl font-bold">
                 A Conectar à BackPocket...
               </h3>
-              <p className="font-body-md text-on-surface-variant text-xs sm:text-sm">
+              <p className="font-sans text-on-surface-variant text-xs sm:text-sm">
                 A sincronizar o pedido web com o motor{" "}
                 <span className="font-bold text-primary">
                   {state.engine === "prolog" ? "Prolog (Dedução Lógica)" : "Drools (Regras Rete-OO)"}
@@ -178,7 +178,7 @@ export default function OnlinePath() {
         {/* Conditional Branch Pill */}
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-primary shadow-xs">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-xs font-extrabold uppercase tracking-wider">
+          <span className="font-sans text-xs font-extrabold uppercase tracking-wider">
             COMPRA ONLINE &amp; BACKPOCKET • FLUXO ASSISTIDO
           </span>
         </div>
@@ -193,10 +193,10 @@ export default function OnlinePath() {
           <div className="h-2 flex-1 rounded-full bg-surface-container-highest" />
         </div>
 
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-on-surface tracking-tight">
+        <h1 className="font-display text-3xl sm:text-4xl font-extrabold text-on-surface tracking-tight">
           Caminho Online &amp; BackPocket
         </h1>
-        <p className="text-sm sm:text-base text-on-surface-variant max-w-xl font-medium">
+        <p className="font-sans text-sm sm:text-base text-on-surface-variant max-w-xl font-medium">
           Tratamento simples de encomendas levi.com / levi.ca e pedidos BackPocket
         </p>
       </div>
@@ -207,25 +207,25 @@ export default function OnlinePath() {
         <section className="bg-white rounded-[2.5rem] p-6 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-surface-container-highest/60 flex flex-col gap-6 transition-all hover:shadow-[0_12px_36px_rgb(0,0,0,0.06)]">
           <div className="flex items-center justify-between border-b border-surface-container-low pb-4">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-2xl bg-emerald-100 text-primary font-extrabold text-sm flex items-center justify-center shadow-xs">
+              <div className="font-mono tabular-nums w-9 h-9 rounded-2xl bg-emerald-100 text-primary font-bold text-sm flex items-center justify-center shadow-xs">
                 1
               </div>
               <div>
-                <h2 className="text-lg sm:text-xl font-extrabold text-on-surface">
+                <h2 className="font-sans text-lg sm:text-xl font-bold text-on-surface">
                   Localização da Encomenda Web
                 </h2>
-                <p className="text-xs text-on-surface-variant font-medium">
+                <p className="font-sans text-xs text-on-surface-variant font-medium">
                   Validação de Encomenda &amp; Prova de Compra
                 </p>
               </div>
             </div>
             {state.onlineOrderFound ? (
-              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold shadow-xs">
+              <span className="font-sans inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold shadow-xs">
                 <span className="material-symbols-outlined text-[15px] text-primary">verified</span>
                 <span>Pronto a Processar</span>
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold shadow-xs">
+              <span className="font-sans inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold shadow-xs">
                 <span className="material-symbols-outlined text-[15px] text-amber-600">warning</span>
                 <span>Requer Verificação</span>
               </span>
@@ -239,15 +239,15 @@ export default function OnlinePath() {
                 <span className="material-symbols-outlined text-[20px]">qr_code_scanner</span>
               </div>
               <div className="flex flex-col">
-                <span className="text-[11px] font-extrabold uppercase tracking-wider text-on-surface-variant">
+                <span className="font-sans text-[11px] font-extrabold uppercase tracking-wider text-on-surface-variant">
                   Referência da Encomenda Web
                 </span>
-                <span className="text-sm font-extrabold font-mono text-on-surface">
+                <span className="font-mono tabular-nums text-sm font-bold text-on-surface">
                   {state.onlineOrderNumber || "WEB-84920-PT"}
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-2 self-end sm:self-center">
+            <div className="flex items-center gap-2 self-end sm:self-center font-sans">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span className="text-xs font-bold text-on-surface-variant">
                 Canal: levi.com • Token BackPocket Ativo
@@ -257,7 +257,7 @@ export default function OnlinePath() {
 
           {/* Question Options (Tactile Duolingo Cards) */}
           <div className="flex flex-col gap-2.5">
-            <label className="text-xs font-extrabold uppercase tracking-wider text-on-surface-variant">
+            <label className="font-sans text-xs font-extrabold uppercase tracking-wider text-on-surface-variant">
               A encomenda foi localizada no portal BackPocket ou Levi.com?
             </label>
             <div role="radiogroup" aria-label="Localização da encomenda web" className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
@@ -288,10 +288,10 @@ export default function OnlinePath() {
                   )}
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-sm font-extrabold text-on-surface">
+                  <span className="font-sans text-sm font-bold text-on-surface">
                     Sim, Encomenda Localizada
                   </span>
-                  <span className="text-xs text-on-surface-variant mt-0.5 leading-relaxed font-medium">
+                  <span className="font-sans text-xs text-on-surface-variant mt-0.5 leading-relaxed font-medium">
                     Comprovativo eletrónico e dados da encomenda confirmados.
                   </span>
                 </div>
@@ -324,10 +324,10 @@ export default function OnlinePath() {
                   )}
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-sm font-extrabold text-on-surface">
+                  <span className="font-sans text-sm font-bold text-on-surface">
                     Não Encontrada / Sem Registo
                   </span>
-                  <span className="text-xs text-on-surface-variant mt-0.5 leading-relaxed font-medium">
+                  <span className="font-sans text-xs text-on-surface-variant mt-0.5 leading-relaxed font-medium">
                     Requer verificação manual ou devolução sem registo prévio.
                   </span>
                 </div>
@@ -340,19 +340,19 @@ export default function OnlinePath() {
         <section className="bg-white rounded-[2.5rem] p-6 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-surface-container-highest/60 flex flex-col gap-6 transition-all hover:shadow-[0_12px_36px_rgb(0,0,0,0.06)]">
           <div className="flex items-center justify-between border-b border-surface-container-low pb-4">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-2xl bg-emerald-100 text-primary font-extrabold text-sm flex items-center justify-center shadow-xs">
+              <div className="font-mono tabular-nums w-9 h-9 rounded-2xl bg-emerald-100 text-primary font-bold text-sm flex items-center justify-center shadow-xs">
                 2
               </div>
               <div>
-                <h2 className="text-lg sm:text-xl font-extrabold text-on-surface">
+                <h2 className="font-sans text-lg sm:text-xl font-bold text-on-surface">
                   Método de Pagamento Original
                 </h2>
-                <p className="text-xs text-on-surface-variant font-medium">
+                <p className="font-sans text-xs text-on-surface-variant font-medium">
                   Identificação do meio original de pagamento
                 </p>
               </div>
             </div>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container text-on-surface text-xs font-bold">
+            <span className="font-sans inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container text-on-surface text-xs font-bold">
               <span className="w-2 h-2 rounded-full bg-primary" />
               <span>
                 {state.onlinePaymentMethod === "CC"
@@ -372,8 +372,8 @@ export default function OnlinePath() {
               <span className="material-symbols-outlined text-amber-700 text-[24px] mt-0.5">
                 warning
               </span>
-              <div className="flex flex-col text-xs text-amber-950">
-                <span className="font-bold text-sm text-amber-900">
+              <div className="flex flex-col text-xs text-amber-950 font-sans">
+                <span className="font-sans font-bold text-sm text-amber-900">
                   Regra Estrita de Reembolso BNPL / Afterpay
                 </span>
                 <span className="mt-0.5 leading-relaxed">
@@ -385,7 +385,7 @@ export default function OnlinePath() {
 
           {/* 2x2 Payment Tender Grid */}
           <div className="flex flex-col gap-2.5">
-            <label className="text-xs font-extrabold uppercase tracking-wider text-on-surface-variant">
+            <label className="font-sans text-xs font-extrabold uppercase tracking-wider text-on-surface-variant">
               Selecione o meio original de liquidação:
             </label>
             <div role="radiogroup" aria-label="Método de pagamento original" className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
@@ -406,7 +406,7 @@ export default function OnlinePath() {
                     <span className="material-symbols-outlined text-primary text-[22px]">
                       credit_card
                     </span>
-                    <span className="text-sm font-extrabold text-on-surface">
+                    <span className="font-sans text-sm font-bold text-on-surface">
                       Cartão de Crédito/Débito
                     </span>
                   </div>
@@ -422,7 +422,7 @@ export default function OnlinePath() {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center justify-between pt-1">
+                <div className="flex items-center justify-between pt-1 font-sans">
                   <span className="text-xs text-on-surface-variant font-medium">
                     Visa •••• 4920
                   </span>
@@ -449,15 +449,15 @@ export default function OnlinePath() {
                     <span className="material-symbols-outlined text-amber-700 text-[22px]">
                       hourglass_top
                     </span>
-                    <span className="text-sm font-extrabold text-on-surface">
+                    <span className="font-sans text-sm font-bold text-on-surface">
                       Afterpay (BNPL)
                     </span>
                   </div>
-                  <span className="px-2 py-0.5 rounded-md bg-rose-100 text-rose-700 text-[10px] font-extrabold">
+                  <span className="font-sans px-2 py-0.5 rounded-md bg-rose-100 text-rose-700 text-[10px] font-extrabold">
                     Reembolso via App
                   </span>
                 </div>
-                <span className="text-xs text-on-surface-variant leading-tight font-medium">
+                <span className="font-sans text-xs text-on-surface-variant leading-tight font-medium">
                   Reembolso estrito pela app. Bloqueio em caixa.
                 </span>
               </button>
@@ -479,7 +479,7 @@ export default function OnlinePath() {
                     <span className="material-symbols-outlined text-secondary text-[22px]">
                       account_balance_wallet
                     </span>
-                    <span className="text-sm font-extrabold text-on-surface">
+                    <span className="font-sans text-sm font-bold text-on-surface">
                       PayPal / Venmo
                     </span>
                   </div>
@@ -495,7 +495,7 @@ export default function OnlinePath() {
                     )}
                   </div>
                 </div>
-                <span className="text-xs text-on-surface-variant leading-tight font-medium">
+                <span className="font-sans text-xs text-on-surface-variant leading-tight font-medium">
                   Crédito estornado à conta de origem digital.
                 </span>
               </button>
@@ -517,7 +517,7 @@ export default function OnlinePath() {
                     <span className="material-symbols-outlined text-on-surface text-[22px]">
                       contactless
                     </span>
-                    <span className="text-sm font-extrabold text-on-surface">
+                    <span className="font-sans text-sm font-bold text-on-surface">
                       Apple Pay / Google Pay
                     </span>
                   </div>
@@ -533,7 +533,7 @@ export default function OnlinePath() {
                     )}
                   </div>
                 </div>
-                <span className="text-xs text-on-surface-variant leading-tight font-medium">
+                <span className="font-sans text-xs text-on-surface-variant leading-tight font-medium">
                   Reembolso por aproximação ou via token salvaguardado.
                 </span>
               </button>
@@ -545,19 +545,19 @@ export default function OnlinePath() {
         <section className="bg-white rounded-[2.5rem] p-6 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-surface-container-highest/60 flex flex-col gap-6 transition-all hover:shadow-[0_12px_36px_rgb(0,0,0,0.06)]">
           <div className="flex items-center justify-between border-b border-surface-container-low pb-4">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-2xl bg-emerald-100 text-primary font-extrabold text-sm flex items-center justify-center shadow-xs">
+              <div className="font-mono tabular-nums w-9 h-9 rounded-2xl bg-emerald-100 text-primary font-bold text-sm flex items-center justify-center shadow-xs">
                 3
               </div>
               <div>
-                <h2 className="text-lg sm:text-xl font-extrabold text-on-surface">
+                <h2 className="font-sans text-lg sm:text-xl font-bold text-on-surface">
                   Janela de Expedição &amp; Tipo de Resolução
                 </h2>
-                <p className="text-xs text-on-surface-variant font-medium">
+                <p className="font-sans text-xs text-on-surface-variant font-medium">
                   Prazo de envio e preferência de devolução ou troca
                 </p>
               </div>
             </div>
-            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-surface-container-low border border-surface-container-highest text-on-surface text-xs font-bold">
+            <span className="font-sans inline-flex items-center gap-1 px-3 py-1 rounded-full bg-surface-container-low border border-surface-container-highest text-on-surface text-xs font-bold">
               {state.onlineDaysWindow === "UNDER_30"
                 ? "Envio: há 14 dias"
                 : "Envio: há 45 dias"}
@@ -566,7 +566,7 @@ export default function OnlinePath() {
 
           {/* Time Window Selection */}
           <div className="flex flex-col gap-2.5">
-            <label className="text-xs font-extrabold uppercase tracking-wider text-on-surface-variant">
+            <label className="font-sans text-xs font-extrabold uppercase tracking-wider text-on-surface-variant">
               Prazo decorrido desde a data de despacho (Tracking eletrónico):
             </label>
             <div role="radiogroup" aria-label="Prazo decorrido desde o despacho" className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
@@ -597,10 +597,10 @@ export default function OnlinePath() {
                   )}
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-sm font-extrabold text-on-surface">
+                  <span className="font-sans text-sm font-bold text-on-surface">
                     ≤ 30 dias desde o envio
                   </span>
-                  <span className="text-xs text-on-surface-variant mt-0.5 leading-relaxed font-medium">
+                  <span className="font-sans text-xs text-on-surface-variant mt-0.5 leading-relaxed font-medium">
                     Elegível para estorno integral no método original de compra.
                   </span>
                 </div>
@@ -633,10 +633,10 @@ export default function OnlinePath() {
                   )}
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-sm font-extrabold text-on-surface">
+                  <span className="font-sans text-sm font-bold text-on-surface">
                     &gt; 30 dias desde o envio
                   </span>
-                  <span className="text-xs text-on-surface-variant mt-0.5 leading-relaxed font-medium">
+                  <span className="font-sans text-xs text-on-surface-variant mt-0.5 leading-relaxed font-medium">
                     Elegível para Cartão de Oferta / Vale de Loja Levi&apos;s.
                   </span>
                 </div>
@@ -647,10 +647,10 @@ export default function OnlinePath() {
           {/* Troca vs Devolução Pura */}
           <div className="bg-surface-container-low/60 rounded-2xl p-4 sm:p-5 border border-surface-container-highest/70 flex flex-col gap-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-extrabold uppercase tracking-wider text-on-surface">
+              <span className="font-sans text-xs font-extrabold uppercase tracking-wider text-on-surface">
                 O cliente pretende trocar de artigo diretamente no balcão?
               </span>
-              <span className="px-2.5 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed text-[11px] font-extrabold">
+              <span className="font-sans px-2.5 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed text-[11px] font-extrabold">
                 Omnicanal
               </span>
             </div>
@@ -662,9 +662,9 @@ export default function OnlinePath() {
                   setField("requestType", "TROCA");
                   setField("exchangeOption", "MESMO_MODELO");
                 }}
-                className={`font-bold text-xs py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                className={`font-sans font-semibold text-xs py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
                   state.onlineInStoreExchange
-                    ? "bg-blue-100/80 border-2 border-secondary text-secondary shadow-xs font-extrabold"
+                    ? "bg-blue-100/80 border-2 border-secondary text-secondary shadow-xs font-bold"
                     : "bg-white border-2 border-surface-container-highest hover:border-outline-variant text-on-surface-variant opacity-80 hover:opacity-100"
                 }`}
               >
@@ -679,9 +679,9 @@ export default function OnlinePath() {
                   setField("requestType", "DEVOLUCAO");
                   setField("exchangeOption", "NENHUMA");
                 }}
-                className={`font-bold text-xs py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                className={`font-sans font-semibold text-xs py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
                   !state.onlineInStoreExchange
-                    ? "bg-emerald-100/70 border-2 border-primary text-primary shadow-xs font-extrabold"
+                    ? "bg-emerald-100/70 border-2 border-primary text-primary shadow-xs font-bold"
                     : "bg-white border-2 border-surface-container-highest hover:border-outline-variant text-on-surface-variant opacity-80 hover:opacity-100"
                 }`}
               >
@@ -697,12 +697,12 @@ export default function OnlinePath() {
         {/* CARD 4: PRÉ-VISUALIZAÇÃO DA DECISÃO (XAI LIVE - ESTILO DUOLINGO MINT) */}
         <section className="bg-emerald-50/80 border-2 border-emerald-300 rounded-[2.5rem] p-6 sm:p-7 shadow-sm flex flex-col gap-4">
           <div className="flex items-center justify-between border-b border-emerald-200/80 pb-3 flex-wrap gap-2">
-            <div className="flex items-center gap-2 text-primary font-extrabold text-sm">
+            <div className="flex items-center gap-2 text-primary font-sans font-bold text-sm">
               <span className="material-symbols-outlined text-[20px]">auto_awesome</span>
               <span>Previsão de Resolução Comercial</span>
             </div>
             <span
-              className={`px-3 py-1 rounded-full text-xs font-extrabold border ${preview.badgeVariant}`}
+              className={`font-sans px-3 py-1 rounded-full text-xs font-extrabold border ${preview.badgeVariant}`}
             >
               {preview.badge}
             </span>
@@ -710,18 +710,18 @@ export default function OnlinePath() {
 
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex flex-col">
-              <span className="font-headline-sm text-base sm:text-lg text-on-surface font-extrabold">
+              <span className="font-sans text-base sm:text-lg text-on-surface font-bold">
                 {preview.headline}
               </span>
-              <p className="font-body-md text-xs sm:text-sm text-on-surface-variant mt-1 leading-relaxed">
+              <p className="font-sans text-xs sm:text-sm text-on-surface-variant mt-1 leading-relaxed">
                 {preview.detail}
               </p>
             </div>
             <div className="flex flex-col items-end shrink-0 bg-white px-4 py-2.5 rounded-2xl border border-emerald-200 shadow-xs">
-              <span className="text-[10px] uppercase tracking-wider font-extrabold text-on-surface-variant">
+              <span className="font-sans text-[10px] uppercase tracking-wider font-extrabold text-on-surface-variant">
                 Valor Total Transação
               </span>
-              <span className="text-xl font-extrabold text-primary font-mono">
+              <span className="font-sans tabular-nums text-xl font-extrabold text-primary">
                 {state.totalPrice.toFixed(2)} {state.currency}
               </span>
             </div>
@@ -740,10 +740,10 @@ export default function OnlinePath() {
               <span className="material-symbols-outlined text-[26px]">warning</span>
             </div>
             <div className="flex flex-col">
-              <span className="font-headline-sm text-sm font-bold text-red-900">
+              <span className="font-sans text-sm font-bold text-red-900">
                 Erro ao processar na BackPocket
               </span>
-              <span className="font-body-md text-xs sm:text-sm text-red-800 mt-0.5">
+              <span className="font-sans text-xs sm:text-sm text-red-800 mt-0.5">
                 {errorMessage}
               </span>
             </div>
@@ -752,7 +752,7 @@ export default function OnlinePath() {
           <button
             type="button"
             onClick={handleProcessBackPocket}
-            className="w-full sm:w-auto px-5 py-2.5 rounded-full bg-red-600 hover:bg-red-700 text-white font-label-md text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-[0_3px_0_#991b1b] hover:translate-y-0.5 active:translate-y-1 transition-all cursor-pointer shrink-0"
+            className="w-full sm:w-auto px-5 py-2.5 rounded-full bg-red-600 hover:bg-red-700 text-white font-sans text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 shadow-[0_3px_0_#991b1b] hover:translate-y-0.5 active:translate-y-1 transition-all cursor-pointer shrink-0"
           >
             <span className="material-symbols-outlined text-[18px]">refresh</span>
             <span>Tentar novamente</span>
@@ -766,14 +766,14 @@ export default function OnlinePath() {
         <button
           type="button"
           onClick={() => router.push("/novo-atendimento/passo/2")}
-          className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-surface-container-low hover:bg-surface-container text-on-surface font-extrabold text-sm flex items-center justify-center gap-2 border border-surface-container-highest/70 transition-all active:scale-[0.98] cursor-pointer"
+          className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-surface-container-low hover:bg-surface-container text-on-surface font-sans font-semibold text-sm flex items-center justify-center gap-2 border border-surface-container-highest/70 transition-all active:scale-[0.98] cursor-pointer"
         >
           <span className="material-symbols-outlined text-[18px]">arrow_back</span>
           <span>Voltar ao Passo 2</span>
         </button>
 
         {/* Status Tag Indicator */}
-        <div className="hidden md:flex items-center gap-2 text-xs text-on-surface-variant font-bold">
+        <div className="hidden md:flex items-center gap-2 text-xs text-on-surface-variant font-sans font-bold">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
           <span>Sem impedimentos fiscais • Conexão BackPocket ativa</span>
         </div>
@@ -783,7 +783,7 @@ export default function OnlinePath() {
           type="button"
           onClick={handleProcessBackPocket}
           disabled={isProcessing}
-          className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-[#006c49] hover:bg-[#00573a] text-white font-extrabold text-sm sm:text-base tracking-wide flex items-center justify-center gap-2.5 shadow-[0_5px_0_#00422b] hover:shadow-[0_2px_0_#00422b] active:shadow-[0_0_0_#00422b] active:translate-y-[4px] transition-all cursor-pointer disabled:opacity-50"
+          className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-[#006c49] hover:bg-[#00573a] text-white font-sans font-semibold text-sm sm:text-base tracking-wide flex items-center justify-center gap-2.5 shadow-[0_5px_0_#00422b] hover:shadow-[0_2px_0_#00422b] active:shadow-[0_0_0_#00422b] active:translate-y-[4px] transition-all cursor-pointer disabled:opacity-50"
         >
           <span>{isProcessing ? "A Conectar..." : "Processar na BackPocket"}</span>
           <span className="text-lg">🚀</span>

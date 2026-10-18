@@ -142,18 +142,18 @@ export default function Step2MarketStore() {
       <div className="w-full flex flex-col gap-3">
         {/* Typographic Section Header */}
         <div className="flex items-center gap-2 px-1">
-          <span className="text-xs font-bold text-slate-400 select-none">01</span>
+          <span className="font-mono tabular-nums text-xs font-bold text-slate-400 select-none">01</span>
           <span className="text-slate-300">/</span>
-          <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
+          <h3 className="font-sans text-sm sm:text-base font-bold text-slate-900 tracking-tight">
             Jurisdição Territorial
           </h3>
           {state.marketJurisdiction ? (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60 select-none">
+            <span className="font-sans inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60 select-none">
               <span className="material-symbols-outlined text-[13px] font-bold">check</span>
               Definido
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 select-none">
+            <span className="font-sans inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 select-none">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
               Obrigatório
             </span>
@@ -182,16 +182,16 @@ export default function Step2MarketStore() {
           >
             <div className="flex items-center gap-3.5 min-w-0">
               <UsaFlag className="w-10 h-7 rounded shadow-2xs shrink-0" />
-              <div className="flex flex-col min-w-0">
+              <div className="flex flex-col min-w-0 font-sans">
                 <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-slate-900 text-sm sm:text-base tracking-tight truncate">
+                  <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight truncate">
                     Estados Unidos
                   </h4>
-                  <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                  <span className="font-mono tabular-nums text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
                     USD ($)
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="font-sans text-xs text-slate-500 mt-0.5">
                   Mercado doméstico regular
                 </p>
               </div>
@@ -231,16 +231,16 @@ export default function Step2MarketStore() {
           >
             <div className="flex items-center gap-3.5 min-w-0">
               <CanadaFlag className="w-10 h-7 rounded shadow-2xs shrink-0" />
-              <div className="flex flex-col min-w-0">
+              <div className="flex flex-col min-w-0 font-sans">
                 <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-slate-900 text-sm sm:text-base tracking-tight truncate">
+                  <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight truncate">
                     Canadá
                   </h4>
-                  <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                  <span className="font-mono tabular-nums text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
                     CAD ($)
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="font-sans text-xs text-slate-500 mt-0.5">
                   Regime transfronteiriço
                 </p>
               </div>
@@ -266,18 +266,18 @@ export default function Step2MarketStore() {
       <div className="w-full flex flex-col gap-3">
         {/* Typographic Section Header */}
         <div className="flex items-center gap-2 px-1">
-          <span className="text-xs font-bold text-slate-400 select-none">02</span>
+          <span className="font-mono tabular-nums text-xs font-bold text-slate-400 select-none">02</span>
           <span className="text-slate-300">/</span>
-          <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
+          <h3 className="font-sans text-sm sm:text-base font-bold text-slate-900 tracking-tight">
             Formato Comercial da Loja
           </h3>
           {state.storeType ? (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60 select-none">
+            <span className="font-sans inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60 select-none">
               <span className="material-symbols-outlined text-[13px] font-bold">check</span>
               Definido
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 select-none">
+            <span className="font-sans inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 select-none">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
               Obrigatório
             </span>
@@ -314,16 +314,16 @@ export default function Step2MarketStore() {
               >
                 <span className="material-symbols-outlined text-[22px]">storefront</span>
               </div>
-              <div className="flex flex-col min-w-0">
+              <div className="flex flex-col min-w-0 font-sans">
                 <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-slate-900 text-sm sm:text-base tracking-tight truncate">
+                  <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight truncate">
                     Loja Mainline
                   </h4>
-                  <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                  <span className="font-sans text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
                     Regular
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="font-sans text-xs text-slate-500 mt-0.5">
                   Lojas conceito, flagships e coleções regulares
                 </p>
               </div>
@@ -371,16 +371,16 @@ export default function Step2MarketStore() {
               >
                 <span className="material-symbols-outlined text-[22px]">sell</span>
               </div>
-              <div className="flex flex-col min-w-0">
+              <div className="flex flex-col min-w-0 font-sans">
                 <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-slate-900 text-sm sm:text-base tracking-tight truncate">
+                  <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight truncate">
                     Loja Outlet
                   </h4>
-                  <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                  <span className="font-sans text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
                     Factory
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="font-sans text-xs text-slate-500 mt-0.5">
                   Centros factory, promoções e pontas de stock
                 </p>
               </div>
@@ -406,14 +406,14 @@ export default function Step2MarketStore() {
       <div className="w-full flex flex-col gap-3">
         {/* Typographic Section Header */}
         <div className="flex items-center gap-2 px-1">
-          <span className="text-xs font-bold text-slate-400 select-none">03</span>
+          <span className="font-mono tabular-nums text-xs font-bold text-slate-400 select-none">03</span>
           <span className="text-slate-300">/</span>
-          <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
+          <h3 className="font-sans text-sm sm:text-base font-bold text-slate-900 tracking-tight">
             Canal de Compra Original
           </h3>
           {state.purchaseChannel ? (
             <span
-              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border select-none ${
+              className={`font-sans inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border select-none ${
                 state.purchaseChannel === "GROSSISTA"
                   ? "bg-red-50 text-red-700 border-red-200/60"
                   : state.purchaseChannel === "FRANQUIA_CA"
@@ -425,7 +425,7 @@ export default function Step2MarketStore() {
               Definido
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 select-none">
+            <span className="font-sans inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 select-none">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
               Obrigatório
             </span>
@@ -486,18 +486,18 @@ export default function Step2MarketStore() {
                   >
                     <span className="material-symbols-outlined text-[20px]">{ch.icon}</span>
                   </div>
-                  <div className="flex flex-col min-w-0">
+                  <div className="flex flex-col min-w-0 font-sans">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <h4 className="font-bold text-slate-900 text-sm tracking-tight truncate">
+                      <h4 className="font-sans font-bold text-slate-900 text-sm tracking-tight truncate">
                         {ch.title}
                       </h4>
                       {ch.badge && (
-                        <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                        <span className="font-sans text-[10px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
                           {ch.badge}
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-500 mt-0.5 truncate">
+                    <p className="font-sans text-xs text-slate-500 mt-0.5 truncate">
                       {ch.subtitle}
                     </p>
                   </div>

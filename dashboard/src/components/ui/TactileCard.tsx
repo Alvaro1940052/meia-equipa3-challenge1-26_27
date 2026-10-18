@@ -69,11 +69,11 @@ export default function TactileCard({
             </div>
           )}
           <div className="flex flex-col flex-1 min-w-0">
-            <h3 className="font-headline-sm text-on-surface leading-tight break-words">
+            <h3 className="font-sans font-bold text-on-surface leading-tight break-words">
               {title}
             </h3>
             {description && (
-              <p className="font-body-md text-on-surface-variant text-sm mt-1 leading-snug">
+              <p className="font-sans font-body-md text-on-surface-variant text-sm mt-1 leading-snug">
                 {description}
               </p>
             )}
@@ -84,7 +84,7 @@ export default function TactileCard({
         <div className="flex items-center gap-2 flex-shrink-0 pt-0.5">
           {badge && (
             <span
-              className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${getBadgeClasses()}`}
+              className={`font-sans px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${getBadgeClasses()}`}
             >
               {badge}
             </span>

@@ -47,12 +47,12 @@ export default function ProgressBar({
       </div>
 
       {/* Step info text */}
-      <div className="flex justify-between items-center text-xs text-slate-500 font-medium px-0.5 select-none">
-        <span>
+      <div className="flex justify-between items-center text-xs text-slate-500 font-sans font-medium px-0.5 select-none">
+        <span className="tabular-nums">
           Passo {currentStep} de {totalSteps}
         </span>
         {nextLabel && (
-          <span className="text-slate-700 font-semibold">
+          <span className="font-sans text-slate-700 font-semibold">
             {nextLabel}
           </span>
         )}

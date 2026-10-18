@@ -10,6 +10,8 @@ export interface ResultCardProps {
   remedy?: string;
   paymentMethod?: string;
   storeCredit?: boolean;
+  currency?: string;
+  operationalAction?: string;
   onNewRequest?: () => void;
   onPrint?: () => void;
   actions?: ReactNode;
@@ -23,6 +25,8 @@ export default function ResultCard({
   remedy,
   paymentMethod,
   storeCredit = false,
+  currency = "USD",
+  operationalAction,
   onNewRequest,
   onPrint,
   actions,
@@ -31,173 +35,203 @@ export default function ResultCard({
   const isApproved = eligibility === "PERMITIR";
   const isRejected = eligibility === "RECUSAR";
   const isReview = eligibility === "REVER";
+  const isRoute = eligibility === "ENCAMINHAR";
 
-  const statusBg = isApproved
-    ? "!bg-emerald-50/90 !border-emerald-300"
+  const statusConfig = isApproved
+    ? {
+        label: "Devolução Aprovada",
+        eyebrow: "Conformidade Validada",
+        subtitle: "Todos os critérios de elegibilidade foram validados com sucesso no motor de inferência.",
+        badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200/80",
+        iconContainerClass: "bg-emerald-50 text-emerald-700 border-emerald-200/60",
+        icon: "check_circle",
+      }
     : isRejected
-    ? "!bg-rose-50/90 !border-rose-300"
-    : "!bg-amber-50/90 !border-amber-300";
+    ? {
+        label: "Devolução Recusada",
+        eyebrow: "Recusa Obrigatória de Política",
+        subtitle: "O pedido não cumpre os critérios normativos da política comercial padrão da loja.",
+        badgeClass: "bg-rose-50 text-rose-700 border-rose-200/80",
+        iconContainerClass: "bg-rose-50 text-rose-700 border-rose-200/60",
+        icon: "cancel",
+      }
+    : isReview
+    ? {
+        label: "Requer Análise de Exceção",
+        eyebrow: "Critério de Gestão Necessário",
+        subtitle: "A situação apresentada exige validação presencial do gestor de loja antes da liquidação.",
+        badgeClass: "bg-amber-50 text-amber-700 border-amber-200/80",
+        iconContainerClass: "bg-amber-50 text-amber-700 border-amber-200/60",
+        icon: "shield",
+      }
+    : {
+        label: "Encaminhamento de Pedido",
+        eyebrow: "Processo Obrigatório Separado",
+        subtitle: "A transação deve ser processada através do canal específico dedicado.",
+        badgeClass: "bg-sky-50 text-sky-700 border-sky-200/80",
+        iconContainerClass: "bg-sky-50 text-sky-700 border-sky-200/60",
+        icon: "forward",
+      };
 
-  const statusColor = isApproved
-    ? "text-primary"
-    : isRejected
-    ? "text-error"
-    : "text-tertiary";
+  const currencyPrefix = currency === "CAD" ? "CAD $" : currency === "EUR" ? "€" : "$";
 
-  const statusLabel = isApproved
-    ? "Devolução Aprovada"
-    : isRejected
-    ? "Devolução Não Elegível"
-    : "Requer Análise de Exceção";
+  const resolutionMode =
+    remedy ||
+    (storeCredit
+      ? "Cartão-Oferta / Crédito de Loja"
+      : isApproved
+      ? "Reembolso Original"
+      : isRejected
+      ? "Sem Devolução Autorizada"
+      : "A Decidir pela Gestão");
 
-  const statusSubtitle = isApproved
-    ? "Todos os critérios de elegibilidade foram validados com sucesso."
+  const resolutionSubtext = isApproved
+    ? storeCredit
+      ? "Validade de 1 ano em todas as lojas físicas e online"
+      : "Creditado automaticamente na conta de origem"
     : isRejected
-    ? "O pedido não cumpre a política comercial padrão da loja."
-    : "A situação apresentada exige validação presencial do gerente de loja.";
+    ? "Devolver artigo ao cliente com comprovativo"
+    : "Conforme avaliação do gestor de turno";
 
-  const iconName = isApproved
-    ? "check_circle"
-    : isRejected
-    ? "cancel"
-    : "report";
+  const resolvedAction =
+    operationalAction ||
+    (isApproved
+      ? "Concluir transação no terminal POS regular"
+      : isRejected
+      ? "Devolver artigo ao cliente e emitir comprovativo de recusa"
+      : isReview
+      ? "Solicitar PIN ou assinatura de autorização do gestor"
+      : "Iniciar processo obrigatório na aplicação dedicada");
 
   return (
     <div
       role="region"
       aria-label="Veredito oficial da devolução"
-      className={`card-tactile relative overflow-hidden p-6 md:p-8 w-full flex flex-col gap-6 border-2 shadow-lg ${statusBg} ${className}`}
+      className={`rounded-2xl bg-white border border-slate-200 p-6 sm:p-7 shadow-xs flex flex-col gap-6 text-left transition-all ${className}`}
     >
-      {/* Subtle celebratory confetti particles on approval */}
-      {isApproved && (
-        <div aria-hidden="true" className="absolute top-0 right-6 pointer-events-none overflow-hidden h-20 w-44">
-          <span className="absolute top-1 right-4 w-2 h-2 rounded-full bg-emerald-500 animate-confetti" style={{ animationDelay: "100ms" }} />
-          <span className="absolute top-2 right-12 w-2.5 h-1.5 rounded-sm bg-amber-400 rotate-45 animate-confetti" style={{ animationDelay: "300ms" }} />
-          <span className="absolute top-1 right-20 w-2 h-2 rounded-full bg-blue-500 animate-confetti" style={{ animationDelay: "200ms" }} />
-          <span className="absolute top-3 right-28 w-1.5 h-2.5 rounded-sm bg-emerald-400 -rotate-12 animate-confetti" style={{ animationDelay: "450ms" }} />
-          <span className="absolute top-2 right-36 w-2 h-2 rounded-full bg-yellow-400 animate-confetti" style={{ animationDelay: "250ms" }} />
-        </div>
-      )}
-
-      {/* Header with status badge & icon */}
-      <div className="flex items-start gap-4">
-        <div
-          className={`w-14 h-14 rounded-2xl flex items-center justify-center text-white flex-shrink-0 shadow-md ${
-            isApproved
-              ? "bg-primary-container shadow-[0_4px_0_#059669] animate-pop-success"
-              : isRejected
-              ? "bg-error shadow-[0_4px_0_#93000A]"
-              : "bg-tertiary-container shadow-[0_4px_0_#B45309]"
-          }`}
-        >
-          <span
-            className="material-symbols-outlined text-[34px]"
-            style={{ fontVariationSettings: "'FILL' 1" }}
+      {/* 1. Header Minimalista do Veredito Oficial */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+        <div className="flex items-start sm:items-center gap-3.5">
+          <div
+            className={`w-12 h-12 rounded-xl border flex items-center justify-center shrink-0 ${statusConfig.iconContainerClass}`}
           >
-            {iconName}
-          </span>
-        </div>
-        <div className="flex flex-col flex-1">
-          <span className="font-label-md text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-            Veredito Oficial RetailFlow
-          </span>
-          <h2 className={`font-headline-lg ${statusColor} tracking-tight`}>
-            {statusLabel}
-          </h2>
-          <p className="font-body-md text-on-surface-variant text-sm mt-0.5">
-            {statusSubtitle}
-          </p>
+            <span className="material-symbols-outlined text-[26px]">
+              {statusConfig.icon}
+            </span>
+          </div>
+
+          <div className="flex flex-col min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span
+                className={`font-sans inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider border ${statusConfig.badgeClass}`}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                {statusConfig.eyebrow}
+              </span>
+            </div>
+            <h2 className="font-sans font-bold text-slate-900 text-xl sm:text-2xl tracking-tight mt-1">
+              {statusConfig.label}
+            </h2>
+            <p className="font-sans text-xs sm:text-sm text-slate-500 mt-0.5 leading-relaxed">
+              {statusConfig.subtitle}
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Refund value and resolution highlight */}
-      {(refundValue !== undefined || remedy || storeCredit) && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {refundValue !== undefined && (
-            <div className="p-4 rounded-2xl bg-white border border-border-card shadow-sm flex flex-col justify-between">
-              <span className="font-label-md text-xs text-on-surface-variant font-bold uppercase tracking-wider">
-                Valor Autorizado
-              </span>
-              <div className="flex items-baseline gap-1 mt-1">
-                <span className="font-headline-lg text-primary font-extrabold text-3xl">
-                  {refundValue.toFixed(2)}
-                </span>
-                <span className="font-headline-sm text-primary">€</span>
-              </div>
-              {paymentMethod && (
-                <span className="text-xs text-on-surface-variant font-medium mt-1">
-                  Via {paymentMethod}
-                </span>
-              )}
-            </div>
-          )}
-
-          {(remedy || storeCredit) && (
-            <div className="p-4 rounded-2xl bg-white border border-border-card shadow-sm flex flex-col justify-between">
-              <span className="font-label-md text-xs text-on-surface-variant font-bold uppercase tracking-wider">
-                Modalidade de Resolução
-              </span>
-              <span className="font-headline-sm text-on-surface mt-1">
-                {remedy || (storeCredit ? "Cartão Presente / Crédito Loja" : "Reembolso Original")}
-              </span>
-              <span className="text-xs text-on-surface-variant font-medium mt-1">
-                {storeCredit ? "Validade de 1 ano em todas as lojas" : "Creditado na conta de origem"}
-              </span>
-            </div>
-          )}
+      {/* 2. Grid Operacional de Balcão (4 Factos Cruciais para o Operador) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+        {/* Card 1: Valor Autorizado */}
+        <div className="rounded-xl p-4 bg-slate-50/70 border border-slate-200/80 flex flex-col justify-between">
+          <div className="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">
+            <span className="font-sans font-bold"><span className="font-mono tabular-nums">01</span> / Valor</span>
+            <span className="material-symbols-outlined text-[16px] text-slate-400">payments</span>
+          </div>
+          <div className="flex items-baseline gap-1 my-1">
+            <span className="font-sans tabular-nums text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+              {refundValue !== undefined ? refundValue.toFixed(2) : "0.00"}
+            </span>
+            <span className="font-sans text-sm font-bold text-slate-500">
+              {currencyPrefix}
+            </span>
+          </div>
+          <span className="font-sans text-[11px] text-slate-500 font-medium truncate">
+            {paymentMethod ? `Via ${paymentMethod}` : "Valor elegível de balcão"}
+          </span>
         </div>
-      )}
 
-      {/* Plain text explanation (no codes) */}
-      <div className="p-5 rounded-2xl bg-white/90 border border-border-card shadow-sm">
-        <h3 className="font-label-md text-xs font-bold uppercase text-on-surface-variant mb-1.5 flex items-center gap-1.5">
-          <span className="material-symbols-outlined text-[16px] text-primary">info</span>
-          <span>Justificação da Decisão</span>
-        </h3>
-        <p className="font-body-lg text-on-surface leading-relaxed text-sm md:text-base">
+        {/* Card 2: Modalidade de Resolução */}
+        <div className="rounded-xl p-4 bg-slate-50/70 border border-slate-200/80 flex flex-col justify-between">
+          <div className="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">
+            <span className="font-sans font-bold"><span className="font-mono tabular-nums">02</span> / Transação</span>
+            <span className="material-symbols-outlined text-[16px] text-slate-400">swap_horiz</span>
+          </div>
+          <span className="font-sans font-bold text-slate-900 text-sm sm:text-base leading-snug my-1 line-clamp-2">
+            {resolutionMode}
+          </span>
+          <span className="font-sans text-[11px] text-slate-500 font-medium truncate" title={resolutionSubtext}>
+            {resolutionSubtext}
+          </span>
+        </div>
+
+        {/* Card 3: Meio de Liquidação */}
+        <div className="rounded-xl p-4 bg-slate-50/70 border border-slate-200/80 flex flex-col justify-between">
+          <div className="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">
+            <span className="font-sans font-bold"><span className="font-mono tabular-nums">03</span> / Liquidação</span>
+            <span className="material-symbols-outlined text-[16px] text-slate-400">credit_card</span>
+          </div>
+          <span className="font-sans font-bold text-slate-900 text-sm sm:text-base leading-snug my-1 truncate">
+            {paymentMethod || (storeCredit ? "Crédito de Loja" : "Meio Original")}
+          </span>
+          <span className="font-sans text-[11px] text-slate-500 font-medium truncate">
+            {isApproved ? "Estorno seguro por tokenização" : "Processamento conforme política"}
+          </span>
+        </div>
+
+        {/* Card 4: Ação Imediata do Operador */}
+        <div className="rounded-xl p-4 bg-slate-50/70 border border-slate-200/80 flex flex-col justify-between">
+          <div className="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">
+            <span className="font-sans font-bold"><span className="font-mono tabular-nums">04</span> / Ação Imediata</span>
+            <span className="material-symbols-outlined text-[16px] text-slate-400">point_of_sale</span>
+          </div>
+          <span className="font-sans font-bold text-slate-900 text-sm leading-snug my-1 line-clamp-2">
+            {resolvedAction}
+          </span>
+          <span className="font-sans text-[11px] text-slate-500 font-medium truncate">
+            {isReview ? "PIN obrigatório no POS" : "Executar no fluxo padrão"}
+          </span>
+        </div>
+      </div>
+
+      {/* 3. Justificação da Decisão em Linguagem Natural */}
+      <div className="p-4 sm:p-5 rounded-xl bg-slate-50/80 border border-slate-200/80 flex flex-col gap-2">
+        <div className="font-sans flex items-center gap-1.5 text-slate-500 text-[11px] font-bold uppercase tracking-wider">
+          <span className="material-symbols-outlined text-[16px] text-emerald-600">gavel</span>
+          <span>Justificação da Política Comercial</span>
+        </div>
+        <p className="font-sans text-xs sm:text-sm text-slate-700 leading-relaxed font-medium">
           {explanation}
         </p>
       </div>
 
-      {/* Review notice if manual exception needed */}
+      {/* 4. Alerta Operacional quando Exige Revisão do Gestor (REVER) */}
       {isReview && (
-        <div className="p-4 rounded-xl bg-amber-100/70 border border-amber-300 text-tertiary-container flex items-start gap-3">
-          <span className="material-symbols-outlined text-[20px] text-tertiary mt-0.5">
+        <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200/80 text-amber-900 flex items-start gap-3">
+          <span className="material-symbols-outlined text-[20px] text-amber-600 mt-0.5 shrink-0">
             notification_important
           </span>
-          <p className="text-xs font-medium text-tertiary leading-relaxed">
-            Esta decisão requer confirmação do supervisor de turno através de PIN de autorização no terminal POS.
-          </p>
+          <div className="flex flex-col gap-0.5 text-xs">
+            <span className="font-sans font-bold text-amber-950">Atenção ao Operador de Caixa:</span>
+            <p className="font-sans text-amber-900 leading-relaxed">
+              Esta decisão requer confirmação presencial do supervisor de turno ou gestor de loja através de PIN de autorização no terminal POS antes da emissão do crédito.
+            </p>
+          </div>
         </div>
       )}
 
-      {/* Custom injected actions or default buttons */}
-      {actions ? (
-        <div className="w-full">{actions}</div>
-      ) : (
-        <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
-          {onPrint && (
-            <button
-              type="button"
-              onClick={onPrint}
-              className="btn-tactile-secondary px-5 py-2.5 text-sm flex items-center gap-2"
-            >
-              <span className="material-symbols-outlined text-[18px]">print</span>
-              <span>Imprimir Recibo</span>
-            </button>
-          )}
-          {onNewRequest && (
-            <button
-              type="button"
-              onClick={onNewRequest}
-              className="btn-tactile-primary px-6 py-2.5 text-sm flex items-center gap-2"
-            >
-              <span className="material-symbols-outlined text-[18px]">add</span>
-              <span>Novo Atendimento</span>
-            </button>
-          )}
-        </div>
-      )}
+      {/* 5. Ações Injetadas ou Rodapé Interno */}
+      {actions && <div className="w-full pt-1">{actions}</div>}
     </div>
   );
 }
+

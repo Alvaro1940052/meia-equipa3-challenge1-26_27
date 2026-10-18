@@ -609,11 +609,11 @@ export default function WhyAskWidget({
               <div className="flex flex-col min-w-0">
                 <h3
                   id="why-ask-title"
-                  className="font-semibold text-sm text-slate-900 tracking-tight"
+                  className="font-sans font-bold text-sm text-slate-900 tracking-tight"
                 >
                   Porquê esta pergunta?
                 </h3>
-                <p className="text-[11px] text-slate-400 truncate">
+                <p className="font-sans text-[11px] text-slate-400 truncate">
                   Racional de negócio &middot; {engine === "prolog" ? "Prolog" : "Drools"}
                 </p>
               </div>
@@ -753,19 +753,19 @@ export default function WhyAskWidget({
                 {/* 1. Pergunta Formulada e Racional de Negócio (100% Livre de Códigos) */}
                 <div className="p-3.5 rounded-xl bg-slate-50/70 border border-slate-200/80 flex flex-col gap-2.5">
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    <span className="font-sans text-[10px] font-bold uppercase tracking-wider text-slate-400">
                       Pergunta ao Operador
                     </span>
-                    <p className="text-xs sm:text-sm font-semibold text-slate-900 leading-snug">
+                    <p className="font-sans text-xs sm:text-sm font-bold text-slate-900 leading-snug">
                       {cleanCounterText(data.pergunta) || "Qual é a informação solicitada neste campo?"}
                     </p>
                   </div>
 
                   <div className="pt-2 border-t border-slate-200/60 flex flex-col gap-0.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    <span className="font-sans text-[10px] font-bold uppercase tracking-wider text-slate-400">
                       Racional de Negócio
                     </span>
-                    <p className="text-xs text-slate-600 leading-relaxed">
+                    <p className="font-sans text-xs text-slate-600 leading-relaxed">
                       {cleanCounterText(data.resumo) ||
                         "Esta premissa é necessária para determinar as normas e políticas comerciais aplicáveis ao caso."}
                     </p>
@@ -775,10 +775,10 @@ export default function WhyAskWidget({
                 {/* 2. Políticas de Loja Abrangidas (Substitui os códigos XX-YYY por Categorias Legíveis) */}
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    <span className="font-sans text-[11px] font-bold uppercase tracking-wider text-slate-400">
                       Políticas de Loja Envolvidas
                     </span>
-                    <span className="text-[11px] text-slate-400">
+                    <span className="font-sans text-[11px] text-slate-400">
                       {data.regrasQueDependem?.length || 0} {data.regrasQueDependem?.length === 1 ? "norma" : "normas"}
                     </span>
                   </div>
@@ -788,14 +788,14 @@ export default function WhyAskWidget({
                       {policies.map((policy) => (
                         <span
                           key={policy}
-                          className="px-2.5 py-1 rounded-md bg-white border border-slate-200 text-slate-700 text-xs font-medium shadow-2xs"
+                          className="font-sans px-2.5 py-1 rounded-md bg-white border border-slate-200 text-slate-700 text-xs font-medium shadow-2xs"
                         >
                           {policy}
                         </span>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-xs text-slate-400 italic">
+                    <p className="font-sans text-xs text-slate-400 italic">
                       Conformidade geral de atendimento.
                     </p>
                   )}
@@ -806,14 +806,14 @@ export default function WhyAskWidget({
                   <div className="flex flex-col gap-2.5 pt-3 border-t border-slate-100">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                        <span className="font-sans text-[11px] font-bold uppercase tracking-wider text-slate-400">
                           Regras em decisão no pedido atual
                         </span>
-                        <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600">
+                        <span className="font-sans inline-flex items-center justify-center px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600">
                           {data.regrasEmEspera.length}
                         </span>
                       </div>
-                      <span className="text-[11px] text-slate-400">
+                      <span className="font-sans text-[11px] text-slate-400">
                         {data.regrasEmEspera.length === 1 ? "norma pendente" : "normas pendentes"}
                       </span>
                     </div>
@@ -839,13 +839,13 @@ export default function WhyAskWidget({
                           >
                             {/* Linha de Topo: Categoria de Loja (Eyebrow) e Badge de Desfecho Principal */}
                             <div className="flex items-center justify-between gap-2">
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                              <span className="font-sans text-[10px] font-bold uppercase tracking-wider text-slate-400">
                                 {category || "Norma Comercial"}
                               </span>
 
                               {primaryOutcome && (
                                 <span
-                                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold shrink-0 ${primaryOutcome.badgeClass}`}
+                                  className={`font-sans inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold shrink-0 ${primaryOutcome.badgeClass}`}
                                 >
                                   <span className="material-symbols-outlined text-[13px]">
                                     {primaryOutcome.icon}
@@ -856,7 +856,7 @@ export default function WhyAskWidget({
                             </div>
 
                             {/* Título da Regra: Sem truncagem, tipografia nítida e profissional */}
-                            <h4 className="font-semibold text-xs sm:text-sm text-slate-900 leading-snug">
+                            <h4 className="font-sans font-bold text-xs sm:text-sm text-slate-900 leading-snug">
                               {ruleTitle}
                             </h4>
 

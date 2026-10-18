@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useWizard } from "./WizardContext";
 import SlickSlider from "@/components/ui/SlickSlider";
 
@@ -12,6 +12,14 @@ interface PaymentOption {
   icon: string;
   canadaOnly?: boolean;
 }
+
+const PRICE_PRESETS = [
+  { value: 39.99, label: "Outlet / Promoção" },
+  { value: 69.50, label: "Peça em Saldo" },
+  { value: 89.90, label: "Levi's 501 Original" },
+  { value: 98.00, label: "PVP Padrão" },
+  { value: 148.00, label: "Premium / Selvedge" },
+];
 
 const PAYMENT_METHODS: PaymentOption[] = [
   {
@@ -79,6 +87,16 @@ export default function Step6Refund() {
   const currencySymbol = state.currency === "CAD" ? "CAD $" : "USD $";
   const isCanada = state.marketJurisdiction === "CA";
 
+  const [priceInput, setPriceInput] = useState<string>(
+    typeof state.totalPrice === "number" ? state.totalPrice.toFixed(2) : "89.90"
+  );
+  const [prevTotalPrice, setPrevTotalPrice] = useState<number>(state.totalPrice);
+
+  if (state.totalPrice !== prevTotalPrice) {
+    setPrevTotalPrice(state.totalPrice);
+    setPriceInput(state.totalPrice.toFixed(2));
+  }
+
   // Filtrar meios: destacar ou permitir Interac se Canadá
   const availableMethods = PAYMENT_METHODS.filter(
     (m) => !m.canadaOnly || isCanada
@@ -100,30 +118,90 @@ export default function Step6Refund() {
     <div className="w-full flex flex-col gap-6">
       {/* Top Banner Minimalista com Total a Devolver */}
       <div className="w-full rounded-xl p-4 sm:p-5 bg-white border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all hover:border-slate-300 hover:shadow-2xs">
-        <div className="flex items-center gap-3.5 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200/60 flex items-center justify-center shrink-0">
+        <div className="flex items-start sm:items-center gap-3.5 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200/60 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
             <span className="material-symbols-outlined text-[22px]">account_balance_wallet</span>
           </div>
           <div className="flex flex-col min-w-0">
-            <div className="flex items-center gap-2">
-              <h4 className="font-bold text-slate-900 text-sm sm:text-base tracking-tight leading-snug">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight leading-snug">
                 Pagamento Original &amp; Liquidação
               </h4>
-              <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
+              <span className="font-sans text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
                 Meio de Reembolso
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+            <p className="font-sans text-xs text-slate-500 mt-0.5 leading-relaxed">
               Indique os factos do talão original. Os motores deduzirão as regras de estorno e liquidação aplicáveis
             </p>
+
+            {/* Pills de Seleção Rápida de Catálogo Levi's */}
+            <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
+              <span className="font-sans text-[11px] font-semibold text-slate-400 select-none mr-0.5">
+                Presets:
+              </span>
+              {PRICE_PRESETS.map((preset) => {
+                const isSelected = Math.abs(state.totalPrice - preset.value) < 0.001;
+                return (
+                  <button
+                    key={preset.value}
+                    type="button"
+                    onClick={() => {
+                      setField("totalPrice", preset.value);
+                      setPriceInput(preset.value.toFixed(2));
+                    }}
+                    className={`font-sans inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer border ${
+                      isSelected
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-300 shadow-2xs font-bold ring-1 ring-emerald-400/30"
+                        : "bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200 hover:border-slate-300"
+                    }`}
+                    title={preset.label}
+                  >
+                    <span className="font-sans font-bold tabular-nums">${preset.value.toFixed(2)}</span>
+                    <span className="font-sans text-[10px] text-slate-400 hidden sm:inline font-normal">
+                      ({preset.label})
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
-        <div className="flex items-baseline gap-1.5 self-start sm:self-auto bg-slate-50 border border-slate-200/80 px-3.5 py-1.5 rounded-lg shrink-0">
-          <span className="text-xs font-semibold text-slate-500">Valor original:</span>
-          <span className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
-            {currencySymbol} {state.totalPrice.toFixed(2)}
-          </span>
+        {/* Input Badge Integrado */}
+        <div className="flex items-center gap-1.5 self-start sm:self-auto bg-slate-50 border border-slate-200/80 px-3.5 py-1.5 rounded-lg shrink-0 focus-within:bg-white focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all">
+          <span className="font-sans text-xs font-semibold text-slate-500 select-none">Valor original:</span>
+          <div className="flex items-center">
+            <span className="font-sans tabular-nums text-base sm:text-lg font-black text-slate-900 tracking-tight mr-1 select-none">
+              {currencySymbol}
+            </span>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={priceInput}
+              onChange={(e) => {
+                const raw = e.target.value;
+                setPriceInput(raw);
+                const parsed = parseFloat(raw);
+                if (!isNaN(parsed) && parsed >= 0) {
+                  setField("totalPrice", parsed);
+                }
+              }}
+              onBlur={() => {
+                const parsed = parseFloat(priceInput);
+                if (!isNaN(parsed) && parsed >= 0) {
+                  setPriceInput(parsed.toFixed(2));
+                  setField("totalPrice", parsed);
+                } else {
+                  setPriceInput(state.totalPrice.toFixed(2));
+                }
+              }}
+              className="font-sans tabular-nums w-20 sm:w-24 bg-transparent text-base sm:text-lg font-black text-slate-900 tracking-tight outline-none border-none p-0 focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              placeholder="89.90"
+              aria-label="Valor original da transação"
+            />
+          </div>
         </div>
       </div>
 
@@ -131,13 +209,13 @@ export default function Step6Refund() {
       <div className="w-full flex flex-col gap-3">
         {/* Typographic Section Header */}
         <div className="flex items-center gap-2 px-1">
-          <span className="text-xs font-bold text-slate-400 select-none">01</span>
+          <span className="font-mono tabular-nums text-xs font-bold text-slate-400 select-none">01</span>
           <span className="text-slate-300">/</span>
-          <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
+          <h3 className="font-sans text-sm sm:text-base font-bold text-slate-900 tracking-tight">
             Meio de Pagamento Original no Talão
           </h3>
           <span
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold select-none ${
+            className={`font-sans inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold select-none ${
               state.originalPaymentMethod === "AFTERPAY" &&
               state.purchaseChannel === "ONLINE_BACKPOCKET" &&
               state.requestType === "TROCA"
@@ -168,10 +246,10 @@ export default function Step6Refund() {
 
             const badgeText = isAfterpayBlocked ? "Exceção Proibida" : item.badge;
             const badgeClassName = isAfterpayBlocked
-              ? "text-[11px] font-semibold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded shrink-0"
+              ? "font-sans text-[11px] font-semibold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded shrink-0"
               : isSelected && (isInteracWarning || isPaypalWarning)
-              ? "text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded shrink-0"
-              : "text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded shrink-0";
+              ? "font-sans text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded shrink-0"
+              : "font-sans text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded shrink-0";
 
             const cardClassName = `group rounded-xl p-4 sm:p-5 cursor-pointer flex items-center justify-between gap-4 transition-all duration-150 focus-visible:outline-2 focus-visible:outline-emerald-600 ${
               isSelected
@@ -226,14 +304,14 @@ export default function Step6Refund() {
                   </div>
                   <div className="flex flex-col min-w-0">
                     <div className="flex items-center gap-2">
-                      <h4 className="font-bold text-slate-900 text-sm sm:text-base tracking-tight">
+                      <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight">
                         {item.title}
                       </h4>
                       <span className={badgeClassName}>
                         {badgeText}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                    <p className="font-sans text-xs text-slate-500 mt-0.5 leading-relaxed">
                       {item.subtitle}
                     </p>
                   </div>
@@ -257,13 +335,13 @@ export default function Step6Refund() {
       <div className="w-full flex flex-col gap-3">
         {/* Typographic Section Header */}
         <div className="flex items-center gap-2 px-1">
-          <span className="text-xs font-bold text-slate-400 select-none">02</span>
+          <span className="font-mono tabular-nums text-xs font-bold text-slate-400 select-none">02</span>
           <span className="text-slate-300">/</span>
-          <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
+          <h3 className="font-sans text-sm sm:text-base font-bold text-slate-900 tracking-tight">
             Estado da Conta e Cartão do Cliente
           </h3>
           <span
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold select-none ${
+            className={`font-sans inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold select-none ${
               state.accountState === "ENCERRADA"
                 ? "bg-amber-50 text-amber-700 border border-amber-200/80"
                 : "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
@@ -306,14 +384,14 @@ export default function Step6Refund() {
               </div>
               <div className="flex flex-col min-w-0">
                 <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-slate-900 text-sm sm:text-base tracking-tight">
+                  <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight">
                     Conta Ativa / Regular
                   </h4>
-                  <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
+                  <span className="font-sans text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
                     Tokenizado
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                <p className="font-sans text-xs text-slate-500 mt-0.5 leading-relaxed">
                   Cartão ou conta operacional. Estorno tokenizado direto sem pedir cartão
                 </p>
               </div>
@@ -363,14 +441,14 @@ export default function Step6Refund() {
               </div>
               <div className="flex flex-col min-w-0">
                 <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-slate-900 text-sm sm:text-base tracking-tight">
+                  <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight">
                     Cartão Perdido / Roubado
                   </h4>
-                  <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
+                  <span className="font-sans text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
                     Token Ativo
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                <p className="font-sans text-xs text-slate-500 mt-0.5 leading-relaxed">
                   Cartão físico cancelado, mas a conta bancária subjacente continua ativa
                 </p>
               </div>
@@ -420,14 +498,14 @@ export default function Step6Refund() {
               </div>
               <div className="flex flex-col min-w-0">
                 <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-slate-900 text-sm sm:text-base tracking-tight">
+                  <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight">
                     Conta Bancária Encerrada
                   </h4>
-                  <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded shrink-0">
+                  <span className="font-sans text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded shrink-0">
                     Conta Encerrada
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                <p className="font-sans text-xs text-slate-500 mt-0.5 leading-relaxed">
                   O cliente encerrou a conta bancária. Tentar primeiro o cartão original; só após recusa o motor autoriza meio alternativo
                 </p>
               </div>
@@ -457,14 +535,14 @@ export default function Step6Refund() {
               </div>
               <div className="flex flex-col min-w-0">
                 <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-slate-900 text-sm sm:text-base tracking-tight">
+                  <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight">
                     A tentativa no terminal POS já foi recusada pelo banco?
                   </h4>
-                  <span className="text-[11px] font-bold text-amber-800 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full shrink-0">
+                  <span className="font-sans text-[11px] font-bold text-amber-800 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full shrink-0">
                     Recusa Confirmada
                   </span>
                 </div>
-                <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
+                <p className="font-sans text-xs text-slate-600 mt-0.5 leading-relaxed">
                   Se o terminal acusar recusa de estorno na conta encerrada, o motor autoriza meio alternativo (numerário, vale ou outro cartão)
                 </p>
               </div>
@@ -494,14 +572,14 @@ export default function Step6Refund() {
               </div>
               <div className="flex flex-col min-w-0">
                 <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-slate-900 text-sm sm:text-base tracking-tight">
+                  <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight">
                     O cartão físico Interac original está presente em loja?
                   </h4>
-                  <span className="text-[11px] font-bold text-indigo-800 bg-indigo-100 border border-indigo-300 px-2 py-0.5 rounded-full shrink-0">
+                  <span className="font-sans text-[11px] font-bold text-indigo-800 bg-indigo-100 border border-indigo-300 px-2 py-0.5 rounded-full shrink-0">
                     Exigência Legal
                   </span>
                 </div>
-                <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
+                <p className="font-sans text-xs text-slate-600 mt-0.5 leading-relaxed">
                   Os terminais Interac canadianos não suportam tokenização. Sem o cartão físico, o pedido exige revisão sénior
                 </p>
               </div>
@@ -531,14 +609,14 @@ export default function Step6Refund() {
               </div>
               <div className="flex flex-col min-w-0">
                 <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-slate-900 text-sm sm:text-base tracking-tight">
+                  <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight">
                     O cliente consegue aceder à aplicação no smartphone?
                   </h4>
-                  <span className="text-[11px] font-bold text-sky-800 bg-sky-100 border border-sky-300 px-2 py-0.5 rounded-full shrink-0">
+                  <span className="font-sans text-[11px] font-bold text-sky-800 bg-sky-100 border border-sky-300 px-2 py-0.5 rounded-full shrink-0">
                     Validação App
                   </span>
                 </div>
-                <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
+                <p className="font-sans text-xs text-slate-600 mt-0.5 leading-relaxed">
                   O estorno PayPal/Venmo exige validação na app do cliente. Sem acesso, o pedido requer revisão sénior.
                 </p>
               </div>
@@ -570,49 +648,20 @@ export default function Step6Refund() {
                 </div>
                 <div className="flex flex-col min-w-0">
                   <div className="flex items-center gap-2">
-                    <h4 className="font-bold text-slate-900 text-sm sm:text-base tracking-tight">
+                    <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight">
                       Troca em Loja Não Permitida para Afterpay Online
                     </h4>
-                    <span className="text-[11px] font-bold text-rose-800 bg-rose-100 border border-rose-300 px-2 py-0.5 rounded-full shrink-0">
+                    <span className="font-sans text-[11px] font-bold text-rose-800 bg-rose-100 border border-rose-300 px-2 py-0.5 rounded-full shrink-0">
                       Exceção Proibida
                     </span>
                   </div>
-                  <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
+                  <p className="font-sans text-xs text-slate-600 mt-0.5 leading-relaxed">
                     As exceções ao meio de pagamento Afterpay são proibidas para compras online. O reembolso deve ser efetuado exclusivamente no método original via BackPocket.
                   </p>
                 </div>
               </div>
             </div>
           )}
-      </div>
-
-      {/* Resumo Final: Veredito e Dedução Pelos Motores */}
-      <div className="rounded-xl p-4 sm:p-5 bg-emerald-50/60 border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all">
-        <div className="flex items-center gap-3.5 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
-            <span className="material-symbols-outlined text-[22px]">psychology</span>
-          </div>
-          <div className="flex flex-col min-w-0">
-            <div className="flex items-center gap-2">
-              <h4 className="font-bold text-slate-900 text-sm sm:text-base tracking-tight leading-snug">
-                Dados Prontos para Inferência Simbólica
-              </h4>
-              <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/70 border border-emerald-300/80 px-2 py-0.5 rounded-full shrink-0">
-                Prolog &amp; Drools
-              </span>
-            </div>
-            <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
-              O motor deduzirá o destino legal do reembolso e o procedimento operacional exato a executar no terminal
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-baseline gap-1.5 self-start sm:self-auto bg-white border border-emerald-200 px-3.5 py-1.5 rounded-lg shrink-0 shadow-2xs">
-          <span className="text-xs font-semibold text-slate-500">Valor a Processar:</span>
-          <span className="text-base sm:text-lg font-black text-emerald-800 tracking-tight">
-            {currencySymbol} {state.totalPrice.toFixed(2)}
-          </span>
-        </div>
       </div>
     </div>
   );

@@ -27,7 +27,7 @@ export default function StatusFooter({
       role="contentinfo"
       className={`w-full border-t border-border-card bg-surface-container-low/80 py-4 px-6 mt-16 select-none ${className}`}
     >
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-on-surface-variant font-medium">
+      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-on-surface-variant font-sans font-medium">
         {/* Engine status indicators */}
         <div className="flex flex-wrap items-center justify-center md:justify-start gap-5">
           <div className="flex items-center gap-2">
@@ -38,9 +38,9 @@ export default function StatusFooter({
                   : "bg-error"
               }`}
             />
-            <span>
+            <span className="font-mono tabular-nums">
               Drools v8.44:{" "}
-              <strong className="text-on-surface font-bold">
+              <strong className="text-on-surface font-semibold">
                 {isDroolsOnline ? droolsLatency : "Offline"}
               </strong>
             </span>
@@ -54,9 +54,9 @@ export default function StatusFooter({
                   : "bg-error"
               }`}
             />
-            <span>
+            <span className="font-mono tabular-nums">
               Prolog Core:{" "}
-              <strong className="text-on-surface font-bold">
+              <strong className="text-on-surface font-semibold">
                 {isPrologOnline ? prologLatency : "Offline"}
               </strong>
             </span>
@@ -65,9 +65,9 @@ export default function StatusFooter({
 
         {/* System & Team identity */}
         <div className="flex items-center gap-2 text-on-surface-variant">
-          <span>{systemVersion}</span>
+          <span className="font-mono tabular-nums">{systemVersion}</span>
           <span>•</span>
-          <span className="font-bold text-on-surface">MEIA Equipa 3</span>
+          <span className="font-sans font-semibold text-on-surface">MEIA Equipa 3</span>
         </div>
       </div>
     </footer>

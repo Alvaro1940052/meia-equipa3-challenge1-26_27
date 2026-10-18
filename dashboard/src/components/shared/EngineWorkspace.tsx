@@ -23,8 +23,8 @@ export default function EngineWorkspace({
   return (
     <section aria-labelledby="engine-title" className="workspace">
       <div className="workspace-head">
-        <h2 id="engine-title">{engine.label}</h2>
-        <p>{engine.tagline}</p>
+        <h2 id="engine-title" className="font-sans">{engine.label}</h2>
+        <p className="font-sans">{engine.tagline}</p>
       </div>
       {toolbar}
       <StepIndicator steps={steps ?? engine.steps} current={currentStep} />

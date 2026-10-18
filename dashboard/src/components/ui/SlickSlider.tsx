@@ -210,7 +210,7 @@ export default function SlickSlider<T = boolean>({
                 e.stopPropagation();
                 onChange(opt.value);
               }}
-              className={`h-full w-full rounded-md text-xs font-bold transition-colors duration-150 flex items-center justify-center gap-1.5 cursor-pointer focus:outline-none ${
+              className={`font-sans h-full w-full rounded-md text-xs font-bold transition-colors duration-150 flex items-center justify-center gap-1.5 cursor-pointer focus:outline-none ${
                 isSelected
                   ? "text-slate-900"
                   : "text-slate-500 hover:text-slate-700"

@@ -74,11 +74,11 @@ export default function DailyTip() {
           </span>
         </div>
 
-        <h4 className="font-headline-sm text-on-surface text-lg md:text-xl">
+        <h4 className="font-sans font-headline-sm text-on-surface text-lg md:text-xl font-bold">
           {tip.title}
         </h4>
 
-        <p className="font-body-md text-on-surface-variant text-sm md:text-base leading-relaxed">
+        <p className="font-sans font-body-md text-on-surface-variant text-sm md:text-base leading-relaxed">
           {tip.text}
         </p>
       </div>
@@ -88,7 +88,7 @@ export default function DailyTip() {
         <button
           type="button"
           onClick={handleNextTip}
-          className={`px-5 py-2.5 rounded-full bg-surface-container-lowest text-secondary font-label-md text-xs md:text-sm font-bold shadow-[0_3px_0_0_#adc6ff] hover:shadow-[0_1px_0_0_#adc6ff] hover:translate-y-[2px] active:shadow-none active:translate-y-[3px] transition-all cursor-pointer flex items-center gap-1.5 select-none ${
+          className={`font-sans px-5 py-2.5 rounded-full bg-surface-container-lowest text-secondary font-label-md text-xs md:text-sm font-semibold shadow-[0_3px_0_0_#adc6ff] hover:shadow-[0_1px_0_0_#adc6ff] hover:translate-y-[2px] active:shadow-none active:translate-y-[3px] transition-all cursor-pointer flex items-center gap-1.5 select-none ${
             acknowledged ? "scale-95 bg-emerald-50 text-emerald-700" : ""
           }`}
         >

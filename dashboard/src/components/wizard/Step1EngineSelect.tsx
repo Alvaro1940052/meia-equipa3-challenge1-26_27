@@ -46,10 +46,10 @@ export default function Step1EngineSelect() {
             </div>
 
             <div>
-              <h3 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+              <h3 className="font-sans text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
                 Motor Drools
               </h3>
-              <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700 mt-0.5">
+              <p className="font-sans text-xs font-semibold uppercase tracking-wider text-emerald-700 mt-0.5">
                 Padrão de Balcão
               </p>
             </div>
@@ -59,7 +59,7 @@ export default function Step1EngineSelect() {
           <button
             type="button"
             tabIndex={-1}
-            className={`w-full py-2.5 px-4 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer ${
+            className={`font-sans w-full py-2.5 px-4 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer ${
               isDrools
                 ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
                 : "bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200"
@@ -107,10 +107,10 @@ export default function Step1EngineSelect() {
             </div>
 
             <div>
-              <h3 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+              <h3 className="font-sans text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
                 Motor Prolog
               </h3>
-              <p className="text-xs font-semibold uppercase tracking-wider text-indigo-700 mt-0.5">
+              <p className="font-sans text-xs font-semibold uppercase tracking-wider text-indigo-700 mt-0.5">
                 Dedução Lógica
               </p>
             </div>
@@ -120,7 +120,7 @@ export default function Step1EngineSelect() {
           <button
             type="button"
             tabIndex={-1}
-            className={`w-full py-2.5 px-4 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer ${
+            className={`font-sans w-full py-2.5 px-4 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer ${
               isProlog
                 ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs"
                 : "bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200"

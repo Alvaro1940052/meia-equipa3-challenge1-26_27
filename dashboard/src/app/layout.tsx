@@ -1,11 +1,24 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import localFont from "next/font/local";
+import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const plusJakarta = Plus_Jakarta_Sans({
+export const roundex = localFont({
+  src: "./fonts/Roundex.otf",
+  variable: "--font-display",
+  display: "swap",
+});
+
+export const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-sans",
+  display: "swap",
+});
+
+export const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
-  weight: ["500", "700", "800"],
-  variable: "--font-jakarta",
+  variable: "--font-mono",
   display: "swap",
 });
 
@@ -21,7 +34,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="pt-PT" className={plusJakarta.variable}>
+    <html
+      lang="pt-PT"
+      className={`${roundex.variable} ${plusJakarta.variable} ${jetbrainsMono.variable}`}
+    >
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link

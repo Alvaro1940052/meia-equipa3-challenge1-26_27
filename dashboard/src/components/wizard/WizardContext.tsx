@@ -61,6 +61,7 @@ export interface WizardState {
   physicalCardPresent: boolean;
   paymentAppAccessible: boolean;
   totalPrice: number;
+  precoAtualProduto?: number;
   currency: "USD" | "CAD";
   operatorName: string;
   storeName: string;
@@ -97,6 +98,7 @@ export const defaultWizardState: WizardState = {
   physicalCardPresent: true,
   paymentAppAccessible: true,
   totalPrice: 89.9,
+  precoAtualProduto: undefined,
   currency: "USD",
   operatorName: "Tiago Silva",
   storeName: "Loja Central • Caixa Aberto",
@@ -107,12 +109,41 @@ export const defaultWizardState: WizardState = {
   onlineOrderNumber: "WEB-84920-PT",
 };
 
+export function getFirstIncompleteStep(state: WizardState): number {
+  // Passo 1: Motor de inferência é obrigatório
+  if (!state.engine) return 1;
+
+  // Passo 2: Jurisdição, formato e canal são obrigatórios
+  if (!state.marketJurisdiction || !state.storeType || !state.purchaseChannel) {
+    return 2;
+  }
+
+  // Passo 3: Condição física e elegibilidade
+  if (!state.physicalCondition) return 3;
+
+  // Passo 4: Tipo de pedido e comprovativo
+  if (!state.requestType || !state.proofOfPurchase) return 4;
+
+  // Passo 5: Modalidade de troca (se for troca)
+  if (state.requestType === "TROCA" && (!state.exchangeOption || state.exchangeOption === "NENHUMA")) {
+    return 5;
+  }
+
+  return 6;
+}
+
 const STORAGE_KEY = "retailflow_wizard_state_v3";
 
 interface WizardContextType {
   state: WizardState;
   currentStep: number;
   totalSteps: number;
+  isHydrated: boolean;
+  isDirty: boolean;
+  showLeaveModal: boolean;
+  pendingNavigationUrl: string | null;
+  setShowLeaveModal: (show: boolean) => void;
+  setPendingNavigationUrl: (url: string | null) => void;
   setField: <K extends keyof WizardState>(field: K, value: WizardState[K]) => void;
   goToStep: (step: number) => void;
   nextStep: () => void;
@@ -127,7 +158,12 @@ const WizardContext = createContext<WizardContextType | undefined>(undefined);
 export function WizardProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<WizardState>(defaultWizardState);
   const [currentStep, setCurrentStep] = useState<number>(1);
+  const [isHydrated, setIsHydrated] = useState<boolean>(false);
+  const [showLeaveModal, setShowLeaveModal] = useState<boolean>(false);
+  const [pendingNavigationUrl, setPendingNavigationUrl] = useState<string | null>(null);
   const totalSteps = 6;
+
+  const isDirty = Boolean(state.engine || state.marketJurisdiction);
 
   // Carregar rascunho anterior de sessionStorage caso exista
   useEffect(() => {
@@ -139,6 +175,8 @@ export function WizardProvider({ children }: { children: ReactNode }) {
       }
     } catch {
       // Ignorar erros de storage
+    } finally {
+      setIsHydrated(true);
     }
   }, []);
 
@@ -150,6 +188,19 @@ export function WizardProvider({ children }: { children: ReactNode }) {
       // Ignorar erros de storage
     }
   }, [state]);
+
+  // Proteção contra Saída Acidental (beforeunload listener)
+  useEffect(() => {
+    if (!isDirty) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isDirty]);
 
   const setField = <K extends keyof WizardState>(field: K, value: WizardState[K]) => {
     setState((prev) => {
@@ -208,6 +259,24 @@ export function WizardProvider({ children }: { children: ReactNode }) {
       // Ignorar
     }
   };
+
+function mapTipoPedidoToResolucaoPedida(
+  requestType: WizardState["requestType"],
+  exchangeOption: WizardState["exchangeOption"]
+): "REEMBOLSO" | "TROCA" | "TROCA_MESMO_ARTIGO" | "CREDITO_LOJA" | "AJUSTE_PRECO" {
+  switch (requestType) {
+    case "DEVOLUCAO":
+      return "REEMBOLSO";
+    case "GIFT":
+      return "CREDITO_LOJA";
+    case "AJUSTE_PRECO":
+      return "AJUSTE_PRECO";
+    case "TROCA":
+      return exchangeOption === "MESMO_MODELO" ? "TROCA_MESMO_ARTIGO" : "TROCA";
+    default:
+      return "REEMBOLSO";
+  }
+}
 
   const buildReturnRequest = (): ReturnRequest => {
     const today = new Date();
@@ -273,6 +342,11 @@ export function WizardProvider({ children }: { children: ReactNode }) {
       : state.requestType === "GIFT"
       ? "DEVOLUCAO_OFERTA"
       : state.requestType;
+
+    const effectiveResolucaoPedida = mapTipoPedidoToResolucaoPedida(
+      isOnline && state.onlineInStoreExchange ? "TROCA" : state.requestType,
+      state.exchangeOption
+    );
 
     const meioPagamentoOnline =
       state.onlinePaymentMethod === "BNPL"
@@ -379,7 +453,7 @@ export function WizardProvider({ children }: { children: ReactNode }) {
             categoria: state.intimateUnderwear ? "BODYWEAR" : "VESTUARIO",
             vendidoNaLoja: true,
             pvpOriginal: state.totalPrice,
-            precoAtual: state.totalPrice,
+            precoAtual: state.precoAtualProduto ?? state.totalPrice,
           },
           quantidade: 1,
           precoPago: state.totalPrice,
@@ -417,13 +491,13 @@ export function WizardProvider({ children }: { children: ReactNode }) {
                   categoria: "VESTUARIO",
                   vendidoNaLoja: true,
                   pvpOriginal: state.totalPrice,
-                  precoAtual: state.totalPrice,
+                  precoAtual: state.precoAtualProduto ?? state.totalPrice,
                 },
                 apenasMudaTamanho:
                   state.exchangeOption === "OUTRO_ARTIGO"
                     ? false
                     : state.exchangeOption === "MESMO_MODELO" || isOnline,
-                precoVenda: state.totalPrice,
+                precoVenda: state.precoAtualProduto ?? state.totalPrice,
               },
             ]
           : [],
@@ -435,7 +509,7 @@ export function WizardProvider({ children }: { children: ReactNode }) {
             motivo: "Exceção autorizada pelo responsável sénior presente",
             concluivelNoSistema: true,
             contornaProcessoObrigatorio: shouldContornarObrigatorio,
-            resolucaoPedida: effectiveTipoPedido,
+            resolucaoPedida: effectiveResolucaoPedida,
           }
         : isAfterpayOnlineExchange
         ? {
@@ -451,12 +525,12 @@ export function WizardProvider({ children }: { children: ReactNode }) {
             aprovada: null, // Pendente de avaliação
             concluivelNoSistema: true,
             contornaProcessoObrigatorio: shouldContornarObrigatorio,
-            resolucaoPedida: effectiveTipoPedido,
+            resolucaoPedida: effectiveResolucaoPedida,
           }
         : shouldContornarObrigatorio
         ? {
             motivo: "Pedido exige contornar o processo operacional obrigatório",
-            resolucaoPedida: effectiveTipoPedido,
+            resolucaoPedida: effectiveResolucaoPedida,
             contornaProcessoObrigatorio: true,
             concluivelNoSistema: true,
           }
@@ -470,6 +544,12 @@ export function WizardProvider({ children }: { children: ReactNode }) {
         state,
         currentStep,
         totalSteps,
+        isHydrated,
+        isDirty,
+        showLeaveModal,
+        pendingNavigationUrl,
+        setShowLeaveModal,
+        setPendingNavigationUrl,
         setField,
         goToStep,
         nextStep,
@@ -490,4 +570,8 @@ export function useWizard() {
     throw new Error("useWizard deve ser usado dentro de um WizardProvider");
   }
   return context;
+}
+
+export function useOptionalWizard() {
+  return useContext(WizardContext);
 }

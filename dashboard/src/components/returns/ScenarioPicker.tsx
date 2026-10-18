@@ -27,9 +27,9 @@ export default function ScenarioPicker({
             aria-pressed={scenario.id === selectedId}
             onClick={() => onSelect(scenario)}
           >
-            <span className="scenario-number">{scenario.id}</span>
-            <span className="scenario-title">{scenario.titulo}</span>
-            {scenario.aValidar.length > 0 && <span className="tag-pending">a validar</span>}
+            <span className="scenario-number font-mono font-bold tabular-nums">{scenario.id}</span>
+            <span className="scenario-title font-sans font-bold">{scenario.titulo}</span>
+            {scenario.aValidar.length > 0 && <span className="tag-pending font-sans">a validar</span>}
           </button>
         </li>
       ))}

@@ -8,7 +8,7 @@ export default function RequestEditor({
   onChange: (value: string) => void;
 }) {
   return (
-    <details className="request-editor">
+    <details className="request-editor font-sans">
       <summary>Editar o pedido completo (avançado)</summary>
       <p className="field-hint">
         Altere qualquer campo do pedido em JSON. A avaliação usa exatamente este conteúdo.
@@ -18,7 +18,7 @@ export default function RequestEditor({
       </label>
       <textarea
         id="request-json"
-        className="form-textarea"
+        className="form-textarea font-mono font-medium text-xs tabular-nums"
         rows={14}
         spellCheck={false}
         value={value}

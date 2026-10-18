@@ -68,7 +68,7 @@ export default function PolicyModal({ isOpen, onClose }: PolicyModalProps) {
               </span>
               <h3
                 id="policy-modal-title"
-                className="font-headline-sm text-on-surface text-xl md:text-2xl font-bold"
+                className="font-sans font-headline-sm text-on-surface text-xl md:text-2xl font-bold"
               >
                 Manual Rápido de Balcão e Devoluções
               </h3>
@@ -90,23 +90,23 @@ export default function PolicyModal({ isOpen, onClose }: PolicyModalProps) {
           {policies.map((p, idx) => (
             <div
               key={idx}
-              className="p-4 rounded-2xl bg-surface-container-low/70 border border-border-card flex items-start gap-4"
+              className="p-4 rounded-2xl bg-surface-container-low/70 border border-border-card flex items-start gap-4 font-sans"
             >
               <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-primary shadow-xs border border-border-card flex-shrink-0">
                 <span className="material-symbols-outlined text-[22px]">{p.icon}</span>
               </div>
               <div className="flex flex-col gap-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h4 className="font-headline-sm text-sm text-on-surface font-bold">
+                  <h4 className="font-sans font-headline-sm text-sm text-on-surface font-bold">
                     {p.title}
                   </h4>
                   <span
-                    className={`px-2.5 py-0.5 rounded-full font-label-md text-[11px] font-bold ${p.badgeColor}`}
+                    className={`font-sans px-2.5 py-0.5 rounded-full font-label-md text-[11px] font-bold ${p.badgeColor}`}
                   >
                     {p.tag}
                   </span>
                 </div>
-                <p className="font-body-md text-on-surface-variant text-xs leading-relaxed">
+                <p className="font-sans font-body-md text-on-surface-variant text-xs leading-relaxed">
                   {p.desc}
                 </p>
               </div>
@@ -115,8 +115,8 @@ export default function PolicyModal({ isOpen, onClose }: PolicyModalProps) {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between gap-4 pt-3 border-t border-border-card">
-          <span className="font-caption text-xs text-on-surface-variant flex items-center gap-1">
+        <div className="flex items-center justify-between gap-4 pt-3 border-t border-border-card font-sans">
+          <span className="font-sans font-caption text-xs text-on-surface-variant flex items-center gap-1">
             <span className="material-symbols-outlined text-[16px] text-primary">verified</span>
             Regras sincronizadas com motores Drools 8 &amp; Prolog 9
           </span>
@@ -124,7 +124,7 @@ export default function PolicyModal({ isOpen, onClose }: PolicyModalProps) {
           <button
             type="button"
             onClick={onClose}
-            className="px-6 py-2.5 rounded-full bg-primary-container text-white font-label-md text-xs font-bold shadow-[0_3px_0_0_#059669] hover:translate-y-[1px] transition-all cursor-pointer"
+            className="font-sans px-6 py-2.5 rounded-full bg-primary-container text-white font-label-md text-xs font-semibold shadow-[0_3px_0_0_#059669] hover:translate-y-[1px] transition-all cursor-pointer"
           >
             Compreendido
           </button>

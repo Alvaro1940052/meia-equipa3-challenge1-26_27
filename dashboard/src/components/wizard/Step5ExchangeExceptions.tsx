@@ -93,13 +93,13 @@ export default function Step5ExchangeExceptions() {
         <div className="w-full flex flex-col gap-3">
           {/* Typographic Section Header */}
           <div className="flex items-center gap-2 px-1">
-            <span className="text-xs font-bold text-slate-400 select-none">01</span>
+            <span className="font-mono tabular-nums text-xs font-bold text-slate-400 select-none">01</span>
             <span className="text-slate-300">/</span>
-            <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
+            <h3 className="font-sans text-sm sm:text-base font-bold text-slate-900 tracking-tight">
               Modalidade de Troca
             </h3>
             <span
-              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold select-none ${
+              className={`font-sans inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold select-none ${
                 state.exchangeOption === "OUTRO_ARTIGO"
                   ? "bg-amber-50 text-amber-700 border border-amber-200/80"
                   : "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
@@ -153,14 +153,14 @@ export default function Step5ExchangeExceptions() {
                     </div>
                     <div className="flex flex-col min-w-0">
                       <div className="flex items-center gap-2">
-                        <h4 className="font-bold text-slate-900 text-sm sm:text-base tracking-tight">
+                        <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight">
                           {item.title}
                         </h4>
-                        <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
+                        <span className="font-sans text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
                           {item.badge}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                      <p className="font-sans text-xs text-slate-500 mt-0.5 leading-relaxed">
                         {item.subtitle}
                       </p>
                     </div>
@@ -191,15 +191,15 @@ export default function Step5ExchangeExceptions() {
       <div className="w-full flex flex-col gap-3">
         {/* Typographic Section Header */}
         <div className="flex items-center gap-2 px-1">
-          <span className="text-xs font-bold text-slate-400 select-none">
+          <span className="font-mono tabular-nums text-xs font-bold text-slate-400 select-none">
             {isExchange ? "02" : "01"}
           </span>
           <span className="text-slate-300">/</span>
-          <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
+          <h3 className="font-sans text-sm sm:text-base font-bold text-slate-900 tracking-tight">
             Situação do Cliente no Balcão
           </h3>
           <span
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold select-none ${
+            className={`font-sans inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold select-none ${
               state.customerSituation === "CONFORME"
                 ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
                 : "bg-amber-50 text-amber-700 border border-amber-200/80"
@@ -255,14 +255,14 @@ export default function Step5ExchangeExceptions() {
                   </div>
                   <div className="flex flex-col min-w-0">
                     <div className="flex items-center gap-2">
-                      <h4 className="font-bold text-slate-900 text-sm sm:text-base tracking-tight">
+                      <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight">
                         {item.title}
                       </h4>
-                      <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
+                      <span className="font-sans text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
                         {item.badge}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                    <p className="font-sans text-xs text-slate-500 mt-0.5 leading-relaxed">
                       {item.subtitle}
                     </p>
                   </div>
@@ -309,16 +309,16 @@ export default function Step5ExchangeExceptions() {
             </div>
             <div className="flex flex-col min-w-0">
               <div className="flex items-center gap-2">
-                <h4 className="font-bold text-slate-900 text-sm sm:text-base tracking-tight leading-snug">
+                <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight leading-snug">
                   Exceção de Gerência Autorizada?
                 </h4>
                 {state.managerException && (
-                  <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-full shrink-0">
+                  <span className="font-sans text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-full shrink-0">
                     Autorizada
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+              <p className="font-sans text-xs text-slate-500 mt-0.5 leading-relaxed">
                 Responsável presente autoriza flexibilização de prazo ou política comercial
               </p>
             </div>

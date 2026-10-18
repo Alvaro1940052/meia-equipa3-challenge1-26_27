@@ -143,16 +143,16 @@ export default function CaseComparisonModal({
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
                 <span className="font-bold text-sm text-slate-900">{title}</span>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${badgeBg}`}>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-mono tabular-nums font-bold border ${badgeBg}`}>
                   {isDrools ? "DRL" : "PROLOG"}
                 </span>
               </div>
-              <span className="text-[11px] text-slate-500 font-medium">{paradigm}</span>
+              <span className="text-[11px] text-slate-500 font-medium font-sans">{paradigm}</span>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="px-2 py-1 rounded-md bg-white border border-slate-200 text-xs font-mono font-bold text-slate-700 flex items-center gap-1 shadow-2xs">
+            <span className="px-2 py-1 rounded-md bg-white border border-slate-200 text-xs font-mono font-bold tabular-nums text-slate-700 flex items-center gap-1 shadow-2xs">
               <span className="material-symbols-outlined text-[14px] text-slate-400">schedule</span>
               {instance.duracaoMs} ms
             </span>
@@ -160,7 +160,7 @@ export default function CaseComparisonModal({
         </div>
 
         {/* Verdict Details Matrix */}
-        <div className="p-4 flex flex-col gap-3.5 text-xs border-b border-slate-100">
+        <div className="p-4 flex flex-col gap-3.5 text-xs border-b border-slate-100 font-sans">
           <div className="flex items-center justify-between gap-2">
             <span className="text-slate-500 font-medium">Decisão de Elegibilidade:</span>
             {renderElegibilidadeBadge(instance.elegibilidade)}
@@ -187,7 +187,7 @@ export default function CaseComparisonModal({
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                 Valor Atribuído
               </span>
-              <span className="font-bold text-slate-900 text-sm font-mono">
+              <span className="font-bold text-slate-900 text-sm font-sans tabular-nums">
                 {instance.valorDevolucao.toFixed(2)} €
               </span>
             </div>
@@ -203,12 +203,12 @@ export default function CaseComparisonModal({
         </div>
 
         {/* Fired Rules / Deductions List */}
-        <div className="p-4 flex-1 flex flex-col gap-2">
+        <div className="p-4 flex-1 flex flex-col gap-2 font-sans">
           <div className="flex items-center justify-between text-xs font-bold text-slate-700">
             <span className="uppercase tracking-wider text-[11px] text-slate-500">
               {isDrools ? "Regras DRL Disparadas" : "Deduções Lógicas de 1ª Ordem"}
             </span>
-            <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px]">
+            <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-mono tabular-nums">
               {instance.regrasDisparadas.length} nós
             </span>
           </div>
@@ -225,11 +225,11 @@ export default function CaseComparisonModal({
                   className="p-2.5 rounded-lg bg-slate-50/80 hover:bg-slate-100/80 border border-slate-100 transition-colors text-xs flex flex-col gap-1"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono font-bold text-slate-800 text-[11px]">
+                    <span className="font-mono tabular-nums font-bold text-slate-800 text-[11px]">
                       {regra.codigo}
                     </span>
                     {regra.modulo && (
-                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-white border border-slate-200 text-slate-500 font-semibold">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-white border border-slate-200 text-slate-500 font-semibold font-mono tabular-nums">
                         {regra.modulo}
                       </span>
                     )}
@@ -251,7 +251,7 @@ export default function CaseComparisonModal({
         </div>
 
         {/* Column Footer */}
-        <div className="p-3 bg-slate-50/60 border-t border-slate-100 text-[10px] text-slate-400 flex items-center justify-between">
+        <div className="p-3 bg-slate-50/60 border-t border-slate-100 text-[10px] text-slate-400 flex items-center justify-between font-mono tabular-nums">
           <span className="truncate" title={instance.motorVersao || undefined}>
             {instance.motorVersao || "Versão padrão"}
           </span>
@@ -279,16 +279,16 @@ export default function CaseComparisonModal({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider">
+                <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider font-sans">
                   Auditoria Cruzada de Motores
                 </span>
-                <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-mono text-xs font-bold">
+                <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-mono text-xs font-bold tabular-nums">
                   #{pedidoId}
                 </span>
               </div>
               <h3
                 id="comparison-modal-title"
-                className="text-lg sm:text-xl font-extrabold text-slate-900 mt-0.5"
+                className="font-sans text-lg sm:text-xl font-bold text-slate-900 mt-0.5"
               >
                 Confronto Pericial: Drools vs Prolog
               </h3>

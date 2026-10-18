@@ -29,19 +29,19 @@ export default function RequestSummary({
   ];
 
   return (
-    <div className="request-summary">
+    <div className="request-summary font-sans">
       <dl className="facts-grid">
         {rows.map(([name, value]) => (
           <div key={name}>
             <dt>{name}</dt>
-            <dd>{value}</dd>
+            <dd className="font-sans font-bold tabular-nums">{value}</dd>
           </div>
         ))}
       </dl>
 
       {items.length > 0 && (
         <div className="table-container">
-          <table className="plain-table">
+          <table className="plain-table font-sans tabular-nums">
             <caption className="sr-only">Artigos do pedido</caption>
             <thead>
               <tr>
@@ -54,10 +54,10 @@ export default function RequestSummary({
             <tbody>
               {items.map((item, index) => (
                 <tr key={text(pick(item, "id")) + index}>
-                  <td>{text(pick(item, "id"))}</td>
+                  <td className="font-mono font-bold tabular-nums">{text(pick(item, "id"))}</td>
                   <td>{label(pick(item, "estado.condicaoUso"))}</td>
                   <td>{label(pick(item, "estado.etiquetas"))}</td>
-                  <td>{money(pick(item, "precoPago"))}</td>
+                  <td className="font-sans font-bold tabular-nums">{money(pick(item, "precoPago"))}</td>
                 </tr>
               ))}
             </tbody>

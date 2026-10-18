@@ -21,7 +21,7 @@ export default function EngineNav({ active }: { active: EngineId }) {
           <Link
             key={engine.id}
             href={`/?motor=${engine.id}`}
-            className={`tab-btn ${engine.id === active ? "active" : ""}`}
+            className={`tab-btn font-sans ${engine.id === active ? "active" : ""}`}
             aria-current={engine.id === active ? "page" : undefined}
             scroll={false}
           >
@@ -31,7 +31,7 @@ export default function EngineNav({ active }: { active: EngineId }) {
           </Link>
         ))}
       </nav>
-      <button className="btn-refresh" onClick={refresh} disabled={refreshing}>
+      <button className="btn-refresh font-sans" onClick={refresh} disabled={refreshing}>
         {refreshing ? "A verificar..." : "↻ Atualizar estado"}
       </button>
     </div>

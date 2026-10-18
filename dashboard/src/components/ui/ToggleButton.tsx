@@ -41,7 +41,7 @@ export default function ToggleButton({
             aria-checked={isSelected}
             disabled={disabled}
             onClick={() => onChange(opt.value)}
-            className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-150 flex items-center gap-1.5 cursor-pointer focus-visible:outline-2 focus-visible:outline-primary ${
+            className={`font-sans px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-150 flex items-center gap-1.5 cursor-pointer focus-visible:outline-2 focus-visible:outline-primary ${
               isSelected
                 ? "bg-primary-container text-on-primary-container shadow-sm font-extrabold"
                 : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high/60"
@@ -57,7 +57,7 @@ export default function ToggleButton({
             )}
             <span>{opt.label}</span>
             {opt.badge && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-surface-container-highest font-normal">
+              <span className="font-sans text-[10px] px-1.5 py-0.5 rounded-full bg-surface-container-highest font-normal">
                 {opt.badge}
               </span>
             )}

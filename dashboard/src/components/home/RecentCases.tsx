@@ -172,14 +172,11 @@ export default function RecentCases() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex flex-col gap-0.5">
             <div className="flex items-center gap-2">
-              <h2 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900">
+              <h2 className="font-sans text-lg sm:text-xl font-bold tracking-tight text-slate-900">
                 Últimos Casos Resolvidos
               </h2>
-              <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-xs font-mono font-bold">
-                PostgreSQL
-              </span>
             </div>
-            <p className="text-xs sm:text-sm text-slate-500">
+            <p className="font-sans text-xs sm:text-sm text-slate-500">
               Histórico unificado de deliberações periciais dos motores Drools e Prolog.
             </p>
           </div>
@@ -304,7 +301,7 @@ export default function RecentCases() {
                     <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2.5 min-w-0">
                       {/* Engine Badge */}
                       <span
-                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold border self-start sm:self-auto shrink-0 ${
+                        className={`font-mono tabular-nums px-1.5 py-0.5 rounded text-[10px] font-bold border self-start sm:self-auto shrink-0 ${
                           isDrools
                             ? "bg-indigo-50 text-indigo-700 border-indigo-200"
                             : "bg-emerald-50 text-emerald-700 border-emerald-200"
@@ -313,11 +310,11 @@ export default function RecentCases() {
                         {isDrools ? "Drools" : "Prolog"}
                       </span>
 
-                      <span className="font-medium text-sm text-slate-900 group-hover:text-indigo-900 transition-colors truncate">
+                      <span className="font-sans font-bold text-sm text-slate-900 group-hover:text-indigo-900 transition-colors truncate">
                         {item.produtoNome}
                       </span>
 
-                      <span className="text-xs text-slate-400 font-mono">
+                      <span className="font-mono tabular-nums text-xs text-slate-400">
                         #{item.pedidoId}
                       </span>
                     </div>
@@ -350,12 +347,12 @@ export default function RecentCases() {
                     )}
 
                     {/* Value */}
-                    <span className="text-sm font-semibold text-slate-900 tabular-nums w-16 text-right">
+                    <span className="font-sans text-sm font-semibold text-slate-900 tabular-nums w-16 text-right">
                       {item.valorDevolucao.toFixed(2)} €
                     </span>
 
                     {/* Timestamp */}
-                    <span className="text-xs text-slate-400 w-16 text-right hidden lg:inline">
+                    <span className="font-sans text-xs text-slate-400 w-16 text-right hidden lg:inline">
                       {formatRelativeTime(item.executadoEm)}
                     </span>
 
@@ -561,7 +558,7 @@ export default function RecentCases() {
                     Auditoria Pericial • #{selectedCase.pedidoId}
                   </span>
                   <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                    className={`font-mono tabular-nums px-2 py-0.5 rounded text-[10px] font-bold border ${
                       selectedCase.motor === "DROOLS"
                         ? "bg-indigo-50 text-indigo-700 border-indigo-200"
                         : "bg-emerald-50 text-emerald-700 border-emerald-200"
@@ -572,7 +569,7 @@ export default function RecentCases() {
                 </div>
                 <h4
                   id="modal-case-title"
-                  className="text-lg font-bold text-slate-900 mt-1"
+                  className="font-sans text-lg font-bold text-slate-900 mt-1"
                 >
                   {selectedCase.produtoNome}
                 </h4>
@@ -600,7 +597,7 @@ export default function RecentCases() {
                   : "bg-amber-50 border-amber-200 text-amber-950"
               }`}
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 font-sans">
                 <span className="material-symbols-outlined text-[24px]">
                   {getOutcomeTag(selectedCase.elegibilidade).icon}
                 </span>
@@ -609,18 +606,18 @@ export default function RecentCases() {
                     Deliberação: {getOutcomeTag(selectedCase.elegibilidade).label} ({selectedCase.elegibilidade})
                   </p>
                   <p className="text-xs opacity-75">
-                    Processado pelo motor {selectedCase.motor} em {selectedCase.duracaoMs} ms
+                    Processado pelo motor <span className="font-mono">{selectedCase.motor}</span> em <span className="font-mono tabular-nums">{selectedCase.duracaoMs} ms</span>
                   </p>
                 </div>
               </div>
 
-              <span className="text-base font-extrabold font-mono">
+              <span className="font-sans tabular-nums text-base font-extrabold">
                 {selectedCase.valorDevolucao.toFixed(2)} €
               </span>
             </div>
 
             {/* Summary Details */}
-            <div className="grid grid-cols-2 gap-2 p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs">
+            <div className="grid grid-cols-2 gap-2 p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs font-sans">
               <div>
                 <span className="text-[10px] text-slate-400 font-bold uppercase">Transação</span>
                 <p className="font-semibold text-slate-800">{selectedCase.tipoTransacao || "N/A"}</p>
@@ -637,15 +634,15 @@ export default function RecentCases() {
               </div>
               <div className="mt-1">
                 <span className="text-[10px] text-slate-400 font-bold uppercase">Data de Registo</span>
-                <p className="font-semibold text-slate-800">
+                <p className="font-semibold text-slate-800 font-mono tabular-nums">
                   {new Date(selectedCase.executadoEm).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </p>
               </div>
             </div>
 
             {/* Rules / Deductions List */}
-            <div className="flex flex-col gap-2">
-              <h5 className="text-xs uppercase tracking-wider text-slate-500 font-bold">
+            <div className="flex flex-col gap-2 font-sans">
+              <h5 className="font-sans text-xs uppercase tracking-wider text-slate-500 font-bold">
                 {selectedCase.motor === "DROOLS"
                   ? "Regras DRL Acionadas"
                   : "Cláusulas Lógicas Deduzidas"}
@@ -660,7 +657,7 @@ export default function RecentCases() {
                       className="p-2 rounded-lg bg-slate-50 text-xs border border-slate-100 flex flex-col gap-0.5"
                     >
                       <div className="flex items-center justify-between">
-                        <strong className="text-slate-900 font-mono text-[11px]">{r.codigo}</strong>
+                        <strong className="text-slate-900 font-mono tabular-nums text-[11px] font-bold">{r.codigo}</strong>
                         {r.modulo && (
                           <span className="text-[10px] text-slate-400 font-semibold">{r.modulo}</span>
                         )}

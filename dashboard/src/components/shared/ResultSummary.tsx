@@ -26,17 +26,17 @@ export default function ResultSummary({
   return (
     <div className="card-tactile p-6 bg-white border border-border-card rounded-2xl shadow-sm flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <span className="font-label-md text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+        <span className="font-sans text-xs font-bold uppercase tracking-wider text-on-surface-variant">
           {eyebrow}
         </span>
         {meta && (
-          <span className="font-caption text-xs text-on-surface-variant bg-surface-container px-2.5 py-1 rounded-full font-medium">
+          <span className="font-sans font-caption text-xs text-on-surface-variant bg-surface-container px-2.5 py-1 rounded-full font-medium">
             {meta}
           </span>
         )}
       </div>
       <div className="flex items-center gap-3">
-        <span className={`px-4 py-1.5 rounded-full text-sm font-extrabold border ${toneBg}`}>
+        <span className={`font-sans px-4 py-1.5 rounded-full text-sm font-extrabold border ${toneBg}`}>
           {headline}
         </span>
       </div>

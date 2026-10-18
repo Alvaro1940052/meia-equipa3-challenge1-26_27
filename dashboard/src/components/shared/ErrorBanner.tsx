@@ -14,13 +14,13 @@ export default function ErrorBanner({
         <span className="material-symbols-outlined text-rose-600 text-[20px]">
           error
         </span>
-        <span className="font-medium">{message}</span>
+        <span className="font-sans font-medium">{message}</span>
       </div>
       {onRetry && (
         <button
           type="button"
           onClick={onRetry}
-          className="btn-tactile-secondary px-3 py-1.5 text-xs font-bold"
+          className="btn-tactile-secondary px-3 py-1.5 text-xs font-sans font-bold"
         >
           Tentar novamente
         </button>

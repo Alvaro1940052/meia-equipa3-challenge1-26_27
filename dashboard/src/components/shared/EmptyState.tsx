@@ -1,10 +1,10 @@
 export default function EmptyState({ title, hint }: { title: string; hint?: string }) {
   return (
     <div className="empty-state">
-      <p>
+      <p className="font-sans">
         <strong>{title}</strong>
       </p>
-      {hint && <p>{hint}</p>}
+      {hint && <p className="font-sans">{hint}</p>}
     </div>
   );
 }

@@ -18,12 +18,12 @@ export default function StepIndicator({
             className={`step ${state}`}
             aria-current={state === "current" ? "step" : undefined}
           >
-            <span className="step-number" aria-hidden="true">
+            <span className="step-number font-mono tabular-nums" aria-hidden="true">
               {state === "done" ? "✓" : index + 1}
             </span>
             <span className="step-text">
-              <strong>{step.title}</strong>
-              <small>{step.hint}</small>
+              <strong className="font-sans">{step.title}</strong>
+              <small className="font-sans">{step.hint}</small>
             </span>
           </li>
         );

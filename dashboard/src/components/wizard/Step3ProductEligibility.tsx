@@ -72,18 +72,18 @@ export default function Step3ProductEligibility() {
       <div className="w-full flex flex-col gap-3">
         {/* Typographic Section Header com badge de estado idêntico ao Passo 2 */}
         <div className="flex items-center gap-2 px-1">
-          <span className="text-xs font-bold text-slate-400 select-none">01</span>
+          <span className="font-mono tabular-nums text-xs font-bold text-slate-400 select-none">01</span>
           <span className="text-slate-300">/</span>
-          <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
+          <h3 className="font-sans text-sm sm:text-base font-bold text-slate-900 tracking-tight">
             Validação Inicial da Peça
           </h3>
           {hasHardStop ? (
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200/80 select-none">
+            <span className="font-sans inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200/80 select-none">
               <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
               Recusa Obrigatória
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 select-none">
+            <span className="font-sans inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 select-none">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
               Obrigatório
             </span>
@@ -111,14 +111,12 @@ export default function Step3ProductEligibility() {
                 <span className="material-symbols-outlined text-[22px]">barcode_scanner</span>
               </div>
               <div className="flex flex-col min-w-0">
-                  <h4 className="font-bold text-slate-900 text-sm sm:text-base tracking-tight leading-snug">
-                    Código de barras reconhecido?
-                  </h4>
-
-                <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight leading-snug">
+                  Código de barras reconhecido?
+                </h4>
+                <p className="font-sans text-xs text-slate-500 mt-0.5 leading-relaxed">
                   Lido com leitor ótico ou código manual no POS
                 </p>
-
               </div>
             </div>
             <SlickSlider
@@ -152,14 +150,12 @@ export default function Step3ProductEligibility() {
                 <span className="material-symbols-outlined text-[22px]">verified</span>
               </div>
               <div className="flex flex-col min-w-0">
-                  <h4 className="font-bold text-slate-900 text-sm sm:text-base tracking-tight leading-snug">
-                    Marca permitida na loja?
-                  </h4>
-
-                <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight leading-snug">
+                  Marca permitida na loja?
+                </h4>
+                <p className="font-sans text-xs text-slate-500 mt-0.5 leading-relaxed">
                   Peça genuína do grupo Levi Strauss &amp; Co.
                 </p>
-
               </div>
             </div>
             <SlickSlider
@@ -193,14 +189,12 @@ export default function Step3ProductEligibility() {
                 <span className="material-symbols-outlined text-[22px]">content_cut</span>
               </div>
               <div className="flex flex-col min-w-0">
-                  <h4 className="font-bold text-slate-900 text-sm sm:text-base tracking-tight leading-snug">
-                    Peça com bainhas ou alterações?
-                  </h4>
-
-                <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight leading-snug">
+                  Peça com bainhas ou alterações?
+                </h4>
+                <p className="font-sans text-xs text-slate-500 mt-0.5 leading-relaxed">
                   Corte ou costura modificada pelo alfaiate
                 </p>
-
               </div>
             </div>
             <SlickSlider
@@ -235,17 +229,16 @@ export default function Step3ProductEligibility() {
               </div>
               <div className="flex flex-col min-w-0">
                 <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-slate-900 text-sm sm:text-base tracking-tight leading-snug">
+                  <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight leading-snug">
                     Roupa interior ou íntima?
                   </h4>
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-500 border border-slate-200/80 select-none shrink-0">
+                  <span className="font-sans inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-500 border border-slate-200/80 select-none shrink-0">
                     Opcional
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                <p className="font-sans text-xs text-slate-500 mt-0.5 leading-relaxed">
                   Boxers, meias ou artigos sujeitos a higiene
                 </p>
-
               </div>
             </div>
             <SlickSlider
@@ -280,17 +273,16 @@ export default function Step3ProductEligibility() {
               </div>
               <div className="flex flex-col min-w-0">
                 <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-slate-900 text-sm sm:text-base tracking-tight leading-snug">
+                  <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight leading-snug">
                     Tem defeito de fabrico visível?
                   </h4>
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-500 border border-slate-200/80 select-none shrink-0">
+                  <span className="font-sans inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-500 border border-slate-200/80 select-none shrink-0">
                     Opcional
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                <p className="font-sans text-xs text-slate-500 mt-0.5 leading-relaxed">
                   Costuras desfeitas na fábrica, rebites ausentes ou defeito comprovado
                 </p>
-
               </div>
             </div>
             <SlickSlider
@@ -311,12 +303,12 @@ export default function Step3ProductEligibility() {
       <div className="w-full flex flex-col gap-3">
         {/* Typographic Section Header */}
         <div className="flex items-center gap-2 px-1">
-          <span className="text-xs font-bold text-slate-400 select-none">02</span>
+          <span className="font-mono tabular-nums text-xs font-bold text-slate-400 select-none">02</span>
           <span className="text-slate-300">/</span>
-          <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
+          <h3 className="font-sans text-sm sm:text-base font-bold text-slate-900 tracking-tight">
             Estado Físico da Peça
           </h3>
-          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 select-none">
+          <span className="font-sans inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 select-none">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
             Obrigatório
           </span>
@@ -368,14 +360,14 @@ export default function Step3ProductEligibility() {
                   </div>
                   <div className="flex flex-col min-w-0">
                     <div className="flex items-center gap-2">
-                      <h4 className="font-bold text-slate-900 text-sm tracking-tight leading-snug">
+                      <h4 className="font-sans font-bold text-slate-900 text-sm tracking-tight leading-snug">
                         {cond.title}
                       </h4>
-                      <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
+                      <span className="font-sans text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
                         {cond.badge}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                    <p className="font-sans text-xs text-slate-500 mt-0.5 leading-relaxed">
                       {cond.subtitle}
                     </p>
                   </div>
@@ -421,14 +413,12 @@ export default function Step3ProductEligibility() {
               <span className="material-symbols-outlined text-[22px]">store</span>
             </div>
             <div className="flex flex-col min-w-0">
-                <h4 className="font-bold text-slate-900 text-sm sm:text-base tracking-tight leading-snug">
-                  Pronta para voltar a ser vendida na área de vendas?
-                </h4>
-
-              <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+              <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight leading-snug">
+                Pronta para voltar a ser vendida na área de vendas?
+              </h4>
+              <p className="font-sans text-xs text-slate-500 mt-0.5 leading-relaxed">
                 Peça limpa, sem cheiros e apta para voltar ao expositor da loja
               </p>
-
             </div>
           </div>
           <SlickSlider

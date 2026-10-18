@@ -202,34 +202,20 @@ export default function DecisoesPage() {
               <span className="material-symbols-outlined text-primary text-[28px]">
                 history_edu
               </span>
-              <h1 className="font-headline-lg text-2xl sm:text-3xl font-extrabold text-on-surface tracking-tight">
+              <h1 className="font-display font-headline-lg text-2xl sm:text-3xl font-extrabold text-on-surface tracking-tight">
                 Decisões &amp; Histórico Pericial
               </h1>
-              <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs font-mono font-bold border border-slate-200">
-                PostgreSQL • {totalGeral !== null ? totalGeral : totalElementos} Registos
-              </span>
             </div>
-            <p className="font-body-md text-on-surface-variant text-sm mt-1">
+            <p className="font-sans font-body-md text-on-surface-variant text-sm mt-1">
               Registo auditável e persistido de todas as inferências deliberadas pelos motores Drools e Prolog.
             </p>
           </div>
 
           <div className="flex items-center gap-2.5 self-start sm:self-auto">
-            <button
-              type="button"
-              onClick={handleSeed}
-              disabled={seeding}
-              className="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs border border-slate-200 flex items-center gap-2 transition-colors cursor-pointer shadow-xs disabled:opacity-50"
-            >
-              <span className="material-symbols-outlined text-[18px]">
-                {seeding ? "sync" : "cloud_download"}
-              </span>
-              <span>{seeding ? "A Semear..." : "Semear Cenários"}</span>
-            </button>
 
             <Link
               href="/novo-atendimento"
-              className="btn-tactile-primary px-5 py-2.5 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+              className="btn-tactile-primary px-5 py-2.5 text-xs font-sans font-semibold flex items-center justify-center gap-2 cursor-pointer shadow-xs"
             >
               <span className="material-symbols-outlined text-[18px]">add</span>
               <span>Novo Atendimento</span>
@@ -249,7 +235,7 @@ export default function DecisoesPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Pesquisar por caso (#CENARIO-01), produto, código de regra (PC-001) ou motivo..."
-              className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-surface-container-low text-on-surface text-sm font-medium border border-border-card/70 focus:outline-2 focus:outline-primary placeholder:text-on-surface-variant/60"
+              className="font-sans w-full pl-10 pr-10 py-2.5 rounded-xl bg-surface-container-low text-on-surface text-sm font-medium border border-border-card/70 focus:outline-2 focus:outline-primary placeholder:text-on-surface-variant/60"
             />
             {searchQuery && (
               <button
@@ -425,11 +411,11 @@ export default function DecisoesPage() {
                   {/* Top Row: Case ID, Product Name, Status Badge, Deliberated Value */}
                   <div className="flex items-start justify-between gap-3 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 min-w-0">
-                      <span className="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md shrink-0">
+                      <span className="font-mono tabular-nums font-bold text-xs text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md shrink-0">
                         #{item.pedidoId}
                       </span>
 
-                      <h3 className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-primary transition-colors truncate">
+                      <h3 className="text-sm sm:text-base font-sans font-bold text-slate-900 group-hover:text-primary transition-colors truncate">
                         {item.produtoNome}
                       </h3>
 
@@ -444,7 +430,7 @@ export default function DecisoesPage() {
                     </div>
 
                     <div className="text-right shrink-0">
-                      <span className="font-mono text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">
+                      <span className="font-sans tabular-nums text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">
                         {item.valorDevolucao.toFixed(2)} €
                       </span>
                     </div>
@@ -454,7 +440,7 @@ export default function DecisoesPage() {
                   <div className="flex items-start gap-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
                     {primaryRule ? (
                       <>
-                        <span className="inline-block mt-0.5 shrink-0 px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-mono text-[11px] font-semibold">
+                        <span className="inline-block mt-0.5 shrink-0 px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-mono tabular-nums text-[11px] font-semibold">
                           {primaryRule.codigo}
                         </span>
                         <p className="line-clamp-2 text-slate-700">
@@ -486,7 +472,7 @@ export default function DecisoesPage() {
                       </span>
 
                       <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium border ${
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-mono tabular-nums font-medium border ${
                           isDrools
                             ? "bg-indigo-50/80 text-indigo-700 border-indigo-200/60"
                             : "bg-emerald-50/80 text-emerald-700 border-emerald-200/60"
@@ -496,7 +482,7 @@ export default function DecisoesPage() {
                           {isDrools ? "account_tree" : "schema"}
                         </span>
                         <span>{isDrools ? "Drools" : "Prolog"}</span>
-                        <span className="text-slate-400 font-mono">· {item.duracaoMs} ms</span>
+                        <span className="text-slate-400 font-mono tabular-nums">· {item.duracaoMs} ms</span>
                       </span>
 
                       <span className="inline-flex items-center gap-1 text-[11px] text-slate-400">
@@ -679,10 +665,10 @@ export default function DecisoesPage() {
               <span className="material-symbols-outlined text-[36px]">inbox</span>
             </div>
             <div className="flex flex-col gap-1 max-w-md">
-              <h3 className="font-headline-md text-on-surface text-lg font-bold">
+              <h3 className="font-sans text-on-surface text-lg font-bold">
                 Nenhum atendimento encontrado
               </h3>
-              <p className="font-body-md text-on-surface-variant text-xs sm:text-sm">
+              <p className="font-sans text-on-surface-variant text-xs sm:text-sm">
                 Não existem registos de devolução ou troca correspondentes ao filtro ou termo de pesquisa indicado.
               </p>
             </div>
@@ -696,7 +682,7 @@ export default function DecisoesPage() {
                   setDebouncedSearchQuery("");
                   setPage(0);
                 }}
-                className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors cursor-pointer"
+                className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-sans font-semibold text-xs transition-colors cursor-pointer"
               >
                 Limpar Todos os Filtros
               </button>
@@ -704,7 +690,7 @@ export default function DecisoesPage() {
                 type="button"
                 onClick={handleSeed}
                 disabled={seeding}
-                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-xs disabled:opacity-50"
+                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-sans font-semibold text-xs flex items-center gap-2 cursor-pointer shadow-xs disabled:opacity-50"
               >
                 <span className="material-symbols-outlined text-[18px]">
                   {seeding ? "sync" : "cloud_download"}
@@ -713,7 +699,7 @@ export default function DecisoesPage() {
               </button>
               <Link
                 href="/novo-atendimento"
-                className="btn-tactile-primary px-5 py-2.5 text-xs font-bold cursor-pointer"
+                className="btn-tactile-primary px-5 py-2.5 text-xs font-sans font-semibold cursor-pointer"
               >
                 Iniciar Novo Caso
               </Link>
@@ -747,12 +733,12 @@ export default function DecisoesPage() {
                   <div className="flex items-center gap-2">
                     <h3
                       id="modal-inference-title"
-                      className="font-headline-sm text-base sm:text-lg font-extrabold text-on-surface font-mono"
+                      className="font-mono tabular-nums text-base sm:text-lg font-bold text-on-surface"
                     >
                       #{selectedInference.pedidoId}
                     </h3>
                     <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                      className={`px-2 py-0.5 rounded text-[10px] font-mono tabular-nums font-bold border ${
                         selectedInference.motor === "DROOLS"
                           ? "bg-indigo-50 text-indigo-700 border-indigo-200"
                           : "bg-emerald-50 text-emerald-700 border-emerald-200"
@@ -761,7 +747,7 @@ export default function DecisoesPage() {
                       {selectedInference.motor}
                     </span>
                   </div>
-                  <span className="text-xs text-on-surface-variant font-medium">
+                  <span className="text-xs text-on-surface-variant font-medium font-sans">
                     {selectedInference.produtoNome}
                   </span>
                 </div>
@@ -778,16 +764,16 @@ export default function DecisoesPage() {
             </div>
 
             {/* Verdict Summary Box */}
-            <div className="p-4 rounded-2xl bg-surface-container-low border border-border-card flex flex-col gap-2 text-xs">
+            <div className="p-4 rounded-2xl bg-surface-container-low border border-border-card flex flex-col gap-2 text-xs font-sans">
               <div className="flex justify-between">
                 <span className="text-on-surface-variant font-semibold">Motor &amp; Versão:</span>
-                <span className="font-bold text-on-surface">
+                <span className="font-mono tabular-nums font-bold text-on-surface">
                   {selectedInference.motor} ({selectedInference.duracaoMs} ms)
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-on-surface-variant font-semibold">Data / Hora:</span>
-                <span className="font-bold text-on-surface">
+                <span className="font-mono tabular-nums font-bold text-on-surface">
                   {new Date(selectedInference.executadoEm).toLocaleString("pt-PT")}
                 </span>
               </div>
@@ -805,14 +791,14 @@ export default function DecisoesPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-on-surface-variant font-semibold">Valor da Transação:</span>
-                <span className="font-extrabold text-primary text-sm font-mono">
+                <span className="font-sans tabular-nums font-extrabold text-primary text-sm">
                   {selectedInference.valorDevolucao.toFixed(2)} €
                 </span>
               </div>
             </div>
 
             {/* Fired Rules List */}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 font-sans">
               <span className="font-label-md text-xs font-bold uppercase tracking-wider text-on-surface-variant">
                 Regras e Deduções Acionadas ({selectedInference.regrasDisparadas.length})
               </span>
@@ -823,9 +809,9 @@ export default function DecisoesPage() {
                     className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex flex-col gap-1 text-xs"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-bold font-mono text-slate-900">{r.codigo}</span>
+                      <span className="font-bold font-mono tabular-nums text-slate-900">{r.codigo}</span>
                       {r.modulo && (
-                        <span className="px-2 py-0.5 rounded text-[10px] bg-white border border-slate-200 text-slate-500 font-semibold">
+                        <span className="px-2 py-0.5 rounded text-[10px] bg-white border border-slate-200 text-slate-500 font-semibold font-mono tabular-nums">
                           {r.modulo}
                         </span>
                       )}
@@ -849,7 +835,7 @@ export default function DecisoesPage() {
                     setSelectedInference(null);
                     setComparingPedidoId(id);
                   }}
-                  className="px-3.5 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs border border-indigo-200 flex items-center gap-1.5 transition-colors cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-sans font-semibold text-xs border border-indigo-200 flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[16px]">compare_arrows</span>
                   <span>Confrontar Motores</span>
@@ -862,7 +848,7 @@ export default function DecisoesPage() {
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  className="btn-tactile-secondary px-4 py-2 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                  className="btn-tactile-secondary px-4 py-2 text-xs font-sans font-semibold flex items-center gap-1.5 cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[16px]">print</span>
                   <span>Imprimir</span>
@@ -870,7 +856,7 @@ export default function DecisoesPage() {
                 <button
                   type="button"
                   onClick={() => setSelectedInference(null)}
-                  className="btn-tactile-primary px-5 py-2 text-xs font-bold cursor-pointer"
+                  className="btn-tactile-primary px-5 py-2 text-xs font-sans font-semibold cursor-pointer"
                 >
                   Fechar
                 </button>

@@ -29,10 +29,10 @@ export default function QuickActions({
             <span className="material-symbols-outlined text-[19px]">switch_account</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-semibold text-slate-900">
+            <span className="font-sans text-sm font-bold text-slate-900">
               Trocar de Operador
             </span>
-            <span className="text-xs text-slate-500">
+            <span className="font-sans text-xs text-slate-500">
               Passar caixa ao colega
             </span>
           </div>
@@ -53,10 +53,10 @@ export default function QuickActions({
             <span className="material-symbols-outlined text-[19px]">school</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-semibold text-slate-900">
+            <span className="font-sans text-sm font-bold text-slate-900">
               Simular Cenário de Treino
             </span>
-            <span className="text-xs text-slate-500">
+            <span className="font-sans text-xs text-slate-500">
               Modo Sandbox seguro
             </span>
           </div>
@@ -77,10 +77,10 @@ export default function QuickActions({
             <span className="material-symbols-outlined text-[19px]">verified</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-semibold text-slate-900">
+            <span className="font-sans text-sm font-bold text-slate-900">
               Políticas Atualizadas
             </span>
-            <span className="text-xs text-slate-500">
+            <span className="font-sans text-xs text-slate-500">
               Regras em vigor no balcão
             </span>
           </div>

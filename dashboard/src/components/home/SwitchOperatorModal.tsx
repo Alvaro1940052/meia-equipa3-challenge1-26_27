@@ -74,7 +74,7 @@ export default function SwitchOperatorModal({
               <span className="font-label-md text-xs font-bold text-on-surface-variant uppercase tracking-wider">
                 Sessão de Caixa
               </span>
-              <h3 id="switch-op-title" className="font-headline-sm text-on-surface text-lg font-bold">
+              <h3 id="switch-op-title" className="font-sans font-headline-sm text-on-surface text-lg font-bold">
                 Trocar de Operador
               </h3>
             </div>
@@ -91,7 +91,7 @@ export default function SwitchOperatorModal({
         </div>
 
         {/* Operator selection list */}
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-2.5 font-sans">
           {availableOperators.map((op) => {
             const isCurrent = currentOperator.startsWith(op.name.split(" ")[0]);
 
@@ -116,17 +116,17 @@ export default function SwitchOperatorModal({
                     {op.name.charAt(0)}
                   </div>
                   <div className="flex flex-col">
-                    <span className="font-label-lg text-sm text-on-surface font-bold">
+                    <span className="font-sans font-label-lg text-sm text-on-surface font-bold">
                       {op.name}
                     </span>
-                    <span className="font-caption text-xs text-on-surface-variant">
+                    <span className="font-sans font-caption text-xs text-on-surface-variant">
                       {op.role}
                     </span>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded-full bg-tertiary-fixed text-on-tertiary-fixed font-label-md text-[10px] font-bold">
+                  <span className="font-sans tabular-nums px-2 py-0.5 rounded-full bg-tertiary-fixed text-on-tertiary-fixed font-label-md text-[10px] font-bold">
                     🔥 {op.streak}
                   </span>
                   {isCurrent && (
@@ -141,11 +141,11 @@ export default function SwitchOperatorModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end pt-2 border-t border-border-card">
+        <div className="flex items-center justify-end pt-2 border-t border-border-card font-sans">
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2 rounded-full bg-surface-container text-on-surface font-label-md text-xs font-bold shadow-xs hover:translate-y-[1px] transition-all cursor-pointer"
+            className="font-sans px-5 py-2 rounded-full bg-surface-container text-on-surface font-label-md text-xs font-semibold shadow-xs hover:translate-y-[1px] transition-all cursor-pointer"
           >
             Cancelar
           </button>

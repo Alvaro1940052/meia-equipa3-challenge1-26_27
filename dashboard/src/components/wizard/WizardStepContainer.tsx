@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useWizard } from "./WizardContext";
+import { useWizard, getFirstIncompleteStep } from "./WizardContext";
+import ConfirmLeaveModal from "./ConfirmLeaveModal";
 import Step1EngineSelect from "./Step1EngineSelect";
 import Step2MarketStore from "./Step2MarketStore";
 import Step3ProductEligibility from "./Step3ProductEligibility";
@@ -74,6 +75,12 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
   const {
     state,
     totalSteps,
+    isHydrated,
+    isDirty,
+    showLeaveModal,
+    pendingNavigationUrl,
+    setShowLeaveModal,
+    setPendingNavigationUrl,
     goToStep,
     resetWizard,
     buildReturnRequest,
@@ -85,11 +92,17 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
   const [evaluationDurationMs, setEvaluationDurationMs] = useState<number>(0);
   const [lastRequest, setLastRequest] = useState<Record<string, unknown> | null>(null);
 
-  // Sincronizar o passo atual do contexto com a rota
+  // Guarda Sequencial de Passos (Step Guard):
+  // Impede que um utilizador aceda diretamente via URL sem ter completado os passos obrigatórios anteriores
   useEffect(() => {
-    goToStep(stepNumber);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stepNumber]);
+    if (!isHydrated) return;
+    const allowedStep = getFirstIncompleteStep(state);
+    if (stepNumber > allowedStep) {
+      router.replace(`/novo-atendimento/passo/${allowedStep}`);
+    } else {
+      goToStep(stepNumber);
+    }
+  }, [stepNumber, state, router, goToStep, isHydrated]);
 
   // Validações de obrigatoriedade por etapa (conforme especificações RPAC-Team3)
   const isStep1Valid = Boolean(state.engine);
@@ -104,10 +117,33 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
 
   const handleBack = () => {
     if (stepNumber <= 1) {
-      router.push("/");
+      if (isDirty) {
+        setPendingNavigationUrl("/");
+        setShowLeaveModal(true);
+      } else {
+        router.push("/");
+      }
     } else {
       router.push(`/novo-atendimento/passo/${stepNumber - 1}`);
     }
+  };
+
+  const handleLeave = () => {
+    setPendingNavigationUrl("/");
+    setShowLeaveModal(true);
+  };
+
+  const handleConfirmLeave = () => {
+    const target = pendingNavigationUrl || "/";
+    setShowLeaveModal(false);
+    setPendingNavigationUrl(null);
+    resetWizard();
+    router.push(target);
+  };
+
+  const handleCancelLeave = () => {
+    setShowLeaveModal(false);
+    setPendingNavigationUrl(null);
   };
 
   const handleNext = async () => {
@@ -198,6 +234,18 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
 
 
 
+  // Se ainda estiver a carregar do sessionStorage ou a redirecionar por guarda de passos, mostrar loading discreto
+  const allowedStep = getFirstIncompleteStep(state);
+  const isGuarded = isHydrated && stepNumber > allowedStep;
+
+  if (!isHydrated || isGuarded) {
+    return (
+      <div className="w-full flex-1 flex items-center justify-center p-8 min-h-[300px]">
+        <div className="w-8 h-8 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   // Caso tenhamos veredito final calculado
   if (evaluationResult) {
     return (
@@ -234,10 +282,10 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
               </span>
             </div>
             <div className="flex flex-col gap-1">
-              <h3 className="font-headline-md text-on-surface text-xl font-bold">
+              <h3 className="font-sans text-on-surface text-xl font-bold">
                 A Calcular Veredito Oficial...
               </h3>
-              <p className="font-body-md text-on-surface-variant text-xs sm:text-sm">
+              <p className="font-sans text-on-surface-variant text-xs sm:text-sm">
                 A submeter pedido ao motor{" "}
                 <span className="font-bold text-primary">
                   {state.engine === "prolog" ? "Prolog (Dedução Lógica)" : "Drools (Regras Rete-OO)"}
@@ -284,10 +332,10 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
                 <span className="material-symbols-outlined text-[26px]">warning</span>
               </div>
               <div className="flex flex-col">
-                <span className="font-headline-sm text-sm font-bold text-red-900">
+                <span className="font-sans text-sm font-bold text-red-900">
                   Não foi possível concluir a avaliação
                 </span>
-                <span className="font-body-md text-xs sm:text-sm text-red-800 mt-0.5">
+                <span className="font-sans text-xs sm:text-sm text-red-800 mt-0.5">
                   {evaluationError}
                 </span>
               </div>
@@ -296,7 +344,7 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
             <button
               type="button"
               onClick={handleEvaluate}
-              className="w-full sm:w-auto px-5 py-2.5 rounded-full bg-red-600 hover:bg-red-700 text-white font-label-md text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-[0_3px_0_#991b1b] hover:translate-y-0.5 active:translate-y-1 transition-all cursor-pointer shrink-0"
+              className="w-full sm:w-auto px-5 py-2.5 rounded-full bg-red-600 hover:bg-red-700 text-white font-sans text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-[0_3px_0_#991b1b] hover:translate-y-0.5 active:translate-y-1 transition-all cursor-pointer shrink-0"
             >
               <span className="material-symbols-outlined text-[18px]">refresh</span>
               <span>Tentar novamente</span>
@@ -317,6 +365,8 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
         <NavigationFooter
           onBack={handleBack}
           onNext={handleNext}
+          onLeave={stepNumber > 1 ? handleLeave : undefined}
+          leaveLabel="Painel Inicial"
           nextLabel={meta.nextLabel}
           nextHint={getStepHint()}
           backLabel={stepNumber === 1 ? "Painel Inicial" : "Passo Anterior"}
@@ -334,6 +384,13 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
           requestType={state.requestType}
         />
       )}
+
+      {/* Modal Customizado de Confirmação de Saída Tátil */}
+      <ConfirmLeaveModal
+        isOpen={showLeaveModal}
+        onConfirm={handleConfirmLeave}
+        onCancel={handleCancelLeave}
+      />
     </div>
   );
 }

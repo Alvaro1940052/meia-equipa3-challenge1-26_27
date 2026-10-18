@@ -96,8 +96,8 @@ export default function ReturnsPanel({ engineId = "returns" }: { engineId?: "ret
 
   const input = (
     <>
-      <h3 className="card-title">1. Escolha um cenário</h3>
-      <p className="card-desc">
+      <h3 className="card-title font-sans font-bold">1. Escolha um cenário</h3>
+      <p className="card-desc font-sans">
         Cada cenário é um pedido de devolução ou troca pronto a avaliar. Pode ajustá-lo antes de executar.
       </p>
       <ScenarioPicker
@@ -110,30 +110,30 @@ export default function ReturnsPanel({ engineId = "returns" }: { engineId?: "ret
 
       {requestText && (
         <div className="request-block">
-          <div className="presets-label">Pedido selecionado</div>
+          <div className="presets-label font-sans">Pedido selecionado</div>
           {request && <RequestSummary request={request} scenario={scenario} />}
           <RequestEditor value={requestText} error={jsonError} onChange={setRequestText} />
         </div>
       )}
 
-      <button type="button" className="btn-primary" onClick={evaluate} disabled={loading || !request}>
+      <button type="button" className="btn-primary font-sans font-bold" onClick={evaluate} disabled={loading || !request}>
         {loading ? "A avaliar..." : "2. Avaliar pedido"}
       </button>
-      {!requestText && <p className="field-hint">Escolha um cenário para continuar.</p>}
+      {!requestText && <p className="field-hint font-sans">Escolha um cenário para continuar.</p>}
     </>
   );
 
   const result = (
     <>
-      <h3 className="card-title">3. Resultado</h3>
-      <p className="card-desc">A decisão do motor, a justificação e o que mudaria noutras condições.</p>
+      <h3 className="card-title font-sans font-bold">3. Resultado</h3>
+      <p className="card-desc font-sans">A decisão do motor, a justificação e o que mudaria noutras condições.</p>
 
       {error && <ErrorBanner message={error} onRetry={evaluate} />}
 
       {evaluation ? (
         <>
           {stale && (
-            <p className="field-hint field-error" role="status">
+            <p className="field-hint field-error font-sans" role="status">
               O pedido foi alterado desde esta avaliação. Avalie de novo para atualizar o resultado.
             </p>
           )}
@@ -148,14 +148,14 @@ export default function ReturnsPanel({ engineId = "returns" }: { engineId?: "ret
               base={BASE}
             />
           ) : (
-            <p className="field-hint">Esta avaliação não foi guardada, por isso não há explicações disponíveis.</p>
+            <p className="field-hint font-sans">Esta avaliação não foi guardada, por isso não há explicações disponíveis.</p>
           )}
 
           <div className="btn-group-row">
-            <button type="button" className="btn-action" onClick={evaluate} disabled={loading || !request}>
+            <button type="button" className="btn-action font-sans font-bold" onClick={evaluate} disabled={loading || !request}>
               {loading ? "A avaliar..." : "Reavaliar"}
             </button>
-            <button type="button" className="btn-action" onClick={reset}>
+            <button type="button" className="btn-action font-sans font-bold" onClick={reset}>
               Nova avaliação
             </button>
           </div>
