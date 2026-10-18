@@ -22,30 +22,32 @@ export interface WizardState {
     | "GROSSISTA"
     | "DESCONHECIDO"
     | null;
-  barcodeRecognized: boolean;
-  brandAllowed: boolean;
-  alteredOrHemmed: boolean;
-  intimateUnderwear: boolean;
-  manufacturingDefect: boolean;
+  barcodeRecognized: boolean | null;
+  brandAllowed: boolean | null;
+  alteredOrHemmed: boolean | null;
+  intimateUnderwear: boolean | null;
+  manufacturingDefect: boolean | null;
   physicalCondition:
     | "NOVO_ETIQUETAS"
     | "NOVO_ETIQUETAS_SOLTAS"
     | "NOVO_SEM_ETIQUETAS"
     | "USADO"
     | "LAVADO"
-    | "MANCHADO";
-  readyToResell: boolean;
-  requestType: "DEVOLUCAO" | "TROCA" | "GIFT" | "AJUSTE_PRECO";
+    | "MANCHADO"
+    | null;
+  readyToResell: boolean | null;
+  requestType: "DEVOLUCAO" | "TROCA" | "GIFT" | "AJUSTE_PRECO" | null;
   proofOfPurchase:
     | "RECIBO_ORIGINAL"
     | "CONFIRMACAO_ONLINE"
     | "RECIBO_OFERTA"
     | "CONSULTA_POS"
-    | "SEM_COMPROVATIVO";
-  daysSincePurchase: number;
-  exchangeOption: "NENHUMA" | "MESMO_MODELO" | "OUTRO_ARTIGO";
-  customerSituation: "CONFORME" | "CONTESTA" | "CHAMAR_GERENCIA";
-  managerException: boolean;
+    | "SEM_COMPROVATIVO"
+    | null;
+  daysSincePurchase: number | null;
+  exchangeOption: "NENHUMA" | "MESMO_MODELO" | "OUTRO_ARTIGO" | null;
+  customerSituation: "CONFORME" | "CONTESTA" | "CHAMAR_GERENCIA" | null;
+  managerException: boolean | null;
   refundMethod: "CONTA_ORIGINAL" | "VALE_LOJA" | "CARTAO_ENCERRADO";
   // Campos de Pagamento Original IN-009 e Família TN
   originalPaymentMethod:
@@ -56,12 +58,13 @@ export interface WizardState {
     | "APPLE_PAY"
     | "PAYPAL"
     | "AFTERPAY"
-    | "INTERAC";
-  accountState: "ATIVA" | "ATIVA_CARTAO_PERDIDO" | "ENCERRADA";
-  originalRefundRefused: boolean;
-  physicalCardPresent: boolean;
-  paymentAppAccessible: boolean;
-  totalPrice: number;
+    | "INTERAC"
+    | null;
+  accountState: "ATIVA" | "ATIVA_CARTAO_PERDIDO" | "ENCERRADA" | null;
+  originalRefundRefused: boolean | null;
+  physicalCardPresent: boolean | null;
+  paymentAppAccessible: boolean | null;
+  totalPrice: number | null;
   precoAtualProduto?: number;
   currency: "USD" | "CAD";
   operatorName: string;
@@ -79,26 +82,26 @@ export const defaultWizardState: WizardState = {
   marketJurisdiction: null,
   storeType: null,
   purchaseChannel: null,
-  barcodeRecognized: true,
-  brandAllowed: true,
-  alteredOrHemmed: false,
-  intimateUnderwear: false,
-  manufacturingDefect: false,
-  physicalCondition: "NOVO_ETIQUETAS",
-  readyToResell: true,
-  requestType: "DEVOLUCAO",
-  proofOfPurchase: "RECIBO_ORIGINAL",
-  daysSincePurchase: 14,
-  exchangeOption: "NENHUMA",
-  customerSituation: "CONFORME",
-  managerException: false,
+  barcodeRecognized: null,
+  brandAllowed: null,
+  alteredOrHemmed: null,
+  intimateUnderwear: null,
+  manufacturingDefect: null,
+  physicalCondition: null,
+  readyToResell: null,
+  requestType: null,
+  proofOfPurchase: null,
+  daysSincePurchase: null,
+  exchangeOption: null,
+  customerSituation: null,
+  managerException: null,
   refundMethod: "CONTA_ORIGINAL",
-  originalPaymentMethod: "CREDITO",
-  accountState: "ATIVA",
-  originalRefundRefused: false,
-  physicalCardPresent: true,
-  paymentAppAccessible: true,
-  totalPrice: 89.9,
+  originalPaymentMethod: null,
+  accountState: null,
+  originalRefundRefused: null,
+  physicalCardPresent: null,
+  paymentAppAccessible: null,
+  totalPrice: null,
   precoAtualProduto: undefined,
   currency: "USD",
   operatorName: "Tiago Silva",
@@ -120,20 +123,44 @@ export function getFirstIncompleteStep(state: WizardState): number {
   }
 
   // Passo 3: Condição física e elegibilidade
-  if (!state.physicalCondition) return 3;
+  if (
+    state.barcodeRecognized === null ||
+    state.brandAllowed === null ||
+    state.alteredOrHemmed === null ||
+    !state.physicalCondition ||
+    state.readyToResell === null
+  ) {
+    return 3;
+  }
 
-  // Passo 4: Tipo de pedido e comprovativo
-  if (!state.requestType || !state.proofOfPurchase) return 4;
+  // Passo 4: Tipo de pedido, comprovativo e prazo são obrigatórios
+  if (!state.requestType || !state.proofOfPurchase || state.daysSincePurchase === null) return 4;
 
-  // Passo 5: Modalidade de troca (se for troca)
+  // Passo 5: Modalidade de troca (se for troca), situação do cliente e exceção de gerência
   if (state.requestType === "TROCA" && (!state.exchangeOption || state.exchangeOption === "NENHUMA")) {
     return 5;
+  }
+  if (!state.customerSituation || state.managerException === null) {
+    return 5;
+  }
+
+  // Passo 6: Valor, meio de pagamento original e estado da conta
+  if (
+    state.totalPrice === null ||
+    state.totalPrice <= 0 ||
+    !state.originalPaymentMethod ||
+    !state.accountState ||
+    (state.accountState === "ENCERRADA" && state.originalRefundRefused === null) ||
+    (state.originalPaymentMethod === "INTERAC" && state.physicalCardPresent === null) ||
+    (state.originalPaymentMethod === "PAYPAL" && state.paymentAppAccessible === null)
+  ) {
+    return 6;
   }
 
   return 6;
 }
 
-const STORAGE_KEY = "retailflow_wizard_state_v3";
+const STORAGE_KEY = "retailflow_wizard_state_v7";
 
 interface WizardContextType {
   state: WizardState;
@@ -196,18 +223,25 @@ export function WizardProvider({ children }: { children: ReactNode }) {
     }
   }, [state]);
 
-  // Proteção contra Saída Acidental externa (fechar aba ou recarregar página)
+  // Interceção de atalhos de reload do teclado (F5, Ctrl+R, Cmd+R) para exibir o modal customizado
   useEffect(() => {
     if (!isDirty || isLeaving) return;
 
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (isLeaving) return;
-      e.preventDefault();
-      e.returnValue = "";
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isF5 = e.key === "F5";
+      const isReloadShortcut =
+        (e.ctrlKey || e.metaKey) && (e.key === "r" || e.key === "R");
+
+      if (isF5 || isReloadShortcut) {
+        e.preventDefault();
+        e.stopPropagation();
+        setPendingNavigationUrl("__RELOAD__");
+        setShowLeaveModal(true);
+      }
     };
 
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener("keydown", handleKeyDown, { capture: true });
+    return () => window.removeEventListener("keydown", handleKeyDown, { capture: true });
   }, [isDirty, isLeaving]);
 
   const setField = <K extends keyof WizardState>(field: K, value: WizardState[K]) => {
@@ -220,8 +254,8 @@ export function WizardProvider({ children }: { children: ReactNode }) {
       // Sincronização reativa de modalidade de troca com o tipo de pedido (IN-005 / M6)
       if (field === "requestType") {
         if (value === "TROCA") {
-          if (prev.exchangeOption === "NENHUMA") {
-            updated.exchangeOption = "MESMO_MODELO";
+          if (prev.exchangeOption === "NENHUMA" || prev.exchangeOption === null) {
+            updated.exchangeOption = null;
           }
         } else {
           updated.exchangeOption = "NENHUMA";
@@ -286,6 +320,13 @@ export function WizardProvider({ children }: { children: ReactNode }) {
       window.onbeforeunload = null;
     }
 
+    if (validTarget === "__RELOAD__") {
+      if (typeof window !== "undefined") {
+        window.location.reload();
+      }
+      return;
+    }
+
     // Navegação SPA suave com Next.js Router (sem provocar o alerta nativo do browser)
     router.push(validTarget);
   };
@@ -316,7 +357,8 @@ function mapTipoPedidoToResolucaoPedida(
   const buildReturnRequest = (): ReturnRequest => {
     const today = new Date();
     const purchaseDate = new Date(today);
-    purchaseDate.setDate(today.getDate() - state.daysSincePurchase);
+    const effectiveDays = state.daysSincePurchase ?? 14;
+    purchaseDate.setDate(today.getDate() - effectiveDays);
 
     const formattedToday = today.toISOString().split("T")[0];
     const formattedPurchaseDate = purchaseDate.toISOString().split("T")[0];
@@ -376,7 +418,7 @@ function mapTipoPedidoToResolucaoPedida(
         : "DEVOLUCAO"
       : state.requestType === "GIFT"
       ? "DEVOLUCAO_OFERTA"
-      : state.requestType;
+      : state.requestType ?? "DEVOLUCAO";
 
     const effectiveResolucaoPedida = mapTipoPedidoToResolucaoPedida(
       isOnline && state.onlineInStoreExchange ? "TROCA" : state.requestType,
@@ -402,6 +444,8 @@ function mapTipoPedidoToResolucaoPedida(
       state.paymentAppAccessible === false;
 
     const shouldContornarObrigatorio = isAfterpayOnlineExchange || isPaypalNoAccess;
+
+    const effectivePrice = state.totalPrice ?? 89.9;
 
     return {
       id: "REQ-" + Date.now(),
@@ -444,7 +488,7 @@ function mapTipoPedidoToResolucaoPedida(
         encomendaEncontrada: isOnline ? state.onlineOrderFound : true,
         compraOferta: effectiveTipoPedido === "DEVOLUCAO_OFERTA",
         moeda: state.currency,
-        valorTotal: state.totalPrice,
+        valorTotal: effectivePrice,
         pagamento: {
           meio:
             state.originalPaymentMethod ||
@@ -453,7 +497,7 @@ function mapTipoPedidoToResolucaoPedida(
               : isOnline
               ? meioPagamentoOnline
               : "CREDITO"),
-          valorPago: state.totalPrice,
+          valorPago: effectivePrice,
           estadoConta: state.accountState || (state.refundMethod === "CARTAO_ENCERRADO" ? "ENCERRADA" : "ATIVA"),
           cartaoFisicoPresente: state.physicalCardPresent ?? true,
           reembolsoOriginalRecusado: state.originalRefundRefused ?? false,
@@ -483,28 +527,28 @@ function mapTipoPedidoToResolucaoPedida(
           id: "A-01",
           produto: {
             sku: "501-ORIGINAL-FIT",
-            skuReconhecidoPOS: state.barcodeRecognized,
-            marca: state.brandAllowed ? "LEVIS" : "OUTRA",
+            skuReconhecidoPOS: state.barcodeRecognized ?? true,
+            marca: state.brandAllowed === false ? "OUTRA" : "LEVIS",
             categoria: state.intimateUnderwear ? "BODYWEAR" : "VESTUARIO",
             vendidoNaLoja: true,
-            pvpOriginal: state.totalPrice,
-            precoAtual: state.precoAtualProduto ?? state.totalPrice,
+            pvpOriginal: effectivePrice,
+            precoAtual: state.precoAtualProduto ?? effectivePrice,
           },
           quantidade: 1,
-          precoPago: state.totalPrice,
-          revendivel: state.readyToResell,
+          precoPago: effectivePrice,
+          revendivel: state.readyToResell ?? (state.physicalCondition === "NOVO_ETIQUETAS" || state.physicalCondition === "NOVO_ETIQUETAS_SOLTAS"),
           estado: {
             condicaoUso,
             etiquetas,
-            embainhado: state.alteredOrHemmed,
-            alterado: state.alteredOrHemmed,
+            embainhado: Boolean(state.alteredOrHemmed),
+            alterado: Boolean(state.alteredOrHemmed),
             personalizado: false,
-            defeitoFabricoConfirmado: state.manufacturingDefect,
+            defeitoFabricoConfirmado: Boolean(state.manufacturingDefect),
             sujoOuInseguro: state.physicalCondition === "MANCHADO",
             danificado: state.physicalCondition === "MANCHADO",
-            bainhaFeitaOuAlterada: state.alteredOrHemmed,
-            temDefeitoFabrico: state.manufacturingDefect,
-            revendivel: state.readyToResell,
+            bainhaFeitaOuAlterada: Boolean(state.alteredOrHemmed),
+            temDefeitoFabrico: Boolean(state.manufacturingDefect),
+            revendivel: state.readyToResell ?? (state.physicalCondition === "NOVO_ETIQUETAS" || state.physicalCondition === "NOVO_ETIQUETAS_SOLTAS"),
           },
           entreCanais: state.purchaseChannel !== "FISICA",
         },
@@ -513,7 +557,8 @@ function mapTipoPedidoToResolucaoPedida(
         (state.requestType === "TROCA" ||
           effectiveTipoPedido === "TROCA" ||
           (isOnline && state.onlineInStoreExchange)) &&
-        state.exchangeOption !== "NENHUMA"
+        state.exchangeOption !== "NENHUMA" &&
+        state.exchangeOption !== null
           ? [
               {
                 produto: {
@@ -525,19 +570,19 @@ function mapTipoPedidoToResolucaoPedida(
                   marca: "LEVIS",
                   categoria: "VESTUARIO",
                   vendidoNaLoja: true,
-                  pvpOriginal: state.totalPrice,
-                  precoAtual: state.precoAtualProduto ?? state.totalPrice,
+                  pvpOriginal: effectivePrice,
+                  precoAtual: state.precoAtualProduto ?? effectivePrice,
                 },
                 apenasMudaTamanho:
                   state.exchangeOption === "OUTRO_ARTIGO"
                     ? false
                     : state.exchangeOption === "MESMO_MODELO" || isOnline,
-                precoVenda: state.precoAtualProduto ?? state.totalPrice,
+                precoVenda: state.precoAtualProduto ?? effectivePrice,
               },
             ]
           : [],
-      excecaoGerencia: state.managerException,
-      situacaoCliente: state.customerSituation,
+      excecaoGerencia: Boolean(state.managerException),
+      situacaoCliente: state.customerSituation ?? "CONFORME",
       pedidoExcecao: state.managerException
         ? {
             aprovada: true,
@@ -555,7 +600,7 @@ function mapTipoPedidoToResolucaoPedida(
             aprovada: null,
             concluivelNoSistema: true,
           }
-        : state.customerSituation !== "CONFORME"
+        : state.customerSituation !== "CONFORME" && state.customerSituation !== null
         ? {
             aprovada: null, // Pendente de avaliação
             concluivelNoSistema: true,

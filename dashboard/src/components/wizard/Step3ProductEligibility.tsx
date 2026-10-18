@@ -61,10 +61,20 @@ export default function Step3ProductEligibility() {
   const { state, setField } = useWizard();
 
   // Regras de Paragem Obrigatória (HS-001, HS-002, HS-003 do RPAC)
-  const isBarcodeBlocked = !state.barcodeRecognized;
-  const isBrandBlocked = !state.brandAllowed;
-  const isAlteredBlocked = state.alteredOrHemmed;
+  const isBarcodeBlocked = state.barcodeRecognized === false;
+  const isBarcodeApproved = state.barcodeRecognized === true;
+
+  const isBrandBlocked = state.brandAllowed === false;
+  const isBrandApproved = state.brandAllowed === true;
+
+  const isAlteredBlocked = state.alteredOrHemmed === true;
+  const isAlteredApproved = state.alteredOrHemmed === false;
+
   const hasHardStop = isBarcodeBlocked || isBrandBlocked || isAlteredBlocked;
+  const isInitialSectionComplete =
+    state.barcodeRecognized !== null &&
+    state.brandAllowed !== null &&
+    state.alteredOrHemmed !== null;
 
   return (
     <div className="w-full flex flex-col gap-6">
@@ -82,6 +92,11 @@ export default function Step3ProductEligibility() {
               <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
               Recusa Obrigatória
             </span>
+          ) : isInitialSectionComplete ? (
+            <span className="font-sans inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60 select-none">
+              <span className="material-symbols-outlined text-[13px] font-bold">check</span>
+              Validado
+            </span>
           ) : (
             <span className="font-sans inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 select-none">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
@@ -90,14 +105,14 @@ export default function Step3ProductEligibility() {
           )}
         </div>
 
-        {/* Minimalist Cards diretamente na página no mesmo grid e estilo do Passo 2 */}
+        {/* Minimalist Cards diretamente na página no mesmo grid e estilo minimalista do Passo 2 */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           {/* Card: Código de barras */}
           <div
-            className={`rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-200 ${
+            className={`rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-200 bg-white ${
               isBarcodeBlocked
-                ? "bg-rose-50/25 border-2 border-rose-300 shadow-2xs"
-                : "bg-white border border-slate-200 hover:border-slate-300 hover:shadow-2xs"
+                ? "border-2 border-rose-500"
+                : "border border-slate-200 hover:border-slate-300"
             }`}
           >
             <div className="flex items-center gap-3.5 min-w-0">
@@ -105,7 +120,9 @@ export default function Step3ProductEligibility() {
                 className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
                   isBarcodeBlocked
                     ? "bg-rose-50 text-rose-700 border border-rose-200/60"
-                    : "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
+                    : isBarcodeApproved
+                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
+                    : "bg-slate-100 text-slate-500 border border-slate-200/60"
                 }`}
               >
                 <span className="material-symbols-outlined text-[22px]">barcode_scanner</span>
@@ -133,10 +150,10 @@ export default function Step3ProductEligibility() {
 
           {/* Card: Marca permitida */}
           <div
-            className={`rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-200 ${
+            className={`rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-200 bg-white ${
               isBrandBlocked
-                ? "bg-rose-50/25 border-2 border-rose-300 shadow-2xs"
-                : "bg-white border border-slate-200 hover:border-slate-300 hover:shadow-2xs"
+                ? "border-2 border-rose-500"
+                : "border border-slate-200 hover:border-slate-300"
             }`}
           >
             <div className="flex items-center gap-3.5 min-w-0">
@@ -144,7 +161,9 @@ export default function Step3ProductEligibility() {
                 className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
                   isBrandBlocked
                     ? "bg-rose-50 text-rose-700 border border-rose-200/60"
-                    : "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
+                    : isBrandApproved
+                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
+                    : "bg-slate-100 text-slate-500 border border-slate-200/60"
                 }`}
               >
                 <span className="material-symbols-outlined text-[22px]">verified</span>
@@ -172,10 +191,10 @@ export default function Step3ProductEligibility() {
 
           {/* Card: Bainhas ou alterações */}
           <div
-            className={`rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-200 ${
+            className={`rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-200 bg-white ${
               isAlteredBlocked
-                ? "bg-rose-50/25 border-2 border-rose-300 shadow-2xs"
-                : "bg-white border border-slate-200 hover:border-slate-300 hover:shadow-2xs"
+                ? "border-2 border-rose-500"
+                : "border border-slate-200 hover:border-slate-300"
             }`}
           >
             <div className="flex items-center gap-3.5 min-w-0">
@@ -183,7 +202,9 @@ export default function Step3ProductEligibility() {
                 className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
                   isAlteredBlocked
                     ? "bg-rose-50 text-rose-700 border border-rose-200/60"
-                    : "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
+                    : isAlteredApproved
+                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
+                    : "bg-slate-100 text-slate-500 border border-slate-200/60"
                 }`}
               >
                 <span className="material-symbols-outlined text-[22px]">content_cut</span>
@@ -211,10 +232,10 @@ export default function Step3ProductEligibility() {
 
           {/* Card: Roupa interior ou íntima */}
           <div
-            className={`rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-200 ${
+            className={`rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-200 bg-white ${
               state.intimateUnderwear
-                ? "bg-indigo-50/20 border-2 border-indigo-200 shadow-2xs"
-                : "bg-white border border-slate-200 hover:border-slate-300 hover:shadow-2xs"
+                ? "border-2 border-indigo-500"
+                : "border border-slate-200 hover:border-slate-300"
             }`}
           >
             <div className="flex items-center gap-3.5 min-w-0">
@@ -222,7 +243,9 @@ export default function Step3ProductEligibility() {
                 className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
                   state.intimateUnderwear
                     ? "bg-indigo-50 text-indigo-700 border border-indigo-200/60"
-                    : "bg-slate-100 text-slate-600 border border-slate-200/60"
+                    : state.intimateUnderwear === false
+                    ? "bg-slate-100 text-slate-700 border border-slate-200/60"
+                    : "bg-slate-100 text-slate-500 border border-slate-200/60"
                 }`}
               >
                 <span className="material-symbols-outlined text-[22px]">apparel</span>
@@ -255,10 +278,10 @@ export default function Step3ProductEligibility() {
 
           {/* Card: Defeito de fabrico visível */}
           <div
-            className={`rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-200 sm:col-span-2 ${
+            className={`rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-200 sm:col-span-2 bg-white ${
               state.manufacturingDefect
-                ? "bg-amber-50/20 border-2 border-amber-300/80 shadow-2xs"
-                : "bg-white border border-slate-200 hover:border-slate-300 hover:shadow-2xs"
+                ? "border-2 border-amber-500"
+                : "border border-slate-200 hover:border-slate-300"
             }`}
           >
             <div className="flex items-center gap-3.5 min-w-0">
@@ -266,7 +289,9 @@ export default function Step3ProductEligibility() {
                 className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
                   state.manufacturingDefect
                     ? "bg-amber-50 text-amber-700 border border-amber-200/60"
-                    : "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
+                    : state.manufacturingDefect === false
+                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
+                    : "bg-slate-100 text-slate-500 border border-slate-200/60"
                 }`}
               >
                 <span className="material-symbols-outlined text-[22px]">report_problem</span>
@@ -308,10 +333,17 @@ export default function Step3ProductEligibility() {
           <h3 className="font-sans text-sm sm:text-base font-bold text-slate-900 tracking-tight">
             Estado Físico da Peça
           </h3>
-          <span className="font-sans inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 select-none">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-            Obrigatório
-          </span>
+          {state.physicalCondition ? (
+            <span className="font-sans inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60 select-none">
+              <span className="material-symbols-outlined text-[13px] font-bold">check</span>
+              Definido
+            </span>
+          ) : (
+            <span className="font-sans inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 select-none">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+              Obrigatório
+            </span>
+          )}
         </div>
 
         {/* Minimalist Cards Grid no mesmo estilo do Passo 2 */}
@@ -334,14 +366,14 @@ export default function Step3ProductEligibility() {
                     setField("physicalCondition", cond.id);
                   }
                 }}
-                className={`group rounded-xl p-4 sm:p-4.5 cursor-pointer flex items-center justify-between gap-3.5 transition-all duration-150 focus-visible:outline-2 ${
+                className={`group rounded-xl p-4 sm:p-4.5 cursor-pointer flex items-center justify-between gap-3.5 transition-all duration-150 focus-visible:outline-2 bg-white ${
                   isSelected
                     ? isRedCondition
-                      ? "bg-white border-2 border-rose-500 shadow-xs focus-visible:outline-rose-500"
+                      ? "border-2 border-rose-500 focus-visible:outline-rose-500"
                       : isAmberCondition
-                      ? "bg-white border-2 border-amber-500 shadow-xs focus-visible:outline-amber-500"
-                      : "bg-white border-2 border-emerald-600 shadow-xs focus-visible:outline-emerald-600"
-                    : "bg-white border border-slate-200 hover:border-slate-300 hover:shadow-2xs focus-visible:outline-emerald-600"
+                      ? "border-2 border-amber-500 focus-visible:outline-amber-500"
+                      : "border-2 border-emerald-600 focus-visible:outline-emerald-600"
+                    : "border border-slate-200 hover:border-slate-300 focus-visible:outline-emerald-600"
                 }`}
               >
                 <div className="flex items-center gap-3.5 min-w-0">
@@ -353,7 +385,7 @@ export default function Step3ProductEligibility() {
                           : isAmberCondition
                           ? "bg-amber-50 text-amber-700 border border-amber-200/60"
                           : "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
-                        : "bg-slate-100 text-slate-600 border border-slate-200/60"
+                        : "bg-slate-100 text-slate-500 border border-slate-200/60"
                     }`}
                   >
                     <span className="material-symbols-outlined text-[22px]">{cond.icon}</span>
@@ -396,18 +428,20 @@ export default function Step3ProductEligibility() {
 
         {/* Aptidão para voltar a ser vendida na área de vendas */}
         <div
-          className={`rounded-xl p-4 sm:p-5 border flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-200 mt-0.5 ${
-            !state.readyToResell
-              ? "bg-amber-50/20 border-2 border-amber-300/80 shadow-2xs"
-              : "bg-white border-slate-200 hover:border-slate-300 hover:shadow-2xs"
+          className={`rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-200 mt-0.5 bg-white ${
+            state.readyToResell === false
+              ? "border-2 border-amber-500"
+              : "border border-slate-200 hover:border-slate-300"
           }`}
         >
           <div className="flex items-center gap-3.5 min-w-0">
             <div
               className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-                state.readyToResell
+                state.readyToResell === true
                   ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
-                  : "bg-amber-50 text-amber-700 border border-amber-200/60"
+                  : state.readyToResell === false
+                  ? "bg-amber-50 text-amber-700 border border-amber-200/60"
+                  : "bg-slate-100 text-slate-500 border border-slate-200/60"
               }`}
             >
               <span className="material-symbols-outlined text-[22px]">store</span>

@@ -11,7 +11,7 @@ export interface SliderOption<T = boolean> {
 
 export interface SlickSliderProps<T = boolean> {
   options: [SliderOption<T>, SliderOption<T>];
-  value: T;
+  value: T | null | undefined;
   onChange: (val: T) => void;
   ariaLabel: string;
   disabled?: boolean;
@@ -37,25 +37,31 @@ export default function SlickSlider<T = boolean>({
   const [isDragging, setIsDragging] = useState(false);
   const [dragProgress, setDragProgress] = useState<number | null>(null);
 
-  const selectedIndex = value === options[0].value ? 0 : 1;
-  const activeOption = options[selectedIndex];
-  const activeTone = activeOption.tone || "success";
+  const selectedIndex =
+    value === options[0].value ? 0 :
+    value === options[1].value ? 1 :
+    -1;
+
+  const hasSelection = selectedIndex >= 0;
+  const activeOption = selectedIndex === 0 ? options[0] : selectedIndex === 1 ? options[1] : null;
+  const activeTone = activeOption?.tone || "success";
 
   // Determinar estilos cromáticos com base no tom da opção ativa
+  // Sem efeito de glow nem rings adicionais, mantendo design minimalista e consistente
   let thumbToneClasses = "bg-white text-emerald-800 border-slate-200/90 shadow-2xs";
   let activeIconColor = "text-emerald-600";
   let defaultIcon = "check";
 
   if (activeTone === "danger") {
-    thumbToneClasses = "bg-white text-rose-700 border-rose-300/90 shadow-2xs ring-1 ring-rose-200/70";
+    thumbToneClasses = "bg-white text-rose-700 border-rose-300 shadow-2xs";
     activeIconColor = "text-rose-600";
     defaultIcon = "close";
   } else if (activeTone === "warning") {
-    thumbToneClasses = "bg-white text-amber-800 border-amber-300/90 shadow-2xs ring-1 ring-amber-200/70";
+    thumbToneClasses = "bg-white text-amber-800 border-amber-300 shadow-2xs";
     activeIconColor = "text-amber-600";
     defaultIcon = "warning";
   } else if (activeTone === "info") {
-    thumbToneClasses = "bg-white text-indigo-700 border-indigo-300/90 shadow-2xs ring-1 ring-indigo-200/70";
+    thumbToneClasses = "bg-white text-indigo-700 border-indigo-300 shadow-2xs";
     activeIconColor = "text-indigo-600";
     defaultIcon = "check";
   }
@@ -73,15 +79,16 @@ export default function SlickSlider<T = boolean>({
 
       container.setPointerCapture(e.pointerId);
       const rect = container.getBoundingClientRect();
+      const clickIdx = e.clientX < rect.left + rect.width / 2 ? 0 : 1;
 
       dragStartRef.current = {
         startX: e.clientX,
-        startIndex: selectedIndex,
+        startIndex: selectedIndex >= 0 ? selectedIndex : clickIdx,
         trackWidth: rect.width,
       };
 
       setIsDragging(true);
-      setDragProgress(selectedIndex === 0 ? 0 : 1);
+      setDragProgress(selectedIndex === 1 ? 1 : 0);
     },
     [disabled, selectedIndex]
   );
@@ -124,7 +131,7 @@ export default function SlickSlider<T = boolean>({
         }
       } else {
         // Se houve arrasto, verificar onde parou o indicador (threshold 0.5)
-        const currentProg = dragProgress ?? (selectedIndex === 0 ? 0 : 1);
+        const currentProg = dragProgress ?? (selectedIndex === 1 ? 1 : 0);
         const finalIndex = currentProg >= 0.5 ? 1 : 0;
         onChange(options[finalIndex].value);
       }
@@ -181,17 +188,19 @@ export default function SlickSlider<T = boolean>({
         disabled ? "opacity-50 cursor-not-allowed pointer-events-none" : "active:scale-[0.985]"
       } ${className}`}
     >
-      {/* Sliding Thumb (O indicador que desliza fisicamente com física e elevação) */}
-      <div
-        aria-hidden="true"
-        style={{
-          transform: `translateX(${currentTranslate})`,
-          transition: isDragging
-            ? "none"
-            : "transform 220ms cubic-bezier(0.16, 1, 0.3, 1), background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease",
-        }}
-        className={`absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] rounded-lg pointer-events-none z-0 border shadow-[0_1px_3px_rgba(15,23,42,0.08),0_1px_2px_rgba(15,23,42,0.06)] flex items-center justify-center ${thumbToneClasses}`}
-      />
+      {/* Sliding Thumb (só é renderizado quando há uma opção selecionada) */}
+      {hasSelection && (
+        <div
+          aria-hidden="true"
+          style={{
+            transform: `translateX(${currentTranslate})`,
+            transition: isDragging
+              ? "none"
+              : "transform 220ms cubic-bezier(0.16, 1, 0.3, 1), background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease",
+          }}
+          className={`absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] rounded-lg pointer-events-none z-0 border shadow-[0_1px_3px_rgba(15,23,42,0.08),0_1px_2px_rgba(15,23,42,0.06)] flex items-center justify-center ${thumbToneClasses}`}
+        />
+      )}
 
       {/* Grid de 2 opções por cima do thumb */}
       <div className="relative z-10 grid grid-cols-2 w-full h-full">

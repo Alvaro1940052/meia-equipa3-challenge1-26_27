@@ -722,7 +722,7 @@ export default function OnlinePath() {
                 Valor Total Transação
               </span>
               <span className="font-sans tabular-nums text-xl font-extrabold text-primary">
-                {state.totalPrice.toFixed(2)} {state.currency}
+                {(state.totalPrice ?? 89.9).toFixed(2)} {state.currency}
               </span>
             </div>
           </div>

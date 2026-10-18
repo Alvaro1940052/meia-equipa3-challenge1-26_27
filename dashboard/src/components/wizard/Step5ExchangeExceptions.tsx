@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React from "react";
 import { useWizard } from "./WizardContext";
 import SlickSlider from "@/components/ui/SlickSlider";
 
@@ -57,20 +57,14 @@ export default function Step5ExchangeExceptions() {
   const { state, setField } = useWizard();
   const isExchange = state.requestType === "TROCA";
 
-  // Salvaguarda: se for troca e exchangeOption estiver NENHUMA, inicializar com MESMO_MODELO
-  useEffect(() => {
-    if (isExchange && state.exchangeOption === "NENHUMA") {
-      setField("exchangeOption", "MESMO_MODELO");
-    }
-  }, [isExchange, state.exchangeOption, setField]);
-
   const getExchangeBadgeText = () => {
     switch (state.exchangeOption) {
       case "OUTRO_ARTIGO":
         return "Troca: Outro Artigo";
       case "MESMO_MODELO":
-      default:
         return "Troca: Mesmo Modelo";
+      default:
+        return "";
     }
   };
 
@@ -81,8 +75,9 @@ export default function Step5ExchangeExceptions() {
       case "CHAMAR_GERENCIA":
         return "Chamar Gerência";
       case "CONFORME":
-      default:
         return "Cliente Conforme";
+      default:
+        return "";
     }
   };
 
@@ -98,16 +93,23 @@ export default function Step5ExchangeExceptions() {
             <h3 className="font-sans text-sm sm:text-base font-bold text-slate-900 tracking-tight">
               Modalidade de Troca
             </h3>
-            <span
-              className={`font-sans inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold select-none ${
-                state.exchangeOption === "OUTRO_ARTIGO"
-                  ? "bg-amber-50 text-amber-700 border border-amber-200/80"
-                  : "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
-              }`}
-            >
-              <span className="material-symbols-outlined text-[13px] font-bold">check</span>
-              {getExchangeBadgeText()}
-            </span>
+            {state.exchangeOption && state.exchangeOption !== "NENHUMA" ? (
+              <span
+                className={`font-sans inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold select-none ${
+                  state.exchangeOption === "OUTRO_ARTIGO"
+                    ? "bg-amber-50 text-amber-700 border border-amber-200/80"
+                    : "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
+                }`}
+              >
+                <span className="material-symbols-outlined text-[13px] font-bold">check</span>
+                {getExchangeBadgeText()}
+              </span>
+            ) : (
+              <span className="font-sans inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 select-none">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                Obrigatório
+              </span>
+            )}
           </div>
 
           {/* Minimalist Cards Grid em 2 colunas */}
@@ -115,6 +117,24 @@ export default function Step5ExchangeExceptions() {
             {EXCHANGE_MODALITIES.map((item) => {
               const isSelected = state.exchangeOption === item.id;
               const isAmberTone = item.tone === "amber";
+
+              const borderClass = isSelected
+                ? isAmberTone
+                  ? "border-2 border-amber-500"
+                  : "border-2 border-emerald-600"
+                : "border border-slate-200 hover:border-slate-300";
+
+              const iconClass = isSelected
+                ? isAmberTone
+                  ? "bg-amber-50 text-amber-700 border border-amber-200/60"
+                  : "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
+                : "bg-slate-100 text-slate-500 border border-slate-200/60";
+
+              const radioClass = isSelected
+                ? isAmberTone
+                  ? "bg-amber-500 text-white"
+                  : "bg-emerald-600 text-white"
+                : "border-2 border-slate-300";
 
               return (
                 <div
@@ -129,25 +149,13 @@ export default function Step5ExchangeExceptions() {
                       setField("exchangeOption", item.id);
                     }
                   }}
-                  className={`group rounded-xl p-4 sm:p-5 cursor-pointer flex items-center justify-between gap-4 transition-all duration-150 focus-visible:outline-2 ${
+                  className={`group rounded-xl p-4 sm:p-5 cursor-pointer flex items-center justify-between gap-4 transition-all duration-150 focus-visible:outline-2 bg-white ${
                     isAmberTone ? "focus-visible:outline-amber-500" : "focus-visible:outline-emerald-600"
-                  } ${
-                    isSelected
-                      ? isAmberTone
-                        ? "bg-white border-2 border-amber-500 shadow-xs"
-                        : "bg-white border-2 border-emerald-600 shadow-xs"
-                      : "bg-white border border-slate-200 hover:border-slate-300 hover:shadow-2xs"
-                  }`}
+                  } ${borderClass}`}
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
                     <div
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-                        isSelected
-                          ? isAmberTone
-                            ? "bg-amber-50 text-amber-700 border border-amber-200/60"
-                            : "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
-                          : "bg-slate-100 text-slate-600 border border-slate-200/60"
-                      }`}
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${iconClass}`}
                     >
                       <span className="material-symbols-outlined text-[22px]">{item.icon}</span>
                     </div>
@@ -168,13 +176,7 @@ export default function Step5ExchangeExceptions() {
 
                   <div
                     aria-hidden="true"
-                    className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-                      isSelected
-                        ? isAmberTone
-                          ? "bg-amber-500 text-white"
-                          : "bg-emerald-600 text-white"
-                        : "border-2 border-slate-300"
-                    }`}
+                    className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-colors ${radioClass}`}
                   >
                     {isSelected && (
                       <span className="material-symbols-outlined text-[13px] font-bold">check</span>
@@ -198,16 +200,23 @@ export default function Step5ExchangeExceptions() {
           <h3 className="font-sans text-sm sm:text-base font-bold text-slate-900 tracking-tight">
             Situação do Cliente no Balcão
           </h3>
-          <span
-            className={`font-sans inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold select-none ${
-              state.customerSituation === "CONFORME"
-                ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
-                : "bg-amber-50 text-amber-700 border border-amber-200/80"
-            }`}
-          >
-            <span className="material-symbols-outlined text-[13px] font-bold">check</span>
-            {getSituationBadgeText()}
-          </span>
+          {state.customerSituation ? (
+            <span
+              className={`font-sans inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold select-none ${
+                state.customerSituation === "CONFORME"
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
+                  : "bg-amber-50 text-amber-700 border border-amber-200/80"
+              }`}
+            >
+              <span className="material-symbols-outlined text-[13px] font-bold">check</span>
+              {getSituationBadgeText()}
+            </span>
+          ) : (
+            <span className="font-sans inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 select-none">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+              Obrigatório
+            </span>
+          )}
         </div>
 
         {/* Minimalist Cards Grid em 2 colunas */}
@@ -215,6 +224,24 @@ export default function Step5ExchangeExceptions() {
           {CUSTOMER_SITUATIONS.map((item) => {
             const isSelected = state.customerSituation === item.id;
             const isAmberTone = item.tone === "amber";
+
+            const borderClass = isSelected
+              ? isAmberTone
+                ? "border-2 border-amber-500"
+                : "border-2 border-emerald-600"
+              : "border border-slate-200 hover:border-slate-300";
+
+            const iconClass = isSelected
+              ? isAmberTone
+                ? "bg-amber-50 text-amber-700 border border-amber-200/60"
+                : "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
+              : "bg-slate-100 text-slate-500 border border-slate-200/60";
+
+            const radioClass = isSelected
+              ? isAmberTone
+                ? "bg-amber-500 text-white"
+                : "bg-emerald-600 text-white"
+              : "border-2 border-slate-300";
 
             return (
               <div
@@ -229,27 +256,15 @@ export default function Step5ExchangeExceptions() {
                     setField("customerSituation", item.id);
                   }
                 }}
-                className={`group rounded-xl p-4 sm:p-5 cursor-pointer flex items-center justify-between gap-4 transition-all duration-150 focus-visible:outline-2 ${
+                className={`group rounded-xl p-4 sm:p-5 cursor-pointer flex items-center justify-between gap-4 transition-all duration-150 focus-visible:outline-2 bg-white ${
                   isAmberTone ? "focus-visible:outline-amber-500" : "focus-visible:outline-emerald-600"
                 } ${
                   item.fullWidth ? "sm:col-span-2" : ""
-                } ${
-                  isSelected
-                    ? isAmberTone
-                      ? "bg-white border-2 border-amber-500 shadow-xs"
-                      : "bg-white border-2 border-emerald-600 shadow-xs"
-                    : "bg-white border border-slate-200 hover:border-slate-300 hover:shadow-2xs"
-                }`}
+                } ${borderClass}`}
               >
                 <div className="flex items-center gap-3.5 min-w-0">
                   <div
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-                      isSelected
-                        ? isAmberTone
-                          ? "bg-amber-50 text-amber-700 border border-amber-200/60"
-                          : "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
-                        : "bg-slate-100 text-slate-600 border border-slate-200/60"
-                    }`}
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${iconClass}`}
                   >
                     <span className="material-symbols-outlined text-[22px]">{item.icon}</span>
                   </div>
@@ -270,13 +285,7 @@ export default function Step5ExchangeExceptions() {
 
                 <div
                   aria-hidden="true"
-                  className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-                    isSelected
-                      ? isAmberTone
-                        ? "bg-amber-500 text-white"
-                        : "bg-emerald-600 text-white"
-                      : "border-2 border-slate-300"
-                  }`}
+                  className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-colors ${radioClass}`}
                 >
                   {isSelected && (
                     <span className="material-symbols-outlined text-[13px] font-bold">check</span>
@@ -289,22 +298,24 @@ export default function Step5ExchangeExceptions() {
 
         {/* Autorização de Exceção pela Gerência com SlickSlider */}
         <div
-          className={`rounded-xl p-4 sm:p-5 border transition-all duration-150 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-0.5 ${
-            state.managerException
-              ? "bg-white border-2 border-emerald-600 shadow-xs"
-              : "bg-white border border-slate-200 hover:border-slate-300 hover:shadow-2xs"
+          className={`rounded-xl p-4 sm:p-5 border transition-all duration-150 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-0.5 bg-white ${
+            state.managerException === true
+              ? "border-2 border-emerald-600"
+              : state.managerException === false
+              ? "border border-slate-300"
+              : "border border-slate-200 hover:border-slate-300"
           }`}
         >
           <div className="flex items-center gap-3.5 min-w-0">
             <div
               className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-                state.managerException
+                state.managerException === true
                   ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
-                  : "bg-slate-100 text-slate-600 border border-slate-200/60"
+                  : "bg-slate-100 text-slate-500 border border-slate-200/60"
               }`}
             >
               <span className="material-symbols-outlined text-[22px]">
-                {state.managerException ? "verified" : "admin_panel_settings"}
+                {state.managerException === true ? "verified" : "admin_panel_settings"}
               </span>
             </div>
             <div className="flex flex-col min-w-0">
@@ -312,9 +323,18 @@ export default function Step5ExchangeExceptions() {
                 <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight leading-snug">
                   Exceção de Gerência Autorizada?
                 </h4>
-                {state.managerException && (
+                {state.managerException === true ? (
                   <span className="font-sans text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-full shrink-0">
                     Autorizada
+                  </span>
+                ) : state.managerException === false ? (
+                  <span className="font-sans text-[11px] font-semibold text-slate-600 bg-slate-100 border border-slate-200/60 px-2 py-0.5 rounded-full shrink-0">
+                    Não Autorizada
+                  </span>
+                ) : (
+                  <span className="font-sans inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 shrink-0 select-none">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                    Obrigatório
                   </span>
                 )}
               </div>
@@ -330,7 +350,7 @@ export default function Step5ExchangeExceptions() {
                 { label: "Não", value: false, tone: "info", icon: "close" },
                 { label: "Autorizada", value: true, tone: "success", icon: "verified" },
               ]}
-              value={!!state.managerException}
+              value={state.managerException}
               onChange={(val) => setField("managerException", val)}
               ariaLabel="Exceção de Gerência Autorizada"
               width="w-full sm:w-[210px]"
@@ -341,5 +361,3 @@ export default function Step5ExchangeExceptions() {
     </div>
   );
 }
-
-

@@ -88,13 +88,13 @@ export default function Step6Refund() {
   const isCanada = state.marketJurisdiction === "CA";
 
   const [priceInput, setPriceInput] = useState<string>(
-    typeof state.totalPrice === "number" ? state.totalPrice.toFixed(2) : "89.90"
+    typeof state.totalPrice === "number" ? state.totalPrice.toFixed(2) : ""
   );
-  const [prevTotalPrice, setPrevTotalPrice] = useState<number>(state.totalPrice);
+  const [prevTotalPrice, setPrevTotalPrice] = useState<number | null>(state.totalPrice);
 
   if (state.totalPrice !== prevTotalPrice) {
     setPrevTotalPrice(state.totalPrice);
-    setPriceInput(state.totalPrice.toFixed(2));
+    setPriceInput(state.totalPrice !== null ? state.totalPrice.toFixed(2) : "");
   }
 
   // Filtrar meios: destacar ou permitir Interac se Canadá
@@ -109,15 +109,16 @@ export default function Step6Refund() {
       case "ENCERRADA":
         return "Conta Encerrada";
       case "ATIVA":
-      default:
         return "Conta Ativa";
+      default:
+        return "";
     }
   };
 
   return (
     <div className="w-full flex flex-col gap-6">
       {/* Top Banner Minimalista com Total a Devolver */}
-      <div className="w-full rounded-xl p-4 sm:p-5 bg-white border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all hover:border-slate-300 hover:shadow-2xs">
+      <div className="w-full rounded-xl p-4 sm:p-5 bg-white border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all hover:border-slate-300">
         <div className="flex items-start sm:items-center gap-3.5 min-w-0">
           <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200/60 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
             <span className="material-symbols-outlined text-[22px]">account_balance_wallet</span>
@@ -141,7 +142,7 @@ export default function Step6Refund() {
                 Presets:
               </span>
               {PRICE_PRESETS.map((preset) => {
-                const isSelected = Math.abs(state.totalPrice - preset.value) < 0.001;
+                const isSelected = state.totalPrice !== null && Math.abs(state.totalPrice - preset.value) < 0.001;
                 return (
                   <button
                     key={preset.value}
@@ -152,8 +153,8 @@ export default function Step6Refund() {
                     }}
                     className={`font-sans inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer border ${
                       isSelected
-                        ? "bg-emerald-50 text-emerald-700 border-emerald-300 shadow-2xs font-bold ring-1 ring-emerald-400/30"
-                        : "bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200 hover:border-slate-300"
+                        ? "bg-emerald-50 text-emerald-700 border-2 border-emerald-600 font-bold"
+                        : "bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 hover:border-slate-300"
                     }`}
                     title={preset.label}
                   >
@@ -186,6 +187,8 @@ export default function Step6Refund() {
                 const parsed = parseFloat(raw);
                 if (!isNaN(parsed) && parsed >= 0) {
                   setField("totalPrice", parsed);
+                } else if (raw === "") {
+                  setField("totalPrice", null as unknown as number);
                 }
               }}
               onBlur={() => {
@@ -193,12 +196,14 @@ export default function Step6Refund() {
                 if (!isNaN(parsed) && parsed >= 0) {
                   setPriceInput(parsed.toFixed(2));
                   setField("totalPrice", parsed);
-                } else {
+                } else if (state.totalPrice !== null) {
                   setPriceInput(state.totalPrice.toFixed(2));
+                } else {
+                  setPriceInput("");
                 }
               }}
               className="font-sans tabular-nums w-20 sm:w-24 bg-transparent text-base sm:text-lg font-black text-slate-900 tracking-tight outline-none border-none p-0 focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              placeholder="89.90"
+              placeholder="0.00"
               aria-label="Valor original da transação"
             />
           </div>
@@ -214,21 +219,28 @@ export default function Step6Refund() {
           <h3 className="font-sans text-sm sm:text-base font-bold text-slate-900 tracking-tight">
             Meio de Pagamento Original no Talão
           </h3>
-          <span
-            className={`font-sans inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold select-none ${
-              state.originalPaymentMethod === "AFTERPAY" &&
-              state.purchaseChannel === "ONLINE_BACKPOCKET" &&
-              state.requestType === "TROCA"
-                ? "bg-rose-50 text-rose-700 border border-rose-200"
-                : (state.originalPaymentMethod === "INTERAC" && state.physicalCardPresent === false) ||
-                  (state.originalPaymentMethod === "PAYPAL" && state.paymentAppAccessible === false)
-                ? "bg-amber-50 text-amber-700 border border-amber-200"
-                : "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
-            }`}
-          >
-            <span className="material-symbols-outlined text-[13px] font-bold">check</span>
-            {PAYMENT_METHODS.find((m) => m.id === state.originalPaymentMethod)?.title || "Cartão de Crédito"}
-          </span>
+          {state.originalPaymentMethod ? (
+            <span
+              className={`font-sans inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold select-none ${
+                state.originalPaymentMethod === "AFTERPAY" &&
+                state.purchaseChannel === "ONLINE_BACKPOCKET" &&
+                state.requestType === "TROCA"
+                  ? "bg-rose-50 text-rose-700 border border-rose-200"
+                  : (state.originalPaymentMethod === "INTERAC" && state.physicalCardPresent === false) ||
+                    (state.originalPaymentMethod === "PAYPAL" && state.paymentAppAccessible === false)
+                  ? "bg-amber-50 text-amber-700 border border-amber-200"
+                  : "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
+              }`}
+            >
+              <span className="material-symbols-outlined text-[13px] font-bold">check</span>
+              {PAYMENT_METHODS.find((m) => m.id === state.originalPaymentMethod)?.title || "Definido"}
+            </span>
+          ) : (
+            <span className="font-sans inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 select-none">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+              Obrigatório
+            </span>
+          )}
         </div>
 
         {/* Minimalist Cards Grid em 2 colunas */}
@@ -251,37 +263,31 @@ export default function Step6Refund() {
               ? "font-sans text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded shrink-0"
               : "font-sans text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded shrink-0";
 
-            const cardClassName = `group rounded-xl p-4 sm:p-5 cursor-pointer flex items-center justify-between gap-4 transition-all duration-150 focus-visible:outline-2 focus-visible:outline-emerald-600 ${
-              isSelected
-                ? isAfterpayBlocked
-                  ? "bg-white border-2 border-rose-500 shadow-xs"
-                  : isInteracWarning || isPaypalWarning
-                  ? "bg-white border-2 border-amber-500 shadow-xs"
-                  : "bg-white border-2 border-emerald-600 shadow-xs"
-                : isAfterpayBlocked
-                ? "bg-white border border-rose-200 hover:border-rose-300 hover:shadow-2xs"
-                : "bg-white border border-slate-200 hover:border-slate-300 hover:shadow-2xs"
-            }`;
+            const borderClassName = isSelected
+              ? isAfterpayBlocked
+                ? "border-2 border-rose-500"
+                : isInteracWarning || isPaypalWarning
+                ? "border-2 border-amber-500"
+                : "border-2 border-emerald-600"
+              : isAfterpayBlocked
+              ? "border border-rose-200 hover:border-rose-300"
+              : "border border-slate-200 hover:border-slate-300";
 
-            const iconClassName = `w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-              isSelected
-                ? isAfterpayBlocked
-                  ? "bg-rose-50 text-rose-700 border border-rose-200/60"
-                  : isInteracWarning || isPaypalWarning
-                  ? "bg-amber-50 text-amber-700 border border-amber-200/60"
-                  : "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
-                : "bg-slate-100 text-slate-600 border border-slate-200/60"
-            }`;
+            const iconClassName = isSelected
+              ? isAfterpayBlocked
+                ? "bg-rose-50 text-rose-700 border border-rose-200/60"
+                : isInteracWarning || isPaypalWarning
+                ? "bg-amber-50 text-amber-700 border border-amber-200/60"
+                : "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
+              : "bg-slate-100 text-slate-500 border border-slate-200/60";
 
-            const radioClassName = `w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-              isSelected
-                ? isAfterpayBlocked
-                  ? "bg-rose-500 text-white"
-                  : isInteracWarning || isPaypalWarning
-                  ? "bg-amber-500 text-white"
-                  : "bg-emerald-600 text-white"
-                : "border-2 border-slate-300"
-            }`;
+            const radioClassName = isSelected
+              ? isAfterpayBlocked
+                ? "bg-rose-500 text-white"
+                : isInteracWarning || isPaypalWarning
+                ? "bg-amber-500 text-white"
+                : "bg-emerald-600 text-white"
+              : "border-2 border-slate-300";
 
             return (
               <div
@@ -296,10 +302,16 @@ export default function Step6Refund() {
                     setField("originalPaymentMethod", item.id);
                   }
                 }}
-                className={cardClassName}
+                className={`group rounded-xl p-4 sm:p-5 cursor-pointer flex items-center justify-between gap-4 transition-all duration-150 focus-visible:outline-2 bg-white ${
+                  isAfterpayBlocked && isSelected
+                    ? "focus-visible:outline-rose-500"
+                    : isSelected && (isInteracWarning || isPaypalWarning)
+                    ? "focus-visible:outline-amber-500"
+                    : "focus-visible:outline-emerald-600"
+                } ${borderClassName}`}
               >
                 <div className="flex items-center gap-3.5 min-w-0">
-                  <div className={iconClassName}>
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${iconClassName}`}>
                     <span className="material-symbols-outlined text-[22px]">{item.icon}</span>
                   </div>
                   <div className="flex flex-col min-w-0">
@@ -319,7 +331,7 @@ export default function Step6Refund() {
 
                 <div
                   aria-hidden="true"
-                  className={radioClassName}
+                  className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-colors ${radioClassName}`}
                 >
                   {isSelected && (
                     <span className="material-symbols-outlined text-[13px] font-bold">check</span>
@@ -340,16 +352,23 @@ export default function Step6Refund() {
           <h3 className="font-sans text-sm sm:text-base font-bold text-slate-900 tracking-tight">
             Estado da Conta e Cartão do Cliente
           </h3>
-          <span
-            className={`font-sans inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold select-none ${
-              state.accountState === "ENCERRADA"
-                ? "bg-amber-50 text-amber-700 border border-amber-200/80"
-                : "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
-            }`}
-          >
-            <span className="material-symbols-outlined text-[13px] font-bold">check</span>
-            {getAccountStateBadge()}
-          </span>
+          {state.accountState ? (
+            <span
+              className={`font-sans inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold select-none ${
+                state.accountState === "ENCERRADA"
+                  ? "bg-amber-50 text-amber-700 border border-amber-200/80"
+                  : "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
+              }`}
+            >
+              <span className="material-symbols-outlined text-[13px] font-bold">check</span>
+              {getAccountStateBadge()}
+            </span>
+          ) : (
+            <span className="font-sans inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 select-none">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+              Obrigatório
+            </span>
+          )}
         </div>
 
         {/* Minimalist Cards Grid em 2 colunas */}
@@ -366,10 +385,10 @@ export default function Step6Refund() {
                 setField("accountState", "ATIVA");
               }
             }}
-            className={`group rounded-xl p-4 sm:p-5 cursor-pointer flex items-center justify-between gap-4 transition-all duration-150 focus-visible:outline-2 focus-visible:outline-emerald-600 ${
+            className={`group rounded-xl p-4 sm:p-5 cursor-pointer flex items-center justify-between gap-4 transition-all duration-150 focus-visible:outline-2 focus-visible:outline-emerald-600 bg-white ${
               state.accountState === "ATIVA"
-                ? "bg-white border-2 border-emerald-600 shadow-xs"
-                : "bg-white border border-slate-200 hover:border-slate-300 hover:shadow-2xs"
+                ? "border-2 border-emerald-600"
+                : "border border-slate-200 hover:border-slate-300"
             }`}
           >
             <div className="flex items-center gap-3.5 min-w-0">
@@ -377,7 +396,7 @@ export default function Step6Refund() {
                 className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
                   state.accountState === "ATIVA"
                     ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
-                    : "bg-slate-100 text-slate-600 border border-slate-200/60"
+                    : "bg-slate-100 text-slate-500 border border-slate-200/60"
                 }`}
               >
                 <span className="material-symbols-outlined text-[22px]">verified</span>
@@ -423,10 +442,10 @@ export default function Step6Refund() {
                 setField("accountState", "ATIVA_CARTAO_PERDIDO");
               }
             }}
-            className={`group rounded-xl p-4 sm:p-5 cursor-pointer flex items-center justify-between gap-4 transition-all duration-150 focus-visible:outline-2 focus-visible:outline-emerald-600 ${
+            className={`group rounded-xl p-4 sm:p-5 cursor-pointer flex items-center justify-between gap-4 transition-all duration-150 focus-visible:outline-2 focus-visible:outline-emerald-600 bg-white ${
               state.accountState === "ATIVA_CARTAO_PERDIDO"
-                ? "bg-white border-2 border-emerald-600 shadow-xs"
-                : "bg-white border border-slate-200 hover:border-slate-300 hover:shadow-2xs"
+                ? "border-2 border-emerald-600"
+                : "border border-slate-200 hover:border-slate-300"
             }`}
           >
             <div className="flex items-center gap-3.5 min-w-0">
@@ -434,7 +453,7 @@ export default function Step6Refund() {
                 className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
                   state.accountState === "ATIVA_CARTAO_PERDIDO"
                     ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
-                    : "bg-slate-100 text-slate-600 border border-slate-200/60"
+                    : "bg-slate-100 text-slate-500 border border-slate-200/60"
                 }`}
               >
                 <span className="material-symbols-outlined text-[22px]">credit_card_off</span>
@@ -480,10 +499,10 @@ export default function Step6Refund() {
                 setField("accountState", "ENCERRADA");
               }
             }}
-            className={`group rounded-xl p-4 sm:p-5 cursor-pointer flex items-center justify-between gap-4 transition-all duration-150 focus-visible:outline-2 focus-visible:outline-emerald-600 sm:col-span-2 ${
+            className={`group rounded-xl p-4 sm:p-5 cursor-pointer flex items-center justify-between gap-4 transition-all duration-150 focus-visible:outline-2 focus-visible:outline-emerald-600 sm:col-span-2 bg-white ${
               state.accountState === "ENCERRADA"
-                ? "bg-white border-2 border-amber-500 shadow-xs"
-                : "bg-white border border-slate-200 hover:border-slate-300 hover:shadow-2xs"
+                ? "border-2 border-amber-500"
+                : "border border-slate-200 hover:border-slate-300"
             }`}
           >
             <div className="flex items-center gap-3.5 min-w-0">
@@ -491,7 +510,7 @@ export default function Step6Refund() {
                 className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
                   state.accountState === "ENCERRADA"
                     ? "bg-amber-50 text-amber-700 border border-amber-200/60"
-                    : "bg-slate-100 text-slate-600 border border-slate-200/60"
+                    : "bg-slate-100 text-slate-500 border border-slate-200/60"
                 }`}
               >
                 <span className="material-symbols-outlined text-[22px]">domain_disabled</span>
@@ -528,9 +547,9 @@ export default function Step6Refund() {
 
         {/* Sub-condição interativa: Tentativa recusada quando conta encerrada */}
         {state.accountState === "ENCERRADA" && (
-          <div className="rounded-xl p-4 sm:p-5 bg-amber-50/60 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in duration-150 mt-1">
+          <div className="rounded-xl p-4 sm:p-5 bg-white border border-amber-300 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in duration-150 mt-1">
             <div className="flex items-center gap-3.5 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 border border-amber-300/80 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 flex items-center justify-center shrink-0">
                 <span className="material-symbols-outlined text-[22px]">sync_problem</span>
               </div>
               <div className="flex flex-col min-w-0">
@@ -538,9 +557,20 @@ export default function Step6Refund() {
                   <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight">
                     A tentativa no terminal POS já foi recusada pelo banco?
                   </h4>
-                  <span className="font-sans text-[11px] font-bold text-amber-800 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full shrink-0">
-                    Recusa Confirmada
-                  </span>
+                  {state.originalRefundRefused === true ? (
+                    <span className="font-sans text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full shrink-0">
+                      Recusa Confirmada
+                    </span>
+                  ) : state.originalRefundRefused === false ? (
+                    <span className="font-sans text-[11px] font-semibold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full shrink-0">
+                      Não Recusada
+                    </span>
+                  ) : (
+                    <span className="font-sans inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 shrink-0 select-none">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                      Obrigatório
+                    </span>
+                  )}
                 </div>
                 <p className="font-sans text-xs text-slate-600 mt-0.5 leading-relaxed">
                   Se o terminal acusar recusa de estorno na conta encerrada, o motor autoriza meio alternativo (numerário, vale ou outro cartão)
@@ -554,7 +584,7 @@ export default function Step6Refund() {
                   { label: "Não Recusada", value: false, tone: "info", icon: "pending" },
                   { label: "Sim, Recusada", value: true, tone: "danger", icon: "cancel" },
                 ]}
-                value={!!state.originalRefundRefused}
+                value={state.originalRefundRefused}
                 onChange={(val) => setField("originalRefundRefused", val)}
                 ariaLabel="Tentativa de estorno recusada"
                 width="w-full sm:w-[220px]"
@@ -565,9 +595,9 @@ export default function Step6Refund() {
 
         {/* Sub-condição interativa: Cartão Interac presente quando meio for Interac */}
         {state.originalPaymentMethod === "INTERAC" && (
-          <div className="rounded-xl p-4 sm:p-5 bg-indigo-50/60 border border-indigo-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in duration-150 mt-1">
+          <div className="rounded-xl p-4 sm:p-5 bg-white border border-indigo-300 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in duration-150 mt-1">
             <div className="flex items-center gap-3.5 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-800 border border-indigo-300/80 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-800 border border-indigo-200 flex items-center justify-center shrink-0">
                 <span className="material-symbols-outlined text-[22px]">credit_card</span>
               </div>
               <div className="flex flex-col min-w-0">
@@ -575,9 +605,20 @@ export default function Step6Refund() {
                   <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight">
                     O cartão físico Interac original está presente em loja?
                   </h4>
-                  <span className="font-sans text-[11px] font-bold text-indigo-800 bg-indigo-100 border border-indigo-300 px-2 py-0.5 rounded-full shrink-0">
-                    Exigência Legal
-                  </span>
+                  {state.physicalCardPresent === true ? (
+                    <span className="font-sans text-[11px] font-bold text-indigo-800 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full shrink-0">
+                      Cartão Presente
+                    </span>
+                  ) : state.physicalCardPresent === false ? (
+                    <span className="font-sans text-[11px] font-semibold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full shrink-0">
+                      Sem Cartão
+                    </span>
+                  ) : (
+                    <span className="font-sans inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 shrink-0 select-none">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                      Obrigatório
+                    </span>
+                  )}
                 </div>
                 <p className="font-sans text-xs text-slate-600 mt-0.5 leading-relaxed">
                   Os terminais Interac canadianos não suportam tokenização. Sem o cartão físico, o pedido exige revisão sénior
@@ -591,7 +632,7 @@ export default function Step6Refund() {
                   { label: "Sem Cartão", value: false, tone: "danger", icon: "close" },
                   { label: "Cartão Presente", value: true, tone: "success", icon: "check" },
                 ]}
-                value={state.physicalCardPresent ?? true}
+                value={state.physicalCardPresent}
                 onChange={(val) => setField("physicalCardPresent", val)}
                 ariaLabel="Cartão Interac presente"
                 width="w-full sm:w-[220px]"
@@ -602,9 +643,9 @@ export default function Step6Refund() {
 
         {/* Sub-condição interativa: Validação na app PayPal/Venmo quando meio for PayPal */}
         {state.originalPaymentMethod === "PAYPAL" && (
-          <div className="rounded-xl p-4 sm:p-5 bg-sky-50/60 border border-sky-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in duration-150 mt-1">
+          <div className="rounded-xl p-4 sm:p-5 bg-white border border-sky-300 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in duration-150 mt-1">
             <div className="flex items-center gap-3.5 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-sky-100 text-sky-800 border border-sky-300/80 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-sky-50 text-sky-800 border border-sky-200 flex items-center justify-center shrink-0">
                 <span className="material-symbols-outlined text-[22px]">smartphone</span>
               </div>
               <div className="flex flex-col min-w-0">
@@ -612,9 +653,20 @@ export default function Step6Refund() {
                   <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight">
                     O cliente consegue aceder à aplicação no smartphone?
                   </h4>
-                  <span className="font-sans text-[11px] font-bold text-sky-800 bg-sky-100 border border-sky-300 px-2 py-0.5 rounded-full shrink-0">
-                    Validação App
-                  </span>
+                  {state.paymentAppAccessible === true ? (
+                    <span className="font-sans text-[11px] font-bold text-sky-800 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-full shrink-0">
+                      Acesso Confirmado
+                    </span>
+                  ) : state.paymentAppAccessible === false ? (
+                    <span className="font-sans text-[11px] font-semibold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full shrink-0">
+                      Sem Acesso
+                    </span>
+                  ) : (
+                    <span className="font-sans inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 shrink-0 select-none">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                      Obrigatório
+                    </span>
+                  )}
                 </div>
                 <p className="font-sans text-xs text-slate-600 mt-0.5 leading-relaxed">
                   O estorno PayPal/Venmo exige validação na app do cliente. Sem acesso, o pedido requer revisão sénior.
@@ -625,10 +677,10 @@ export default function Step6Refund() {
             <div className="shrink-0 w-full sm:w-auto">
               <SlickSlider
                 options={[
-                  { label: "Sem Acesso", value: false, tone: "danger" },
-                  { label: "Acesso Confirmado", value: true, tone: "success" },
+                  { label: "Sem Acesso", value: false, tone: "danger", icon: "close" },
+                  { label: "Acesso Confirmado", value: true, tone: "success", icon: "check" },
                 ]}
-                value={state.paymentAppAccessible ?? true}
+                value={state.paymentAppAccessible}
                 onChange={(val) => setField("paymentAppAccessible", val)}
                 ariaLabel="Acesso à aplicação PayPal"
                 width="w-full sm:w-[220px]"
@@ -641,9 +693,9 @@ export default function Step6Refund() {
         {state.originalPaymentMethod === "AFTERPAY" &&
           state.purchaseChannel === "ONLINE_BACKPOCKET" &&
           state.requestType === "TROCA" && (
-            <div className="rounded-xl p-4 sm:p-5 bg-rose-50/70 border border-rose-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in duration-150 mt-1">
+            <div className="rounded-xl p-4 sm:p-5 bg-white border border-rose-300 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in duration-150 mt-1">
               <div className="flex items-center gap-3.5 min-w-0">
-                <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-800 border border-rose-300/80 flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-800 border border-rose-200 flex items-center justify-center shrink-0">
                   <span className="material-symbols-outlined text-[22px]">block</span>
                 </div>
                 <div className="flex flex-col min-w-0">
@@ -651,7 +703,7 @@ export default function Step6Refund() {
                     <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight">
                       Troca em Loja Não Permitida para Afterpay Online
                     </h4>
-                    <span className="font-sans text-[11px] font-bold text-rose-800 bg-rose-100 border border-rose-300 px-2 py-0.5 rounded-full shrink-0">
+                    <span className="font-sans text-[11px] font-bold text-rose-800 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full shrink-0">
                       Exceção Proibida
                     </span>
                   </div>

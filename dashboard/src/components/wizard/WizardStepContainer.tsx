@@ -107,10 +107,47 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
   const isStep2Valid = Boolean(
     state.marketJurisdiction && state.storeType && state.purchaseChannel
   );
+  const isStep3Valid = Boolean(
+    state.barcodeRecognized !== null &&
+    state.brandAllowed !== null &&
+    state.alteredOrHemmed !== null &&
+    state.physicalCondition &&
+    state.readyToResell !== null
+  );
+  const isStep4Valid = Boolean(
+    state.requestType &&
+    state.proofOfPurchase &&
+    state.daysSincePurchase !== null
+  );
+
+  const isExchange = state.requestType === "TROCA";
+  const isStep5Valid = Boolean(
+    (!isExchange || (state.exchangeOption && state.exchangeOption !== "NENHUMA")) &&
+    state.customerSituation &&
+    state.managerException !== null
+  );
+
+  const isInteracValid = state.originalPaymentMethod !== "INTERAC" || state.physicalCardPresent !== null;
+  const isPaypalValid = state.originalPaymentMethod !== "PAYPAL" || state.paymentAppAccessible !== null;
+  const isEncerradaValid = state.accountState !== "ENCERRADA" || state.originalRefundRefused !== null;
+
+  const isStep6Valid = Boolean(
+    state.totalPrice !== null &&
+    state.totalPrice > 0 &&
+    state.originalPaymentMethod &&
+    state.accountState &&
+    isInteracValid &&
+    isPaypalValid &&
+    isEncerradaValid
+  );
 
   const isCurrentStepValid =
     stepNumber === 1 ? isStep1Valid :
     stepNumber === 2 ? isStep2Valid :
+    stepNumber === 3 ? isStep3Valid :
+    stepNumber === 4 ? isStep4Valid :
+    stepNumber === 5 ? isStep5Valid :
+    stepNumber === 6 ? isStep6Valid :
     true;
 
   const handleBack = () => {
@@ -142,6 +179,26 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
       return;
     }
 
+    // No passo 3, é obrigatório preencher a validação inicial e o estado físico
+    if (stepNumber === 3 && !isStep3Valid) {
+      return;
+    }
+
+    // No passo 4, é obrigatório preencher o tipo de pedido, comprovativo e prazo
+    if (stepNumber === 4 && !isStep4Valid) {
+      return;
+    }
+
+    // No passo 5, é obrigatório preencher a modalidade de troca (se for troca), situação de balcão e exceção
+    if (stepNumber === 5 && !isStep5Valid) {
+      return;
+    }
+
+    // No passo 6, é obrigatório preencher o valor, meio de pagamento original e estado da conta
+    if (stepNumber === 6 && !isStep6Valid) {
+      return;
+    }
+
     if (stepNumber < totalSteps) {
       router.push(`/novo-atendimento/passo/${stepNumber + 1}`);
     } else {
@@ -149,8 +206,6 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
       await handleEvaluate();
     }
   };
-
-  const isExchange = state.requestType === "TROCA";
 
   const getStepHint = () => {
     if (stepNumber === 1) {
@@ -166,8 +221,58 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
       }
       return meta.nextHint;
     }
+    if (stepNumber === 3) {
+      if (!isStep3Valid) {
+        const missing: string[] = [];
+        if (state.barcodeRecognized === null) missing.push("Código de barras");
+        if (state.brandAllowed === null) missing.push("Marca");
+        if (state.alteredOrHemmed === null) missing.push("Bainhas");
+        if (!state.physicalCondition) missing.push("Estado Físico");
+        if (state.readyToResell === null) missing.push("Revenda");
+        return `Obrigatório: selecionar ${missing.slice(0, 2).join(", ")}${missing.length > 2 ? "..." : ""}`;
+      }
+      return meta.nextHint;
+    }
     if (stepNumber === 4) {
+      if (!isStep4Valid) {
+        const missing: string[] = [];
+        if (!state.requestType) missing.push("Tipo de Pedido");
+        if (!state.proofOfPurchase) missing.push("Comprovativo");
+        if (state.daysSincePurchase === null) missing.push("Prazo");
+        return `Obrigatório: selecionar ${missing.slice(0, 2).join(", ")}${missing.length > 2 ? "..." : ""}`;
+      }
       return isExchange ? "Modalidade de Troca e Exceção" : "Situação de Balcão e Exceção";
+    }
+    if (stepNumber === 5) {
+      if (!isStep5Valid) {
+        const missing: string[] = [];
+        if (isExchange && (!state.exchangeOption || state.exchangeOption === "NENHUMA")) {
+          missing.push("Modalidade");
+        }
+        if (!state.customerSituation) missing.push("Situação");
+        if (state.managerException === null) missing.push("Exceção");
+        return `Obrigatório: selecionar ${missing.join(", ")}`;
+      }
+      return meta.nextHint;
+    }
+    if (stepNumber === 6) {
+      if (!isStep6Valid) {
+        const missing: string[] = [];
+        if (state.totalPrice === null || state.totalPrice <= 0) missing.push("Valor");
+        if (!state.originalPaymentMethod) missing.push("Meio de Pagamento");
+        if (!state.accountState) missing.push("Estado da Conta");
+        if (state.accountState === "ENCERRADA" && state.originalRefundRefused === null) {
+          missing.push("Recusa no Terminal");
+        }
+        if (state.originalPaymentMethod === "INTERAC" && state.physicalCardPresent === null) {
+          missing.push("Cartão Físico");
+        }
+        if (state.originalPaymentMethod === "PAYPAL" && state.paymentAppAccessible === null) {
+          missing.push("Acesso App");
+        }
+        return `Obrigatório: selecionar ${missing.slice(0, 2).join(", ")}${missing.length > 2 ? "..." : ""}`;
+      }
+      return meta.nextHint;
     }
     return meta.nextHint;
   };
@@ -366,7 +471,7 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
           stepNumber={stepNumber}
           engine={state.engine || "returns"}
           returnRequest={buildReturnRequest()}
-          requestType={state.requestType}
+          requestType={state.requestType || undefined}
         />
       )}
     </div>

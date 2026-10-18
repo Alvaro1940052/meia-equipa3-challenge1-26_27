@@ -122,7 +122,7 @@ export default function Step4ReceiptTimeline() {
             const isAjustePreco = item.id === "AJUSTE_PRECO";
             const isAjusteRecusado =
               isAjustePreco &&
-              (state.daysSincePurchase > 14 ||
+              ((state.daysSincePurchase !== null && state.daysSincePurchase > 14) ||
                 (state.proofOfPurchase && state.proofOfPurchase !== "RECIBO_ORIGINAL"));
 
             const handleSelect = () => {
@@ -131,15 +131,15 @@ export default function Step4ReceiptTimeline() {
 
             const borderClass = isSelected
               ? isAjusteRecusado
-                ? "bg-white border-2 border-rose-500 shadow-xs"
-                : "bg-white border-2 border-emerald-600 shadow-xs"
-              : "bg-white border border-slate-200 hover:border-slate-300 hover:shadow-2xs";
+                ? "border-2 border-rose-500"
+                : "border-2 border-emerald-600"
+              : "border border-slate-200 hover:border-slate-300";
 
             const iconClass = isSelected
               ? isAjusteRecusado
                 ? "bg-rose-50 text-rose-700 border border-rose-200/60"
                 : "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
-              : "bg-slate-100 text-slate-600 border border-slate-200/60";
+              : "bg-slate-100 text-slate-500 border border-slate-200/60";
 
             const radioClass = isSelected
               ? isAjusteRecusado
@@ -160,7 +160,7 @@ export default function Step4ReceiptTimeline() {
                     handleSelect();
                   }
                 }}
-                className={`group rounded-xl p-4 sm:p-5 cursor-pointer flex items-center justify-between gap-4 transition-all duration-150 focus-visible:outline-2 ${
+                className={`group rounded-xl p-4 sm:p-5 cursor-pointer flex items-center justify-between gap-4 transition-all duration-150 focus-visible:outline-2 bg-white ${
                   isAjusteRecusado && isSelected
                     ? "focus-visible:outline-rose-500"
                     : "focus-visible:outline-emerald-600"
@@ -232,15 +232,15 @@ export default function Step4ReceiptTimeline() {
 
             const borderClass = isSelected
               ? isAmber
-                ? "bg-white border-2 border-amber-500 shadow-xs"
-                : "bg-white border-2 border-emerald-600 shadow-xs"
-              : "bg-white border border-slate-200 hover:border-slate-300 hover:shadow-2xs";
+                ? "border-2 border-amber-500"
+                : "border-2 border-emerald-600"
+              : "border border-slate-200 hover:border-slate-300";
 
             const iconClass = isSelected
               ? isAmber
-                ? "bg-amber-500 text-white border border-amber-500"
+                ? "bg-amber-50 text-amber-700 border border-amber-200/60"
                 : "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
-              : "bg-slate-100 text-slate-600 border border-slate-200/60";
+              : "bg-slate-100 text-slate-500 border border-slate-200/60";
 
             const radioClass = isSelected
               ? isAmber
@@ -261,7 +261,7 @@ export default function Step4ReceiptTimeline() {
                     setField("proofOfPurchase", item.id);
                   }
                 }}
-                className={`group rounded-xl p-4 sm:p-5 cursor-pointer flex items-center justify-between gap-4 transition-all duration-150 focus-visible:outline-2 ${
+                className={`group rounded-xl p-4 sm:p-5 cursor-pointer flex items-center justify-between gap-4 transition-all duration-150 focus-visible:outline-2 bg-white ${
                   isAmber ? "focus-visible:outline-amber-500" : "focus-visible:outline-emerald-600"
                 } ${
                   isFullWidth ? "sm:col-span-2" : ""
@@ -311,15 +311,22 @@ export default function Step4ReceiptTimeline() {
           <h3 className="font-sans text-sm sm:text-base font-bold text-slate-900 tracking-tight">
             Janela Temporal desde a Compra
           </h3>
-          {state.daysSincePurchase <= 30 ? (
-            <span className="font-sans inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60 select-none">
-              <span className="material-symbols-outlined text-[13px] font-bold">check</span>
-              Regular (≤ 30d)
-            </span>
+          {state.daysSincePurchase !== null ? (
+            state.daysSincePurchase <= 30 ? (
+              <span className="font-sans inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60 select-none">
+                <span className="material-symbols-outlined text-[13px] font-bold">check</span>
+                Regular (≤ 30d)
+              </span>
+            ) : (
+              <span className="font-sans inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 select-none">
+                <span className="material-symbols-outlined text-[13px] font-bold">warning</span>
+                Fora de Prazo ({state.daysSincePurchase}d)
+              </span>
+            )
           ) : (
-            <span className="font-sans inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 select-none">
-              <span className="material-symbols-outlined text-[13px] font-bold">warning</span>
-              Fora de Prazo ({state.daysSincePurchase}d)
+            <span className="font-sans inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 select-none">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+              Obrigatório
             </span>
           )}
         </div>
@@ -329,7 +336,7 @@ export default function Step4ReceiptTimeline() {
           {/* Card: Até 30 Dias */}
           <div
             role="radio"
-            aria-checked={state.daysSincePurchase <= 30}
+            aria-checked={state.daysSincePurchase !== null && state.daysSincePurchase <= 30}
             tabIndex={0}
             onClick={() => setField("daysSincePurchase", 14)}
             onKeyDown={(e) => {
@@ -338,18 +345,18 @@ export default function Step4ReceiptTimeline() {
                 setField("daysSincePurchase", 14);
               }
             }}
-            className={`group rounded-xl p-4 sm:p-5 cursor-pointer flex items-center justify-between gap-4 transition-all duration-150 focus-visible:outline-2 focus-visible:outline-emerald-600 ${
-              state.daysSincePurchase <= 30
-                ? "bg-white border-2 border-emerald-600 shadow-xs"
-                : "bg-white border border-slate-200 hover:border-slate-300 hover:shadow-2xs"
+            className={`group rounded-xl p-4 sm:p-5 cursor-pointer flex items-center justify-between gap-4 transition-all duration-150 focus-visible:outline-2 focus-visible:outline-emerald-600 bg-white ${
+              state.daysSincePurchase !== null && state.daysSincePurchase <= 30
+                ? "border-2 border-emerald-600"
+                : "border border-slate-200 hover:border-slate-300"
             }`}
           >
             <div className="flex items-center gap-3.5 min-w-0">
               <div
                 className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-                  state.daysSincePurchase <= 30
+                  state.daysSincePurchase !== null && state.daysSincePurchase <= 30
                     ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
-                    : "bg-slate-100 text-slate-600 border border-slate-200/60"
+                    : "bg-slate-100 text-slate-500 border border-slate-200/60"
                 }`}
               >
                 <span className="material-symbols-outlined text-[22px]">schedule</span>
@@ -372,12 +379,12 @@ export default function Step4ReceiptTimeline() {
             <div
               aria-hidden="true"
               className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-                state.daysSincePurchase <= 30
+                state.daysSincePurchase !== null && state.daysSincePurchase <= 30
                   ? "bg-emerald-600 text-white"
                   : "border-2 border-slate-300"
               }`}
             >
-              {state.daysSincePurchase <= 30 && (
+              {state.daysSincePurchase !== null && state.daysSincePurchase <= 30 && (
                 <span className="material-symbols-outlined text-[13px] font-bold">check</span>
               )}
             </div>
@@ -386,7 +393,7 @@ export default function Step4ReceiptTimeline() {
           {/* Card: Mais de 30 Dias */}
           <div
             role="radio"
-            aria-checked={state.daysSincePurchase > 30}
+            aria-checked={state.daysSincePurchase !== null && state.daysSincePurchase > 30}
             tabIndex={0}
             onClick={() => setField("daysSincePurchase", 45)}
             onKeyDown={(e) => {
@@ -395,18 +402,18 @@ export default function Step4ReceiptTimeline() {
                 setField("daysSincePurchase", 45);
               }
             }}
-            className={`group rounded-xl p-4 sm:p-5 cursor-pointer flex items-center justify-between gap-4 transition-all duration-150 focus-visible:outline-2 focus-visible:outline-emerald-600 ${
-              state.daysSincePurchase > 30
-                ? "bg-white border-2 border-amber-500 shadow-xs"
-                : "bg-white border border-slate-200 hover:border-slate-300 hover:shadow-2xs"
+            className={`group rounded-xl p-4 sm:p-5 cursor-pointer flex items-center justify-between gap-4 transition-all duration-150 focus-visible:outline-2 focus-visible:outline-emerald-600 bg-white ${
+              state.daysSincePurchase !== null && state.daysSincePurchase > 30
+                ? "border-2 border-amber-500"
+                : "border border-slate-200 hover:border-slate-300"
             }`}
           >
             <div className="flex items-center gap-3.5 min-w-0">
               <div
                 className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-                  state.daysSincePurchase > 30
+                  state.daysSincePurchase !== null && state.daysSincePurchase > 30
                     ? "bg-amber-50 text-amber-700 border border-amber-200/60"
-                    : "bg-slate-100 text-slate-600 border border-slate-200/60"
+                    : "bg-slate-100 text-slate-500 border border-slate-200/60"
                 }`}
               >
                 <span className="material-symbols-outlined text-[22px]">history_toggle_off</span>
@@ -429,12 +436,12 @@ export default function Step4ReceiptTimeline() {
             <div
               aria-hidden="true"
               className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-                state.daysSincePurchase > 30
+                state.daysSincePurchase !== null && state.daysSincePurchase > 30
                   ? "bg-amber-500 text-white"
                   : "border-2 border-slate-300"
               }`}
             >
-              {state.daysSincePurchase > 30 && (
+              {state.daysSincePurchase !== null && state.daysSincePurchase > 30 && (
                 <span className="material-symbols-outlined text-[13px] font-bold">check</span>
               )}
             </div>
@@ -442,9 +449,13 @@ export default function Step4ReceiptTimeline() {
         </div>
 
         {/* Ajuste fino de dias em card minimalista com pills modernas */}
-        <div className="rounded-xl p-4 sm:p-5 border border-slate-200 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all hover:border-slate-300 hover:shadow-2xs mt-0.5">
+        <div className="rounded-xl p-4 sm:p-5 border border-slate-200 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all hover:border-slate-300 mt-0.5">
           <div className="flex items-center gap-3.5 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 border border-slate-200/60 flex items-center justify-center shrink-0">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+              state.daysSincePurchase !== null
+                ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
+                : "bg-slate-100 text-slate-500 border border-slate-200/60"
+            }`}>
               <span className="material-symbols-outlined text-[22px]">calendar_month</span>
             </div>
             <div className="flex flex-col min-w-0">
@@ -452,8 +463,14 @@ export default function Step4ReceiptTimeline() {
                 <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight leading-snug">
                   Dias exatos decorridos
                 </h4>
-                <span className="font-sans tabular-nums text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-full">
-                  {state.daysSincePurchase} {state.daysSincePurchase === 1 ? "dia" : "dias"}
+                <span className={`font-sans tabular-nums text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                  state.daysSincePurchase !== null
+                    ? "text-emerald-700 bg-emerald-50 border border-emerald-200/60"
+                    : "text-slate-500 bg-slate-100 border border-slate-200/80"
+                }`}>
+                  {state.daysSincePurchase !== null
+                    ? `${state.daysSincePurchase} ${state.daysSincePurchase === 1 ? "dia" : "dias"}`
+                    : "Não selecionado"}
                 </span>
               </div>
               <p className="font-sans text-xs text-slate-500 mt-0.5 leading-relaxed">
@@ -472,7 +489,7 @@ export default function Step4ReceiptTimeline() {
                   onClick={() => setField("daysSincePurchase", dias)}
                   className={`font-sans tabular-nums px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-emerald-600 ${
                     isSelected
-                      ? "bg-slate-900 text-white shadow-2xs font-extrabold"
+                      ? "bg-slate-900 text-white font-extrabold"
                       : "bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200/70"
                   }`}
                 >

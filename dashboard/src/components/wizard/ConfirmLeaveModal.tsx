@@ -66,40 +66,40 @@ export default function ConfirmLeaveModal({
       className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
     >
       <div className="bg-white rounded-2xl p-6 sm:p-7 max-w-sm sm:max-w-md w-full border border-slate-200/90 shadow-xl shadow-slate-900/10 flex flex-col gap-5 animate-in zoom-in-95 duration-150">
-        {/* Top bar com Ícone Minimalista e Botão Fechar */}
-        <div className="flex items-start justify-between gap-4">
-          <div
-            className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0"
-            aria-hidden="true"
-          >
-            <span className="material-symbols-outlined text-[20px]">logout</span>
+        {/* Cabeçalho com Ícone à Esquerda do Título e Botão Fechar à Direita */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div
+              className="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0"
+              aria-hidden="true"
+            >
+              <span className="material-symbols-outlined text-[20px]">logout</span>
+            </div>
+            <h3
+              id="confirm-leave-title"
+              className="font-sans font-bold text-slate-900 text-base sm:text-lg tracking-tight"
+            >
+              {title}
+            </h3>
           </div>
 
           <button
             type="button"
             onClick={onCancel}
             aria-label="Fechar"
-            className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer shrink-0"
           >
             <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
         </div>
 
-        {/* Título e Descrição Concisa */}
-        <div className="flex flex-col gap-1.5">
-          <h3
-            id="confirm-leave-title"
-            className="font-sans font-bold text-slate-900 text-lg tracking-tight"
-          >
-            {title}
-          </h3>
-          <p
-            id="confirm-leave-desc"
-            className="font-sans text-slate-500 text-sm leading-relaxed"
-          >
-            {description}
-          </p>
-        </div>
+        {/* Descrição Concisa */}
+        <p
+          id="confirm-leave-desc"
+          className="font-sans text-slate-500 text-sm leading-relaxed"
+        >
+          {description}
+        </p>
 
         {/* Ações com Hierarquia Visual Clara */}
         <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-2">
@@ -112,13 +112,13 @@ export default function ConfirmLeaveModal({
             {confirmLabel}
           </button>
 
-          {/* Ação Segura Principal (Foco automático, sólido elegante) */}
+          {/* Ação Segura Principal (Foco automático, verde #009B5B) */}
           <button
             ref={safeButtonRef}
             type="button"
             autoFocus
             onClick={() => onCancel()}
-            className="font-sans px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-black text-white font-semibold text-sm shadow-xs transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-slate-900"
+            className="font-sans px-5 py-2.5 rounded-xl bg-[#009B5B] hover:bg-[#00874e] active:bg-[#007342] text-white font-semibold text-sm shadow-xs transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-[#009B5B]"
           >
             {cancelLabel}
           </button>
