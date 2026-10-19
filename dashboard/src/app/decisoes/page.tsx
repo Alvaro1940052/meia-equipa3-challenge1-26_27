@@ -5,21 +5,22 @@ import Link from "next/link";
 import Navbar from "@/components/ui/Navbar";
 import StatusFooter from "@/components/ui/StatusFooter";
 import CaseComparisonModal from "@/components/home/CaseComparisonModal";
+import { useLocale } from "@/contexts/LocaleContext";
 import type { InferenciaItem, PaginaResponse } from "@/types/inferences";
 import { label } from "@/config/returnsLabels";
 
-function formatRelativeDate(isoString: string): string {
+function formatRelativeDate(isoString: string, locale: "pt" | "en" = "pt"): string {
   try {
     const date = new Date(isoString);
-    if (isNaN(date.getTime())) return "Recente";
-    return date.toLocaleDateString("pt-PT", {
+    if (isNaN(date.getTime())) return locale === "en" ? "Recent" : "Recente";
+    return date.toLocaleDateString(locale === "en" ? "en-US" : "pt-PT", {
       day: "2-digit",
       month: "short",
       hour: "2-digit",
       minute: "2-digit",
     });
   } catch {
-    return "Recente";
+    return locale === "en" ? "Recent" : "Recente";
   }
 }
 
@@ -40,6 +41,9 @@ function getPageNumbers(currentPage: number, totalPages: number): (number | "...
 }
 
 export default function DecisoesPage() {
+  const { locale } = useLocale();
+  const isEn = locale === "en";
+
   const [outcomeFilter, setOutcomeFilter] = useState<"TODOS" | "PERMITIR" | "TROCA" | "RECUSAR" | "REVER">("TODOS");
   const [engineFilter, setEngineFilter] = useState<"TODOS" | "DROOLS" | "PROLOG">("TODOS");
   const [searchQuery, setSearchQuery] = useState("");
@@ -58,23 +62,14 @@ export default function DecisoesPage() {
   const [comparingPedidoId, setComparingPedidoId] = useState<string | null>(null);
   const [seeding, setSeeding] = useState<boolean>(false);
 
+  // Debounce search query to avoid spamming the backend
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
-      setPage(0);
-    }, 300);
+      setPage(0); // reset page on search term change
+    }, 350);
     return () => clearTimeout(timer);
   }, [searchQuery]);
-
-  const handleEngineFilterChange = (val: "TODOS" | "DROOLS" | "PROLOG") => {
-    setEngineFilter(val);
-    setPage(0);
-  };
-
-  const handleOutcomeFilterChange = (val: "TODOS" | "PERMITIR" | "TROCA" | "RECUSAR" | "REVER") => {
-    setOutcomeFilter(val);
-    setPage(0);
-  };
 
   const fetchInferences = useCallback(async () => {
     setLoading(true);
@@ -83,40 +78,61 @@ export default function DecisoesPage() {
       const params = new URLSearchParams();
       params.set("pagina", String(page));
       params.set("tamanho", String(pageSize));
-
-      if (engineFilter !== "TODOS") {
-        params.set("motor", engineFilter);
-      }
       if (outcomeFilter !== "TODOS") {
-        params.set("elegibilidade", outcomeFilter);
+        params.set("filtro_elegibilidade", outcomeFilter);
+      }
+      if (engineFilter !== "TODOS") {
+        params.set("filtro_motor", engineFilter);
       }
       if (debouncedSearchQuery.trim()) {
-        params.set("busca", debouncedSearchQuery.trim());
+        params.set("pesquisa", debouncedSearchQuery.trim());
       }
 
       const res = await fetch(`/api/avaliacoes?${params.toString()}`);
       if (!res.ok) {
         const errJson = await res.json().catch(() => null);
-        throw new Error(errJson?.error?.message || errJson?.detail || `Erro ${res.status} ao carregar histórico.`);
+        throw new Error(
+          errJson?.error?.message ||
+          errJson?.detail ||
+          (isEn ? `HTTP Error ${res.status} retrieving deliberations.` : `Erro HTTP ${res.status} ao obter deliberações.`)
+        );
       }
       const data: PaginaResponse<InferenciaItem> = await res.json();
       setInferences(data.conteudo || []);
       setTotalElementos(data.totalElementos ?? (data.conteudo || []).length);
       setTotalPaginas(Math.max(1, data.totalPaginas ?? Math.ceil((data.totalElementos || 1) / pageSize)));
 
-      if (engineFilter === "TODOS" && outcomeFilter === "TODOS" && !debouncedSearchQuery.trim()) {
+      if (outcomeFilter === "TODOS" && engineFilter === "TODOS" && !debouncedSearchQuery.trim()) {
         setTotalGeral(data.totalElementos);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao consultar registos de decisões.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : (isEn ? "Failed to connect to audit repository." : "Falha na comunicação com o repositório pericial de deliberações.")
+      );
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, engineFilter, outcomeFilter, debouncedSearchQuery]);
+  }, [page, pageSize, outcomeFilter, engineFilter, debouncedSearchQuery, isEn]);
 
   useEffect(() => {
     fetchInferences();
   }, [fetchInferences]);
+
+  const handleOutcomeFilterChange = (filter: typeof outcomeFilter) => {
+    if (filter !== outcomeFilter) {
+      setOutcomeFilter(filter);
+      setPage(0);
+    }
+  };
+
+  const handleEngineFilterChange = (engine: typeof engineFilter) => {
+    if (engine !== engineFilter) {
+      setEngineFilter(engine);
+      setPage(0);
+    }
+  };
 
   const handleSeed = async () => {
     setSeeding(true);
@@ -124,12 +140,12 @@ export default function DecisoesPage() {
     try {
       const res = await fetch("/api/avaliacoes/seed", { method: "POST" });
       if (!res.ok) {
-        throw new Error(`Erro ${res.status} ao semear cenários.`);
+        throw new Error(isEn ? `Error ${res.status} seeding scenarios.` : `Erro ${res.status} ao semear cenários.`);
       }
       setPage(0);
       await fetchInferences();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao semear cenários de teste.");
+      setError(err instanceof Error ? err.message : (isEn ? "Failed to seed benchmark scenarios." : "Falha ao semear cenários de referência."));
     } finally {
       setSeeding(false);
     }
@@ -138,11 +154,11 @@ export default function DecisoesPage() {
   const startItem = totalElementos === 0 ? 0 : page * pageSize + 1;
   const endItem = Math.min((page + 1) * pageSize, totalElementos);
 
-  const getOutcomeBadge = (elegibilidade: InferenciaItem["elegibilidade"]) => {
+  const getOutcomeBadge = (elegibilidade: string) => {
     switch (elegibilidade) {
       case "PERMITIR":
         return {
-          label: "Aprovada",
+          label: isEn ? "Approved Return" : "Devolução Aprovada",
           badgeClass: "bg-emerald-50 text-emerald-800 border border-emerald-200/90",
           icon: "check_circle",
           iconColor: "text-emerald-600",
@@ -151,7 +167,7 @@ export default function DecisoesPage() {
         };
       case "TROCA":
         return {
-          label: "Troca no Balcão",
+          label: isEn ? "Counter Exchange" : "Troca no Balcão",
           badgeClass: "bg-blue-50 text-blue-800 border border-blue-200/90",
           icon: "swap_horiz",
           iconColor: "text-blue-600",
@@ -160,7 +176,7 @@ export default function DecisoesPage() {
         };
       case "RECUSAR":
         return {
-          label: "Recusada",
+          label: isEn ? "Refused" : "Recusada",
           badgeClass: "bg-rose-50 text-rose-800 border border-rose-200/90",
           icon: "cancel",
           iconColor: "text-rose-600",
@@ -170,7 +186,7 @@ export default function DecisoesPage() {
       case "REVER":
       default:
         return {
-          label: "Revisão Gerência",
+          label: isEn ? "Manager Review" : "Revisão Gerência",
           badgeClass: "bg-amber-50 text-amber-800 border border-amber-200/90",
           icon: "warning",
           iconColor: "text-amber-600",
@@ -203,22 +219,23 @@ export default function DecisoesPage() {
                 history_edu
               </span>
               <h1 className="font-display font-headline-lg text-2xl sm:text-3xl font-extrabold text-on-surface tracking-tight">
-                Decisões &amp; Histórico Pericial
+                {isEn ? "Decisions & Expert History" : "Decisões & Histórico Pericial"}
               </h1>
             </div>
             <p className="font-sans font-body-md text-on-surface-variant text-sm mt-1">
-              Registo auditável e persistido de todas as inferências deliberadas pelos motores Drools e Prolog.
+              {isEn
+                ? "Auditable and persisted history of all deliberations from Drools and Prolog engines."
+                : "Registo auditável e persistido de todas as inferências deliberadas pelos motores Drools e Prolog."}
             </p>
           </div>
 
           <div className="flex items-center gap-2.5 self-start sm:self-auto">
-
             <Link
               href="/novo-atendimento"
               className="btn-tactile-primary px-5 py-2.5 text-xs font-sans font-semibold flex items-center justify-center gap-2 cursor-pointer shadow-xs"
             >
               <span className="material-symbols-outlined text-[18px]">add</span>
-              <span>Novo Atendimento</span>
+              <span>{isEn ? "New Customer Service" : "Novo Atendimento"}</span>
             </Link>
           </div>
         </div>
@@ -234,7 +251,11 @@ export default function DecisoesPage() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Pesquisar por caso (#CENARIO-01), produto, código de regra (PC-001) ou motivo..."
+              placeholder={
+                isEn
+                  ? "Search by case (#SCENARIO-01), product, rule code (PC-001) or reason..."
+                  : "Pesquisar por caso (#CENARIO-01), produto, código de regra (PC-001) ou motivo..."
+              }
               className="font-sans w-full pl-10 pr-10 py-2.5 rounded-xl bg-surface-container-low text-on-surface text-sm font-medium border border-border-card/70 focus:outline-2 focus:outline-primary placeholder:text-on-surface-variant/60"
             />
             {searchQuery && (
@@ -245,7 +266,7 @@ export default function DecisoesPage() {
                   setDebouncedSearchQuery("");
                   setPage(0);
                 }}
-                aria-label="Limpar pesquisa"
+                aria-label={isEn ? "Clear search" : "Limpar pesquisa"}
                 className="absolute right-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface text-xs font-bold cursor-pointer"
               >
                 ✕
@@ -258,28 +279,26 @@ export default function DecisoesPage() {
             {/* Engine Filter */}
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider shrink-0">
-                Motor:
+                {isEn ? "Engine:" : "Motor:"}
               </span>
               <div className="inline-flex items-center p-1 bg-surface-container-low rounded-lg border border-border-card/50 text-xs">
                 <button
                   type="button"
                   onClick={() => handleEngineFilterChange("TODOS")}
-                  className={`px-3 py-1 rounded-md transition-colors font-medium cursor-pointer ${
-                    engineFilter === "TODOS"
+                  className={`px-3 py-1 rounded-md transition-colors font-medium cursor-pointer ${engineFilter === "TODOS"
                       ? "bg-white text-slate-900 font-bold shadow-xs"
                       : "text-slate-600 hover:text-slate-900"
-                  }`}
+                    }`}
                 >
-                  Todos
+                  {isEn ? "All" : "Todos"}
                 </button>
                 <button
                   type="button"
                   onClick={() => handleEngineFilterChange("DROOLS")}
-                  className={`px-3 py-1 rounded-md transition-colors font-medium flex items-center gap-1.5 cursor-pointer ${
-                    engineFilter === "DROOLS"
+                  className={`px-3 py-1 rounded-md transition-colors font-medium flex items-center gap-1.5 cursor-pointer ${engineFilter === "DROOLS"
                       ? "bg-indigo-600 text-white font-bold shadow-xs"
                       : "text-indigo-700 hover:bg-indigo-50"
-                  }`}
+                    }`}
                 >
                   <span className="material-symbols-outlined text-[14px]">account_tree</span>
                   <span>Drools</span>
@@ -287,11 +306,10 @@ export default function DecisoesPage() {
                 <button
                   type="button"
                   onClick={() => handleEngineFilterChange("PROLOG")}
-                  className={`px-3 py-1 rounded-md transition-colors font-medium flex items-center gap-1.5 cursor-pointer ${
-                    engineFilter === "PROLOG"
+                  className={`px-3 py-1 rounded-md transition-colors font-medium flex items-center gap-1.5 cursor-pointer ${engineFilter === "PROLOG"
                       ? "bg-emerald-600 text-white font-bold shadow-xs"
                       : "text-emerald-700 hover:bg-emerald-50"
-                  }`}
+                    }`}
                 >
                   <span className="material-symbols-outlined text-[14px]">schema</span>
                   <span>Prolog</span>
@@ -302,20 +320,20 @@ export default function DecisoesPage() {
             {/* Outcome Filter */}
             <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider shrink-0">
-                Resultado:
+                {isEn ? "Outcome:" : "Resultado:"}
               </span>
               <div
                 role="radiogroup"
-                aria-label="Filtrar por resultado"
+                aria-label={isEn ? "Filter by outcome" : "Filtrar por resultado"}
                 className="flex items-center gap-1 p-1 bg-surface-container-low rounded-lg border border-border-card/50 text-xs"
               >
                 {(
                   [
-                    { key: "TODOS", label: "Todas" },
-                    { key: "PERMITIR", label: "Aprovadas" },
-                    { key: "TROCA", label: "Trocas" },
-                    { key: "RECUSAR", label: "Recusadas" },
-                    { key: "REVER", label: "Revisão" },
+                    { key: "TODOS", label: isEn ? "All" : "Todas" },
+                    { key: "PERMITIR", label: isEn ? "Approved" : "Aprovadas" },
+                    { key: "TROCA", label: isEn ? "Exchanges" : "Trocas" },
+                    { key: "RECUSAR", label: isEn ? "Refused" : "Recusadas" },
+                    { key: "REVER", label: isEn ? "Review" : "Revisão" },
                   ] as const
                 ).map((opt) => {
                   const isSelected = outcomeFilter === opt.key;
@@ -326,11 +344,10 @@ export default function DecisoesPage() {
                       role="radio"
                       aria-checked={isSelected}
                       onClick={() => handleOutcomeFilterChange(opt.key)}
-                      className={`px-3 py-1 rounded-md transition-all cursor-pointer whitespace-nowrap font-medium ${
-                        isSelected
+                      className={`px-3 py-1 rounded-md transition-all cursor-pointer whitespace-nowrap font-medium ${isSelected
                           ? "bg-slate-900 text-white font-bold shadow-xs"
                           : "text-slate-600 hover:bg-surface-container hover:text-slate-900"
-                      }`}
+                        }`}
                     >
                       {opt.label}
                     </button>
@@ -355,7 +372,7 @@ export default function DecisoesPage() {
               onClick={fetchInferences}
               className="px-3 py-1 rounded-md bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs cursor-pointer transition-colors shadow-xs"
             >
-              Tentar Novamente
+              {isEn ? "Try Again" : "Tentar Novamente"}
             </button>
           </div>
         )}
@@ -393,9 +410,8 @@ export default function DecisoesPage() {
         {/* Inferences List */}
         {!error && inferences.length > 0 && (
           <div
-            className={`flex flex-col gap-3 transition-opacity duration-150 ${
-              loading ? "opacity-60 pointer-events-none" : "opacity-100"
-            }`}
+            className={`flex flex-col gap-3 transition-opacity duration-150 ${loading ? "opacity-60 pointer-events-none" : "opacity-100"
+              }`}
           >
             {inferences.map((item) => {
               const meta = getOutcomeBadge(item.elegibilidade);
@@ -449,7 +465,9 @@ export default function DecisoesPage() {
                       </>
                     ) : (
                       <p className="text-slate-500 italic">
-                        Deliberação automática do motor sem notas adicionais.
+                        {isEn
+                          ? "Automated engine deliberation without additional notes."
+                          : "Deliberação automática do motor sem notas adicionais."}
                       </p>
                     )}
                   </div>
@@ -461,22 +479,21 @@ export default function DecisoesPage() {
                         <span className="material-symbols-outlined text-[15px] text-slate-400">
                           schedule
                         </span>
-                        <span>{formatRelativeDate(item.executadoEm)}</span>
+                        <span>{formatRelativeDate(item.executadoEm, locale)}</span>
                       </span>
 
                       <span className="inline-flex items-center gap-1 text-slate-500">
                         <span className="material-symbols-outlined text-[15px] text-slate-400">
                           payments
                         </span>
-                        <span>{label(item.meioReembolso || "MEIO_ORIGINAL")}</span>
+                        <span>{label(item.meioReembolso || "MEIO_ORIGINAL", locale)}</span>
                       </span>
 
                       <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-mono tabular-nums font-medium border ${
-                          isDrools
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-mono tabular-nums font-medium border ${isDrools
                             ? "bg-indigo-50/80 text-indigo-700 border-indigo-200/60"
                             : "bg-emerald-50/80 text-emerald-700 border-emerald-200/60"
-                        }`}
+                          }`}
                       >
                         <span className="material-symbols-outlined text-[13px]">
                           {isDrools ? "account_tree" : "schema"}
@@ -490,7 +507,7 @@ export default function DecisoesPage() {
                           rule_settings
                         </span>
                         <span>
-                          {item.regrasDisparadas.length} regra{item.regrasDisparadas.length === 1 ? "" : "s"}
+                          {item.regrasDisparadas.length} {isEn ? (item.regrasDisparadas.length === 1 ? "rule" : "rules") : (item.regrasDisparadas.length === 1 ? "regra" : "regras")}
                         </span>
                       </span>
                     </div>
@@ -503,13 +520,13 @@ export default function DecisoesPage() {
                             e.stopPropagation();
                             setComparingPedidoId(item.pedidoId);
                           }}
-                          title={`Confrontar Drools e Prolog para #${item.pedidoId}`}
+                          title={isEn ? `Compare Drools and Prolog for #${item.pedidoId}` : `Confrontar Drools e Prolog para #${item.pedidoId}`}
                           className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
                         >
                           <span className="material-symbols-outlined text-[15px]">
                             compare_arrows
                           </span>
-                          <span>Comparar</span>
+                          <span>{isEn ? "Compare" : "Comparar"}</span>
                         </button>
                       )}
 
@@ -521,7 +538,7 @@ export default function DecisoesPage() {
                         }}
                         className="px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
                       >
-                        <span>Ver Veredito</span>
+                        <span>{isEn ? "View Verdict" : "Ver Veredito"}</span>
                         <span className="material-symbols-outlined text-[15px]">
                           arrow_forward
                         </span>
@@ -540,12 +557,15 @@ export default function DecisoesPage() {
             {/* Left: Range and Items Per Page Selector */}
             <div className="flex items-center gap-3 text-slate-500 w-full sm:w-auto justify-between sm:justify-start">
               <span>
-                A mostrar <strong className="text-slate-900 font-semibold">{startItem}–{endItem}</strong> de{" "}
-                <strong className="text-slate-900 font-semibold">{totalElementos}</strong> deliberações
+                {isEn ? "Showing" : "A mostrar"}{" "}
+                <strong className="text-slate-900 font-semibold">{startItem}–{endItem}</strong>{" "}
+                {isEn ? "of" : "de"}{" "}
+                <strong className="text-slate-900 font-semibold">{totalElementos}</strong>{" "}
+                {isEn ? "deliberations" : "deliberações"}
               </span>
 
               <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
-                <span className="text-slate-400 hidden md:inline">Por pág:</span>
+                <span className="text-slate-400 hidden md:inline">{isEn ? "Per page:" : "Por pág:"}</span>
                 <div className="inline-flex rounded-lg bg-slate-100 p-0.5">
                   {[10, 20, 50].map((size) => (
                     <button
@@ -556,11 +576,10 @@ export default function DecisoesPage() {
                         setPageSize(size);
                         setPage(0);
                       }}
-                      className={`px-2 py-0.5 rounded-md font-medium transition-colors cursor-pointer ${
-                        pageSize === size
+                      className={`px-2 py-0.5 rounded-md font-medium transition-colors cursor-pointer ${pageSize === size
                           ? "bg-white text-slate-900 font-bold shadow-2xs"
                           : "text-slate-600 hover:text-slate-900"
-                      }`}
+                        }`}
                     >
                       {size}
                     </button>
@@ -570,14 +589,14 @@ export default function DecisoesPage() {
             </div>
 
             {/* Right: Navigation Controls */}
-            <nav aria-label="Paginação de histórico pericial" className="flex items-center gap-1">
+            <nav aria-label={isEn ? "Audit history pagination" : "Paginação de histórico pericial"} className="flex items-center gap-1">
               {/* First Page */}
               <button
                 type="button"
                 onClick={() => setPage(0)}
                 disabled={page === 0 || loading}
-                title="Primeira página"
-                aria-label="Primeira página"
+                title={isEn ? "First page" : "Primeira página"}
+                aria-label={isEn ? "First page" : "Primeira página"}
                 className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px]">first_page</span>
@@ -588,8 +607,8 @@ export default function DecisoesPage() {
                 type="button"
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
                 disabled={page === 0 || loading}
-                title="Página anterior"
-                aria-label="Página anterior"
+                title={isEn ? "Previous page" : "Página anterior"}
+                aria-label={isEn ? "Previous page" : "Página anterior"}
                 className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px]">chevron_left</span>
@@ -597,7 +616,7 @@ export default function DecisoesPage() {
 
               {/* Mobile Page Indicator */}
               <span className="sm:hidden px-2 text-slate-600 font-medium">
-                Pág. <strong className="text-slate-900 font-bold">{page + 1}</strong> de {totalPaginas}
+                {isEn ? "Page" : "Pág."} <strong className="text-slate-900 font-bold">{page + 1}</strong> {isEn ? "of" : "de"} {totalPaginas}
               </span>
 
               {/* Desktop Page Numbers */}
@@ -618,12 +637,11 @@ export default function DecisoesPage() {
                       disabled={loading}
                       onClick={() => setPage(p - 1)}
                       aria-current={isCurrent ? "page" : undefined}
-                      aria-label={`Página ${p}`}
-                      className={`min-w-7 h-7 px-2 rounded-lg text-xs transition-colors cursor-pointer flex items-center justify-center ${
-                        isCurrent
+                      aria-label={isEn ? `Page ${p}` : `Página ${p}`}
+                      className={`min-w-7 h-7 px-2 rounded-lg text-xs transition-colors cursor-pointer flex items-center justify-center ${isCurrent
                           ? "bg-slate-900 text-white font-bold shadow-xs"
                           : "text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-medium"
-                      }`}
+                        }`}
                     >
                       {p}
                     </button>
@@ -636,8 +654,8 @@ export default function DecisoesPage() {
                 type="button"
                 onClick={() => setPage((p) => Math.min(totalPaginas - 1, p + 1))}
                 disabled={page >= totalPaginas - 1 || loading}
-                title="Página seguinte"
-                aria-label="Página seguinte"
+                title={isEn ? "Next page" : "Página seguinte"}
+                aria-label={isEn ? "Next page" : "Página seguinte"}
                 className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px]">chevron_right</span>
@@ -648,8 +666,8 @@ export default function DecisoesPage() {
                 type="button"
                 onClick={() => setPage(totalPaginas - 1)}
                 disabled={page >= totalPaginas - 1 || loading}
-                title="Última página"
-                aria-label="Última página"
+                title={isEn ? "Last page" : "Última página"}
+                aria-label={isEn ? "Last page" : "Última página"}
                 className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px]">last_page</span>
@@ -666,10 +684,12 @@ export default function DecisoesPage() {
             </div>
             <div className="flex flex-col gap-1 max-w-md">
               <h3 className="font-sans text-on-surface text-lg font-bold">
-                Nenhum atendimento encontrado
+                {isEn ? "No records found" : "Nenhum atendimento encontrado"}
               </h3>
               <p className="font-sans text-on-surface-variant text-xs sm:text-sm">
-                Não existem registos de devolução ou troca correspondentes ao filtro ou termo de pesquisa indicado.
+                {isEn
+                  ? "No return or exchange records matching the given filter or search term."
+                  : "Não existem registos de devolução ou troca correspondentes ao filtro ou termo de pesquisa indicado."}
               </p>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-3 mt-2">
@@ -684,7 +704,7 @@ export default function DecisoesPage() {
                 }}
                 className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-sans font-semibold text-xs transition-colors cursor-pointer"
               >
-                Limpar Todos os Filtros
+                {isEn ? "Clear All Filters" : "Limpar Todos os Filtros"}
               </button>
               <button
                 type="button"
@@ -695,13 +715,13 @@ export default function DecisoesPage() {
                 <span className="material-symbols-outlined text-[18px]">
                   {seeding ? "sync" : "cloud_download"}
                 </span>
-                <span>{seeding ? "A Semear..." : "Semear 10 Cenários"}</span>
+                <span>{seeding ? (isEn ? "Seeding..." : "A Semear...") : (isEn ? "Seed 10 Scenarios" : "Semear 10 Cenários")}</span>
               </button>
               <Link
                 href="/novo-atendimento"
                 className="btn-tactile-primary px-5 py-2.5 text-xs font-sans font-semibold cursor-pointer"
               >
-                Iniciar Novo Caso
+                {isEn ? "Start New Case" : "Iniciar Novo Caso"}
               </Link>
             </div>
           </div>
@@ -721,9 +741,8 @@ export default function DecisoesPage() {
             <div className="flex items-start justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-3">
                 <div
-                  className={`w-11 h-11 rounded-2xl flex items-center justify-center ${
-                    getOutcomeBadge(selectedInference.elegibilidade).containerBg
-                  }`}
+                  className={`w-11 h-11 rounded-2xl flex items-center justify-center ${getOutcomeBadge(selectedInference.elegibilidade).containerBg
+                    }`}
                 >
                   <span className="material-symbols-outlined text-[24px]">
                     {getOutcomeBadge(selectedInference.elegibilidade).icon}
@@ -738,11 +757,10 @@ export default function DecisoesPage() {
                       #{selectedInference.pedidoId}
                     </h3>
                     <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-mono tabular-nums font-bold border ${
-                        selectedInference.motor === "DROOLS"
+                      className={`px-2 py-0.5 rounded text-[10px] font-mono tabular-nums font-bold border ${selectedInference.motor === "DROOLS"
                           ? "bg-indigo-50 text-indigo-700 border-indigo-200"
                           : "bg-emerald-50 text-emerald-700 border-emerald-200"
-                      }`}
+                        }`}
                     >
                       {selectedInference.motor}
                     </span>
@@ -756,7 +774,7 @@ export default function DecisoesPage() {
               <button
                 type="button"
                 onClick={() => setSelectedInference(null)}
-                aria-label="Fechar"
+                aria-label={isEn ? "Close" : "Fechar"}
                 className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-on-surface cursor-pointer"
               >
                 ✕
@@ -766,31 +784,31 @@ export default function DecisoesPage() {
             {/* Verdict Summary Box */}
             <div className="p-4 rounded-2xl bg-surface-container-low border border-border-card flex flex-col gap-2 text-xs font-sans">
               <div className="flex justify-between">
-                <span className="text-on-surface-variant font-semibold">Motor &amp; Versão:</span>
+                <span className="text-on-surface-variant font-semibold">{isEn ? "Engine & Latency:" : "Motor & Versão:"}</span>
                 <span className="font-mono tabular-nums font-bold text-on-surface">
                   {selectedInference.motor} ({selectedInference.duracaoMs} ms)
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-on-surface-variant font-semibold">Data / Hora:</span>
+                <span className="text-on-surface-variant font-semibold">{isEn ? "Date / Time:" : "Data / Hora:"}</span>
                 <span className="font-mono tabular-nums font-bold text-on-surface">
-                  {new Date(selectedInference.executadoEm).toLocaleString("pt-PT")}
+                  {new Date(selectedInference.executadoEm).toLocaleString(isEn ? "en-US" : "pt-PT")}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-on-surface-variant font-semibold">Tipo Transação:</span>
+                <span className="text-on-surface-variant font-semibold">{isEn ? "Transaction Type:" : "Tipo Transação:"}</span>
                 <span className="font-bold text-on-surface">
                   {selectedInference.tipoTransacao || "N/A"}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-on-surface-variant font-semibold">Meio Reembolso:</span>
+                <span className="text-on-surface-variant font-semibold">{isEn ? "Refund Tender:" : "Meio Reembolso:"}</span>
                 <span className="font-bold text-on-surface">
-                  {selectedInference.meioReembolso || "N/A"}
+                  {label(selectedInference.meioReembolso || "MEIO_ORIGINAL", locale)}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-on-surface-variant font-semibold">Valor da Transação:</span>
+                <span className="text-on-surface-variant font-semibold">{isEn ? "Transaction Amount:" : "Valor da Transação:"}</span>
                 <span className="font-sans tabular-nums font-extrabold text-primary text-sm">
                   {selectedInference.valorDevolucao.toFixed(2)} €
                 </span>
@@ -800,7 +818,7 @@ export default function DecisoesPage() {
             {/* Fired Rules List */}
             <div className="flex flex-col gap-2 font-sans">
               <span className="font-label-md text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-                Regras e Deduções Acionadas ({selectedInference.regrasDisparadas.length})
+                {isEn ? "Rules & Deductions Triggered" : "Regras e Deduções Acionadas"} ({selectedInference.regrasDisparadas.length})
               </span>
               <div className="flex flex-col gap-2 max-h-52 overflow-y-auto pr-1">
                 {selectedInference.regrasDisparadas.map((r, idx) => (
@@ -838,7 +856,7 @@ export default function DecisoesPage() {
                   className="px-3.5 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-sans font-semibold text-xs border border-indigo-200 flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[16px]">compare_arrows</span>
-                  <span>Confrontar Motores</span>
+                  <span>{isEn ? "Compare Engines" : "Confrontar Motores"}</span>
                 </button>
               ) : (
                 <div />
@@ -851,14 +869,14 @@ export default function DecisoesPage() {
                   className="btn-tactile-secondary px-4 py-2 text-xs font-sans font-semibold flex items-center gap-1.5 cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[16px]">print</span>
-                  <span>Imprimir</span>
+                  <span>{isEn ? "Print" : "Imprimir"}</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setSelectedInference(null)}
                   className="btn-tactile-primary px-5 py-2 text-xs font-sans font-semibold cursor-pointer"
                 >
-                  Fechar
+                  {isEn ? "Close" : "Fechar"}
                 </button>
               </div>
             </div>

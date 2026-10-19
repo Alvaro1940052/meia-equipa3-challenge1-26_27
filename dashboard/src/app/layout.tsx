@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
+import { LocaleProvider } from "@/contexts/LocaleContext";
 import "./globals.css";
 
 export const roundex = localFont({
@@ -51,11 +52,13 @@ export default function RootLayout({
         />
       </head>
       <body className="bg-surface text-on-surface font-sans antialiased min-h-screen">
-        {/* Skip to Content Link for keyboard accessibility */}
-        <a href="#main-content" className="skip-link">
-          Saltar para o conteúdo principal
-        </a>
-        {children}
+        <LocaleProvider>
+          {/* Skip to Content Link for keyboard accessibility */}
+          <a href="#main-content" className="skip-link">
+            Saltar para o conteúdo principal
+          </a>
+          {children}
+        </LocaleProvider>
       </body>
     </html>
   );

@@ -103,11 +103,10 @@ export default function SwitchOperatorModal({
                   onSelectOperator(op);
                   onClose();
                 }}
-                className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 text-left transition-all cursor-pointer select-none ${
-                  isCurrent
+                className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 text-left transition-all cursor-pointer select-none ${isCurrent
                     ? "bg-blue-50/80 border-blue-500 shadow-sm"
                     : "bg-surface-container-low hover:bg-surface-container border-border-card"
-                }`}
+                  }`}
               >
                 <div className="flex items-center gap-3">
                   <div

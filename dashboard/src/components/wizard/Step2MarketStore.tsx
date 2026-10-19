@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useWizard } from "./WizardContext";
+import { useLocale } from "@/contexts/LocaleContext";
 
 // Bandeira dos EUA em SVG nítido e responsivo
 function UsaFlag({ className = "w-9 h-6" }: { className?: string }) {
@@ -94,7 +95,7 @@ interface ChannelItem {
   badge?: string;
 }
 
-const CHANNELS: ChannelItem[] = [
+const CHANNELS_PT: ChannelItem[] = [
   {
     id: "FISICA",
     title: "Loja Física",
@@ -128,8 +129,45 @@ const CHANNELS: ChannelItem[] = [
   },
 ];
 
+const CHANNELS_EN: ChannelItem[] = [
+  {
+    id: "FISICA",
+    title: "Physical Store",
+    subtitle: "Official brand retail store network",
+    icon: "store",
+  },
+  {
+    id: "ONLINE_BACKPOCKET",
+    title: "Online / BackPocket",
+    subtitle: "levi.com, levi.ca or official app",
+    badge: "Web",
+    icon: "shopping_bag",
+  },
+  {
+    id: "FRANQUIA_CA",
+    title: "Canadian Franchise",
+    subtitle: "Franchise partner store in Canada",
+    icon: "domain",
+  },
+  {
+    id: "GROSSISTA",
+    title: "Wholesale / External",
+    subtitle: "Department stores (e.g., Macy's)",
+    icon: "inventory_2",
+  },
+  {
+    id: "DESCONHECIDO",
+    title: "Unknown Channel",
+    subtitle: "No store record or receipt match",
+    icon: "help_outline",
+  },
+];
+
 export default function Step2MarketStore() {
   const { state, setField } = useWizard();
+  const { locale } = useLocale();
+
+  const channels = locale === "en" ? CHANNELS_EN : CHANNELS_PT;
 
   const isUsa = state.marketJurisdiction === "EUA";
   const isCanada = state.marketJurisdiction === "CA";
@@ -145,17 +183,17 @@ export default function Step2MarketStore() {
           <span className="font-mono tabular-nums text-xs font-bold text-slate-400 select-none">01</span>
           <span className="text-slate-300">/</span>
           <h3 className="font-sans text-sm sm:text-base font-bold text-slate-900 tracking-tight">
-            Jurisdição Territorial
+            {locale === "en" ? "Territorial Jurisdiction" : "Jurisdição Territorial"}
           </h3>
           {state.marketJurisdiction ? (
             <span className="font-sans inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60 select-none">
               <span className="material-symbols-outlined text-[13px] font-bold">check</span>
-              Definido
+              {locale === "en" ? "Set" : "Definido"}
             </span>
           ) : (
             <span className="font-sans inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 select-none">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-              Obrigatório
+              {locale === "en" ? "Required" : "Obrigatório"}
             </span>
           )}
         </div>
@@ -174,25 +212,24 @@ export default function Step2MarketStore() {
                 setField("marketJurisdiction", "EUA");
               }
             }}
-            className={`group rounded-xl p-4 sm:p-5 cursor-pointer flex items-center justify-between gap-4 transition-all duration-150 focus-visible:outline-2 focus-visible:outline-emerald-600 ${
-              isUsa
+            className={`group rounded-xl p-4 sm:p-5 cursor-pointer flex items-center justify-between gap-4 transition-all duration-150 focus-visible:outline-2 focus-visible:outline-emerald-600 ${isUsa
                 ? "bg-white border-2 border-emerald-600 shadow-xs"
                 : "bg-white border border-slate-200 hover:border-slate-300 hover:shadow-2xs"
-            }`}
+              }`}
           >
             <div className="flex items-center gap-3.5 min-w-0">
               <UsaFlag className="w-10 h-7 rounded shadow-2xs shrink-0" />
               <div className="flex flex-col min-w-0 font-sans">
                 <div className="flex items-center gap-2">
                   <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight truncate">
-                    Estados Unidos
+                    {locale === "en" ? "United States" : "Estados Unidos"}
                   </h4>
                   <span className="font-mono tabular-nums text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
                     USD ($)
                   </span>
                 </div>
                 <p className="font-sans text-xs text-slate-500 mt-0.5">
-                  Mercado doméstico regular
+                  {locale === "en" ? "Regular domestic market" : "Mercado doméstico regular"}
                 </p>
               </div>
             </div>
@@ -234,14 +271,14 @@ export default function Step2MarketStore() {
               <div className="flex flex-col min-w-0 font-sans">
                 <div className="flex items-center gap-2">
                   <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight truncate">
-                    Canadá
+                    {locale === "en" ? "Canada" : "Canadá"}
                   </h4>
                   <span className="font-mono tabular-nums text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
                     CAD ($)
                   </span>
                 </div>
                 <p className="font-sans text-xs text-slate-500 mt-0.5">
-                  Regime transfronteiriço
+                  {locale === "en" ? "Cross-border retail regime" : "Regime transfronteiriço"}
                 </p>
               </div>
             </div>
@@ -269,17 +306,17 @@ export default function Step2MarketStore() {
           <span className="font-mono tabular-nums text-xs font-bold text-slate-400 select-none">02</span>
           <span className="text-slate-300">/</span>
           <h3 className="font-sans text-sm sm:text-base font-bold text-slate-900 tracking-tight">
-            Formato Comercial da Loja
+            {locale === "en" ? "Store Commercial Format" : "Formato Comercial da Loja"}
           </h3>
           {state.storeType ? (
             <span className="font-sans inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60 select-none">
               <span className="material-symbols-outlined text-[13px] font-bold">check</span>
-              Definido
+              {locale === "en" ? "Set" : "Definido"}
             </span>
           ) : (
             <span className="font-sans inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 select-none">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-              Obrigatório
+              {locale === "en" ? "Required" : "Obrigatório"}
             </span>
           )}
         </div>
@@ -317,14 +354,16 @@ export default function Step2MarketStore() {
               <div className="flex flex-col min-w-0 font-sans">
                 <div className="flex items-center gap-2">
                   <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight truncate">
-                    Loja Mainline
+                    {locale === "en" ? "Mainline Store" : "Loja Mainline"}
                   </h4>
                   <span className="font-sans text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
                     Regular
                   </span>
                 </div>
                 <p className="font-sans text-xs text-slate-500 mt-0.5">
-                  Lojas conceito, flagships e coleções regulares
+                  {locale === "en"
+                    ? "Concept stores, flagships, and regular lines"
+                    : "Lojas conceito, flagships e coleções regulares"}
                 </p>
               </div>
             </div>
@@ -374,14 +413,16 @@ export default function Step2MarketStore() {
               <div className="flex flex-col min-w-0 font-sans">
                 <div className="flex items-center gap-2">
                   <h4 className="font-sans font-bold text-slate-900 text-sm sm:text-base tracking-tight truncate">
-                    Loja Outlet
+                    {locale === "en" ? "Outlet Store" : "Loja Outlet"}
                   </h4>
                   <span className="font-sans text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
                     Factory
                   </span>
                 </div>
                 <p className="font-sans text-xs text-slate-500 mt-0.5">
-                  Centros factory, promoções e pontas de stock
+                  {locale === "en"
+                    ? "Factory outlet centers, clearance, and promotions"
+                    : "Centros factory, promoções e pontas de stock"}
                 </p>
               </div>
             </div>
@@ -409,7 +450,7 @@ export default function Step2MarketStore() {
           <span className="font-mono tabular-nums text-xs font-bold text-slate-400 select-none">03</span>
           <span className="text-slate-300">/</span>
           <h3 className="font-sans text-sm sm:text-base font-bold text-slate-900 tracking-tight">
-            Canal de Compra Original
+            {locale === "en" ? "Original Purchase Channel" : "Canal de Compra Original"}
           </h3>
           {state.purchaseChannel ? (
             <span
@@ -417,24 +458,24 @@ export default function Step2MarketStore() {
                 state.purchaseChannel === "GROSSISTA"
                   ? "bg-red-50 text-red-700 border-red-200/60"
                   : state.purchaseChannel === "FRANQUIA_CA"
-                  ? "bg-amber-50 text-amber-700 border-amber-200/60"
-                  : "bg-emerald-50 text-emerald-700 border-emerald-200/60"
+                    ? "bg-amber-50 text-amber-700 border-amber-200/60"
+                    : "bg-emerald-50 text-emerald-700 border-emerald-200/60"
               }`}
             >
               <span className="material-symbols-outlined text-[13px] font-bold">check</span>
-              Definido
+              {locale === "en" ? "Set" : "Definido"}
             </span>
           ) : (
             <span className="font-sans inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 select-none">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-              Obrigatório
+              {locale === "en" ? "Required" : "Obrigatório"}
             </span>
           )}
         </div>
 
         {/* Minimalist Cards Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-          {CHANNELS.map((ch) => {
+          {channels.map((ch) => {
             const isSelected = state.purchaseChannel === ch.id;
 
             // Determinação de cores de seleção contextual conforme o canal
@@ -470,19 +511,17 @@ export default function Step2MarketStore() {
                     setField("purchaseChannel", ch.id as any);
                   }
                 }}
-                className={`group rounded-xl p-4 sm:p-4.5 cursor-pointer flex items-center justify-between gap-3.5 transition-all duration-150 focus-visible:outline-2 ${focusOutlineClass} ${
-                  isSelected
+                className={`group rounded-xl p-4 sm:p-4.5 cursor-pointer flex items-center justify-between gap-3.5 transition-all duration-150 focus-visible:outline-2 ${focusOutlineClass} ${isSelected
                     ? selectedBorderClass
                     : "bg-white border border-slate-200 hover:border-slate-300 hover:shadow-2xs"
-                }`}
+                  }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <div
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-                      isSelected
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${isSelected
                         ? selectedIconClass
                         : "bg-slate-100 text-slate-600"
-                    }`}
+                      }`}
                   >
                     <span className="material-symbols-outlined text-[20px]">{ch.icon}</span>
                   </div>
@@ -505,11 +544,10 @@ export default function Step2MarketStore() {
 
                 <div
                   aria-hidden="true"
-                  className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-                    isSelected
+                  className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-colors ${isSelected
                       ? selectedCircleClass
                       : "border-2 border-slate-300"
-                  }`}
+                    }`}
                 >
                   {isSelected && (
                     <span className="material-symbols-outlined text-[13px] font-bold">check</span>

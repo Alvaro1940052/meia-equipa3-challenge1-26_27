@@ -2,28 +2,29 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useLocale } from "@/contexts/LocaleContext";
 import type { InferenciaItem, PaginaResponse } from "@/types/inferences";
 import CaseComparisonModal from "./CaseComparisonModal";
 
 export type CaseItem = InferenciaItem;
 
-function formatRelativeTime(isoString: string): string {
+function formatRelativeTime(isoString: string, locale: "pt" | "en" = "pt"): string {
   try {
     const date = new Date(isoString);
-    if (isNaN(date.getTime())) return "Recente";
+    if (isNaN(date.getTime())) return locale === "en" ? "Recent" : "Recente";
     const diffMs = Date.now() - date.getTime();
     const diffSec = Math.max(0, Math.floor(diffMs / 1000));
-    if (diffSec < 60) return "Agora mesmo";
+    if (diffSec < 60) return locale === "en" ? "Just now" : "Agora mesmo";
     const diffMin = Math.floor(diffSec / 60);
-    if (diffMin < 60) return `Há ${diffMin} min`;
+    if (diffMin < 60) return locale === "en" ? `${diffMin}m ago` : `Há ${diffMin} min`;
     const diffHours = Math.floor(diffMin / 60);
-    if (diffHours < 24) return `Há ${diffHours}h`;
+    if (diffHours < 24) return locale === "en" ? `${diffHours}h ago` : `Há ${diffHours}h`;
     const diffDays = Math.floor(diffHours / 24);
-    if (diffDays === 1) return "Ontem";
-    if (diffDays < 7) return `Há ${diffDays} dias`;
-    return date.toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit" });
+    if (diffDays === 1) return locale === "en" ? "Yesterday" : "Ontem";
+    if (diffDays < 7) return locale === "en" ? `${diffDays}d ago` : `Há ${diffDays} dias`;
+    return date.toLocaleDateString(locale === "en" ? "en-US" : "pt-PT", { day: "2-digit", month: "2-digit" });
   } catch {
-    return "Recente";
+    return locale === "en" ? "Recent" : "Recente";
   }
 }
 
@@ -44,6 +45,9 @@ function getPageNumbers(currentPage: number, totalPages: number): (number | "...
 }
 
 export default function RecentCases() {
+  const { locale } = useLocale();
+  const isEn = locale === "en";
+
   const [filter, setFilter] = useState<"TODOS" | "DEVOLUCOES" | "TROCAS">("TODOS");
   const [page, setPage] = useState<number>(0);
   const [pageSize, setPageSize] = useState<number>(10);
@@ -73,7 +77,7 @@ export default function RecentCases() {
       const res = await fetch(`/api/avaliacoes?${params.toString()}`);
       if (!res.ok) {
         const errJson = await res.json().catch(() => null);
-        throw new Error(errJson?.error?.message || errJson?.detail || `Erro ${res.status} ao carregar histórico.`);
+        throw new Error(errJson?.error?.message || errJson?.detail || (isEn ? `Error ${res.status} loading history.` : `Erro ${res.status} ao carregar histórico.`));
       }
       const data: PaginaResponse<InferenciaItem> = await res.json();
       setCases(data.conteudo || []);
@@ -84,11 +88,11 @@ export default function RecentCases() {
         setTotalGeral(data.totalElementos);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro desconhecido ao ligar ao serviço de avaliações.");
+      setError(err instanceof Error ? err.message : (isEn ? "Failed to connect to evaluations service." : "Erro desconhecido ao ligar ao serviço de avaliações."));
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, filter]);
+  }, [page, pageSize, filter, isEn]);
 
   useEffect(() => {
     fetchCases();
@@ -107,12 +111,12 @@ export default function RecentCases() {
     try {
       const res = await fetch("/api/avaliacoes/seed", { method: "POST" });
       if (!res.ok) {
-        throw new Error(`Erro ${res.status} na semeadura.`);
+        throw new Error(isEn ? `Error ${res.status} seeding scenarios.` : `Erro ${res.status} na semeadura.`);
       }
       setPage(0);
       await fetchCases();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao semear cenários.");
+      setError(err instanceof Error ? err.message : (isEn ? "Failed to seed scenarios." : "Falha ao semear cenários."));
     } finally {
       setSeeding(false);
     }
@@ -122,7 +126,11 @@ export default function RecentCases() {
   const endItem = Math.min((page + 1) * pageSize, totalElementos);
 
   const handlePrint = (caseItem: InferenciaItem) => {
-    setPrintToast(`A enviar comprovativo de #${caseItem.pedidoId} para a impressora do balcão...`);
+    setPrintToast(
+      isEn
+        ? `Sending receipt for #${caseItem.pedidoId} to counter printer...`
+        : `A enviar comprovativo de #${caseItem.pedidoId} para a impressora do balcão...`
+    );
     setTimeout(() => {
       setPrintToast(null);
     }, 3200);
@@ -132,21 +140,21 @@ export default function RecentCases() {
     switch (elegibilidade) {
       case "PERMITIR":
         return {
-          label: "Aprovado",
+          label: isEn ? "Approved" : "Aprovado",
           badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200/60",
           icon: "check_circle",
           iconColor: "text-emerald-600",
         };
       case "TROCA":
         return {
-          label: "Troca",
+          label: isEn ? "Exchange" : "Troca",
           badgeClass: "bg-blue-50 text-blue-700 border-blue-200/60",
           icon: "sync_alt",
           iconColor: "text-blue-600",
         };
       case "RECUSAR":
         return {
-          label: "Recusado",
+          label: isEn ? "Refused" : "Recusado",
           badgeClass: "bg-rose-50 text-rose-700 border-rose-200/60",
           icon: "cancel",
           iconColor: "text-rose-600",
@@ -154,7 +162,7 @@ export default function RecentCases() {
       case "REVER":
       default:
         return {
-          label: "Revisão",
+          label: isEn ? "Review" : "Revisão",
           badgeClass: "bg-amber-50 text-amber-700 border-amber-200/60",
           icon: "warning",
           iconColor: "text-amber-600",
@@ -165,7 +173,7 @@ export default function RecentCases() {
   return (
     <>
       <section
-        aria-label="Últimos casos resolvidos"
+        aria-label={isEn ? "Recent resolved cases" : "Últimos casos resolvidos"}
         className="flex flex-col gap-4"
       >
         {/* Header and Filter Tabs */}
@@ -173,11 +181,13 @@ export default function RecentCases() {
           <div className="flex flex-col gap-0.5">
             <div className="flex items-center gap-2">
               <h2 className="font-sans text-lg sm:text-xl font-bold tracking-tight text-slate-900">
-                Últimos Casos Resolvidos
+                {isEn ? "Recent Resolved Cases" : "Últimos Casos Resolvidos"}
               </h2>
             </div>
             <p className="font-sans text-xs sm:text-sm text-slate-500">
-              Histórico unificado de deliberações periciais dos motores Drools e Prolog.
+              {isEn
+                ? "Unified deliberation audit history from Drools and Prolog engines."
+                : "Histórico unificado de deliberações periciais dos motores Drools e Prolog."}
             </p>
           </div>
 
@@ -186,35 +196,32 @@ export default function RecentCases() {
             <button
               type="button"
               onClick={() => handleFilterChange("TODOS")}
-              className={`px-3 py-1 rounded-md transition-colors cursor-pointer ${
-                filter === "TODOS"
+              className={`px-3 py-1 rounded-md transition-colors cursor-pointer ${filter === "TODOS"
                   ? "bg-white text-slate-900 font-semibold shadow-xs"
                   : "text-slate-600 hover:text-slate-900"
-              }`}
+                }`}
             >
-              Todos {totalGeral !== null ? `(${totalGeral})` : totalElementos > 0 && filter === "TODOS" ? `(${totalElementos})` : ""}
+              {isEn ? "All" : "Todos"} {totalGeral !== null ? `(${totalGeral})` : totalElementos > 0 && filter === "TODOS" ? `(${totalElementos})` : ""}
             </button>
             <button
               type="button"
               onClick={() => handleFilterChange("DEVOLUCOES")}
-              className={`px-3 py-1 rounded-md transition-colors cursor-pointer ${
-                filter === "DEVOLUCOES"
+              className={`px-3 py-1 rounded-md transition-colors cursor-pointer ${filter === "DEVOLUCOES"
                   ? "bg-white text-slate-900 font-semibold shadow-xs"
                   : "text-slate-600 hover:text-slate-900"
-              }`}
+                }`}
             >
-              Devoluções {filter === "DEVOLUCOES" ? `(${totalElementos})` : ""}
+              {isEn ? "Returns" : "Devoluções"} {filter === "DEVOLUCOES" ? `(${totalElementos})` : ""}
             </button>
             <button
               type="button"
               onClick={() => handleFilterChange("TROCAS")}
-              className={`px-3 py-1 rounded-md transition-colors cursor-pointer ${
-                filter === "TROCAS"
+              className={`px-3 py-1 rounded-md transition-colors cursor-pointer ${filter === "TROCAS"
                   ? "bg-white text-slate-900 font-semibold shadow-xs"
                   : "text-slate-600 hover:text-slate-900"
-              }`}
+                }`}
             >
-              Trocas {filter === "TROCAS" ? `(${totalElementos})` : ""}
+              {isEn ? "Exchanges" : "Trocas"} {filter === "TROCAS" ? `(${totalElementos})` : ""}
             </button>
           </div>
         </div>
@@ -246,7 +253,7 @@ export default function RecentCases() {
               onClick={fetchCases}
               className="px-3 py-1 rounded-md bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs cursor-pointer transition-colors shrink-0 shadow-xs"
             >
-              Tentar Novamente
+              {isEn ? "Try Again" : "Tentar Novamente"}
             </button>
           </div>
         )}
@@ -276,9 +283,8 @@ export default function RecentCases() {
         {/* Cases List */}
         {!error && cases.length > 0 && (
           <div
-            className={`bg-white border border-slate-200 rounded-xl divide-y divide-slate-100 shadow-xs overflow-hidden transition-opacity duration-150 ${
-              loading ? "opacity-60 pointer-events-none" : "opacity-100"
-            }`}
+            className={`bg-white border border-slate-200 rounded-xl divide-y divide-slate-100 shadow-xs overflow-hidden transition-opacity duration-150 ${loading ? "opacity-60 pointer-events-none" : "opacity-100"
+              }`}
           >
             {cases.map((item) => {
               const meta = getOutcomeTag(item.elegibilidade);
@@ -301,11 +307,10 @@ export default function RecentCases() {
                     <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2.5 min-w-0">
                       {/* Engine Badge */}
                       <span
-                        className={`font-mono tabular-nums px-1.5 py-0.5 rounded text-[10px] font-bold border self-start sm:self-auto shrink-0 ${
-                          isDrools
+                        className={`font-mono tabular-nums px-1.5 py-0.5 rounded text-[10px] font-bold border self-start sm:self-auto shrink-0 ${isDrools
                             ? "bg-indigo-50 text-indigo-700 border-indigo-200"
                             : "bg-emerald-50 text-emerald-700 border-emerald-200"
-                        }`}
+                          }`}
                       >
                         {isDrools ? "Drools" : "Prolog"}
                       </span>
@@ -337,12 +342,12 @@ export default function RecentCases() {
                           e.stopPropagation();
                           setComparingPedidoId(item.pedidoId);
                         }}
-                        title={`Confrontar Drools e Prolog para #${item.pedidoId}`}
-                        aria-label={`Comparar motores para #${item.pedidoId}`}
+                        title={isEn ? `Compare Drools and Prolog for #${item.pedidoId}` : `Confrontar Drools e Prolog para #${item.pedidoId}`}
+                        aria-label={isEn ? `Compare engines for #${item.pedidoId}` : `Comparar motores para #${item.pedidoId}`}
                         className="px-2.5 py-1 rounded-md bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
                       >
                         <span className="material-symbols-outlined text-[15px]">compare_arrows</span>
-                        <span className="hidden sm:inline">Comparar Motores</span>
+                        <span className="hidden sm:inline">{isEn ? "Compare Engines" : "Comparar Motores"}</span>
                       </button>
                     )}
 
@@ -353,7 +358,7 @@ export default function RecentCases() {
 
                     {/* Timestamp */}
                     <span className="font-sans text-xs text-slate-400 w-16 text-right hidden lg:inline">
-                      {formatRelativeTime(item.executadoEm)}
+                      {formatRelativeTime(item.executadoEm, locale)}
                     </span>
 
                     {/* Actions */}
@@ -364,8 +369,8 @@ export default function RecentCases() {
                           e.stopPropagation();
                           handlePrint(item);
                         }}
-                        title="Reimprimir Comprovativo"
-                        aria-label={`Reimprimir comprovativo #${item.pedidoId}`}
+                        title={isEn ? "Reprint Receipt" : "Reimprimir Comprovativo"}
+                        aria-label={isEn ? `Reprint receipt #${item.pedidoId}` : `Reimprimir comprovativo #${item.pedidoId}`}
                         className="p-1.5 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                       >
                         <span className="material-symbols-outlined text-[17px]">print</span>
@@ -388,12 +393,15 @@ export default function RecentCases() {
             {/* Left: Range and Items Per Page Selector */}
             <div className="flex items-center gap-3 text-slate-500 w-full sm:w-auto justify-between sm:justify-start">
               <span>
-                A mostrar <strong className="text-slate-900 font-semibold">{startItem}–{endItem}</strong> de{" "}
-                <strong className="text-slate-900 font-semibold">{totalElementos}</strong> casos
+                {isEn ? "Showing" : "A mostrar"}{" "}
+                <strong className="text-slate-900 font-semibold">{startItem}–{endItem}</strong>{" "}
+                {isEn ? "of" : "de"}{" "}
+                <strong className="text-slate-900 font-semibold">{totalElementos}</strong>{" "}
+                {isEn ? "cases" : "casos"}
               </span>
 
               <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
-                <span className="text-slate-400 hidden md:inline">Por pág:</span>
+                <span className="text-slate-400 hidden md:inline">{isEn ? "Per page:" : "Por pág:"}</span>
                 <div className="inline-flex rounded-lg bg-slate-100 p-0.5">
                   {[10, 20, 50].map((size) => (
                     <button
@@ -404,11 +412,10 @@ export default function RecentCases() {
                         setPageSize(size);
                         setPage(0);
                       }}
-                      className={`px-2 py-0.5 rounded-md font-medium transition-colors cursor-pointer ${
-                        pageSize === size
+                      className={`px-2 py-0.5 rounded-md font-medium transition-colors cursor-pointer ${pageSize === size
                           ? "bg-white text-slate-900 font-bold shadow-2xs"
                           : "text-slate-600 hover:text-slate-900"
-                      }`}
+                        }`}
                     >
                       {size}
                     </button>
@@ -418,14 +425,14 @@ export default function RecentCases() {
             </div>
 
             {/* Right: Navigation Controls */}
-            <nav aria-label="Paginação de casos" className="flex items-center gap-1">
+            <nav aria-label={isEn ? "Cases pagination" : "Paginação de casos"} className="flex items-center gap-1">
               {/* First Page */}
               <button
                 type="button"
                 onClick={() => setPage(0)}
                 disabled={page === 0 || loading}
-                title="Primeira página"
-                aria-label="Primeira página"
+                title={isEn ? "First page" : "Primeira página"}
+                aria-label={isEn ? "First page" : "Primeira página"}
                 className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px]">first_page</span>
@@ -436,8 +443,8 @@ export default function RecentCases() {
                 type="button"
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
                 disabled={page === 0 || loading}
-                title="Página anterior"
-                aria-label="Página anterior"
+                title={isEn ? "Previous page" : "Página anterior"}
+                aria-label={isEn ? "Previous page" : "Página anterior"}
                 className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px]">chevron_left</span>
@@ -445,7 +452,7 @@ export default function RecentCases() {
 
               {/* Mobile Page Indicator */}
               <span className="sm:hidden px-2 text-slate-600 font-medium">
-                Pág. <strong className="text-slate-900 font-bold">{page + 1}</strong> de {totalPaginas}
+                {isEn ? "Page" : "Pág."} <strong className="text-slate-900 font-bold">{page + 1}</strong> {isEn ? "of" : "de"} {totalPaginas}
               </span>
 
               {/* Desktop Page Numbers */}
@@ -466,12 +473,11 @@ export default function RecentCases() {
                       disabled={loading}
                       onClick={() => setPage(p - 1)}
                       aria-current={isCurrent ? "page" : undefined}
-                      aria-label={`Página ${p}`}
-                      className={`min-w-7 h-7 px-2 rounded-lg text-xs transition-colors cursor-pointer flex items-center justify-center ${
-                        isCurrent
+                      aria-label={isEn ? `Page ${p}` : `Página ${p}`}
+                      className={`min-w-7 h-7 px-2 rounded-lg text-xs transition-colors cursor-pointer flex items-center justify-center ${isCurrent
                           ? "bg-slate-900 text-white font-bold shadow-xs"
                           : "text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-medium"
-                      }`}
+                        }`}
                     >
                       {p}
                     </button>
@@ -484,8 +490,8 @@ export default function RecentCases() {
                 type="button"
                 onClick={() => setPage((p) => Math.min(totalPaginas - 1, p + 1))}
                 disabled={page >= totalPaginas - 1 || loading}
-                title="Página seguinte"
-                aria-label="Página seguinte"
+                title={isEn ? "Next page" : "Página seguinte"}
+                aria-label={isEn ? "Next page" : "Página seguinte"}
                 className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px]">chevron_right</span>
@@ -496,8 +502,8 @@ export default function RecentCases() {
                 type="button"
                 onClick={() => setPage(totalPaginas - 1)}
                 disabled={page >= totalPaginas - 1 || loading}
-                title="Última página"
-                aria-label="Última página"
+                title={isEn ? "Last page" : "Última página"}
+                aria-label={isEn ? "Last page" : "Última página"}
                 className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px]">last_page</span>
@@ -513,10 +519,12 @@ export default function RecentCases() {
               <span className="material-symbols-outlined text-[32px]">folder_open</span>
             </div>
             <h3 className="text-base sm:text-lg font-bold text-slate-900">
-              Nenhuma deliberação encontrada no histórico
+              {isEn ? "No deliberations found in history" : "Nenhuma deliberação encontrada no histórico"}
             </h3>
             <p className="text-xs sm:text-sm text-slate-500 max-w-md">
-              Ainda não existem registos persistidos correspondentes a este filtro. Pode semear as avaliações dos 10 cenários oficiais da Levi&apos;s de forma imediata.
+              {isEn
+                ? "No persisted records matching this filter yet. You can seed evaluations for Levi's 10 official benchmark scenarios immediately."
+                : "Ainda não existem registos persistidos correspondentes a este filtro. Pode semear as avaliações dos 10 cenários oficiais da Levi's de forma imediata."}
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3 mt-3">
               <button
@@ -528,13 +536,13 @@ export default function RecentCases() {
                 <span className="material-symbols-outlined text-[18px]">
                   {seeding ? "sync" : "cloud_download"}
                 </span>
-                <span>{seeding ? "A Semear Cenários..." : "Semear 10 Cenários Oficiais"}</span>
+                <span>{seeding ? (isEn ? "Seeding Scenarios..." : "A Semear Cenários...") : (isEn ? "Seed 10 Benchmark Scenarios" : "Semear 10 Cenários Oficiais")}</span>
               </button>
               <Link
                 href="/novo-atendimento"
                 className="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs border border-slate-200 transition-colors cursor-pointer"
               >
-                Novo Atendimento
+                {isEn ? "New Customer Service" : "Novo Atendimento"}
               </Link>
             </div>
           </div>
@@ -555,14 +563,13 @@ export default function RecentCases() {
               <div className="flex flex-col">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                    Auditoria Pericial • #{selectedCase.pedidoId}
+                    {isEn ? "Audit Log • #" : "Auditoria Pericial • #"}{selectedCase.pedidoId}
                   </span>
                   <span
-                    className={`font-mono tabular-nums px-2 py-0.5 rounded text-[10px] font-bold border ${
-                      selectedCase.motor === "DROOLS"
+                    className={`font-mono tabular-nums px-2 py-0.5 rounded text-[10px] font-bold border ${selectedCase.motor === "DROOLS"
                         ? "bg-indigo-50 text-indigo-700 border-indigo-200"
                         : "bg-emerald-50 text-emerald-700 border-emerald-200"
-                    }`}
+                      }`}
                   >
                     {selectedCase.motor}
                   </span>
@@ -578,7 +585,7 @@ export default function RecentCases() {
               <button
                 type="button"
                 onClick={() => setSelectedCase(null)}
-                aria-label="Fechar modal"
+                aria-label={isEn ? "Close modal" : "Fechar modal"}
                 className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center cursor-pointer transition-colors"
               >
                 <span className="material-symbols-outlined text-[20px]">close</span>
@@ -587,15 +594,14 @@ export default function RecentCases() {
 
             {/* Verdict Badge & Amount */}
             <div
-              className={`p-3.5 rounded-xl flex items-center justify-between border ${
-                selectedCase.elegibilidade === "PERMITIR"
+              className={`p-3.5 rounded-xl flex items-center justify-between border ${selectedCase.elegibilidade === "PERMITIR"
                   ? "bg-emerald-50 border-emerald-200 text-emerald-950"
                   : selectedCase.elegibilidade === "TROCA"
-                  ? "bg-blue-50 border-blue-200 text-blue-950"
-                  : selectedCase.elegibilidade === "RECUSAR"
-                  ? "bg-rose-50 border-rose-200 text-rose-950"
-                  : "bg-amber-50 border-amber-200 text-amber-950"
-              }`}
+                    ? "bg-blue-50 border-blue-200 text-blue-950"
+                    : selectedCase.elegibilidade === "RECUSAR"
+                      ? "bg-rose-50 border-rose-200 text-rose-950"
+                      : "bg-amber-50 border-amber-200 text-amber-950"
+                }`}
             >
               <div className="flex items-center gap-3 font-sans">
                 <span className="material-symbols-outlined text-[24px]">
@@ -603,10 +609,10 @@ export default function RecentCases() {
                 </span>
                 <div>
                   <p className="font-bold text-sm">
-                    Deliberação: {getOutcomeTag(selectedCase.elegibilidade).label} ({selectedCase.elegibilidade})
+                    {isEn ? "Deliberation:" : "Deliberação:"} {getOutcomeTag(selectedCase.elegibilidade).label} ({selectedCase.elegibilidade})
                   </p>
                   <p className="text-xs opacity-75">
-                    Processado pelo motor <span className="font-mono">{selectedCase.motor}</span> em <span className="font-mono tabular-nums">{selectedCase.duracaoMs} ms</span>
+                    {isEn ? "Processed by" : "Processado pelo motor"} <span className="font-mono">{selectedCase.motor}</span> {isEn ? "in" : "em"} <span className="font-mono tabular-nums">{selectedCase.duracaoMs} ms</span>
                   </p>
                 </div>
               </div>
@@ -619,21 +625,21 @@ export default function RecentCases() {
             {/* Summary Details */}
             <div className="grid grid-cols-2 gap-2 p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs font-sans">
               <div>
-                <span className="text-[10px] text-slate-400 font-bold uppercase">Transação</span>
+                <span className="text-[10px] text-slate-400 font-bold uppercase">{isEn ? "Transaction" : "Transação"}</span>
                 <p className="font-semibold text-slate-800">{selectedCase.tipoTransacao || "N/A"}</p>
               </div>
               <div>
-                <span className="text-[10px] text-slate-400 font-bold uppercase">Meio Reembolso</span>
+                <span className="text-[10px] text-slate-400 font-bold uppercase">{isEn ? "Refund Tender" : "Meio Reembolso"}</span>
                 <p className="font-semibold text-slate-800 truncate" title={selectedCase.meioReembolso || "N/A"}>
                   {selectedCase.meioReembolso || "N/A"}
                 </p>
               </div>
               <div className="mt-1">
-                <span className="text-[10px] text-slate-400 font-bold uppercase">Nível Aprovação</span>
-                <p className="font-semibold text-slate-800">{selectedCase.nivelAprovacao || "Balcão"}</p>
+                <span className="text-[10px] text-slate-400 font-bold uppercase">{isEn ? "Approval Level" : "Nível Aprovação"}</span>
+                <p className="font-semibold text-slate-800">{selectedCase.nivelAprovacao || (isEn ? "Countertop" : "Balcão")}</p>
               </div>
               <div className="mt-1">
-                <span className="text-[10px] text-slate-400 font-bold uppercase">Data de Registo</span>
+                <span className="text-[10px] text-slate-400 font-bold uppercase">{isEn ? "Recorded At" : "Data de Registo"}</span>
                 <p className="font-semibold text-slate-800 font-mono tabular-nums">
                   {new Date(selectedCase.executadoEm).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </p>
@@ -644,12 +650,14 @@ export default function RecentCases() {
             <div className="flex flex-col gap-2 font-sans">
               <h5 className="font-sans text-xs uppercase tracking-wider text-slate-500 font-bold">
                 {selectedCase.motor === "DROOLS"
-                  ? "Regras DRL Acionadas"
-                  : "Cláusulas Lógicas Deduzidas"}
+                  ? isEn ? "Triggered DRL Rules" : "Regras DRL Acionadas"
+                  : isEn ? "Deduced Logical Clauses" : "Cláusulas Lógicas Deduzidas"}
               </h5>
               <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-1">
                 {selectedCase.regrasDisparadas.length === 0 ? (
-                  <p className="text-xs text-slate-400 italic">Nenhuma regra específica registada.</p>
+                  <p className="text-xs text-slate-400 italic">
+                    {isEn ? "No specific rules logged." : "Nenhuma regra específica registada."}
+                  </p>
                 ) : (
                   selectedCase.regrasDisparadas.map((r, idx) => (
                     <div
@@ -682,10 +690,10 @@ export default function RecentCases() {
                   className="px-3 py-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs border border-indigo-200 flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[16px]">compare_arrows</span>
-                  <span>Confrontar com {selectedCase.motor === "DROOLS" ? "Prolog" : "Drools"}</span>
+                  <span>{isEn ? `Compare with ${selectedCase.motor === "DROOLS" ? "Prolog" : "Drools"}` : `Confrontar com ${selectedCase.motor === "DROOLS" ? "Prolog" : "Drools"}`}</span>
                 </button>
               ) : (
-                <span className="text-xs text-slate-400 italic">Motor único</span>
+                <span className="text-xs text-slate-400 italic">{isEn ? "Single engine" : "Motor único"}</span>
               )}
 
               <div className="flex items-center gap-2">
@@ -698,7 +706,7 @@ export default function RecentCases() {
                   className="px-3 py-2 rounded-lg bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs border border-slate-200 flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[16px]">print</span>
-                  <span>Imprimir</span>
+                  <span>{isEn ? "Print" : "Imprimir"}</span>
                 </button>
 
                 <button
@@ -706,7 +714,7 @@ export default function RecentCases() {
                   onClick={() => setSelectedCase(null)}
                   className="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs transition-colors cursor-pointer"
                 >
-                  Fechar
+                  {isEn ? "Close" : "Fechar"}
                 </button>
               </div>
             </div>

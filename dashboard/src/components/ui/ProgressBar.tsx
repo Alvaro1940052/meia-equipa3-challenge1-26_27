@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useLocale } from "@/contexts/LocaleContext";
 
 export interface ProgressBarProps {
   totalSteps: number;
@@ -15,16 +16,27 @@ export default function ProgressBar({
   nextLabel,
   className = "",
 }: ProgressBarProps) {
+  const { locale } = useLocale();
+  const isEn = locale === "en";
+
   const steps = Array.from({ length: totalSteps }, (_, i) => i + 1);
 
   return (
     <div
       role="progressbar"
-      aria-label={`Progresso do atendimento: Passo ${currentStep} de ${totalSteps}`}
+      aria-label={
+        isEn
+          ? `Service progress: Step ${currentStep} of ${totalSteps}`
+          : `Progresso do atendimento: Passo ${currentStep} de ${totalSteps}`
+      }
       aria-valuenow={currentStep}
       aria-valuemin={1}
       aria-valuemax={totalSteps}
-      aria-valuetext={`Passo ${currentStep} de ${totalSteps}${nextLabel ? ` - A seguir: ${nextLabel}` : ""}`}
+      aria-valuetext={
+        isEn
+          ? `Step ${currentStep} of ${totalSteps}${nextLabel ? ` - Next: ${nextLabel}` : ""}`
+          : `Passo ${currentStep} de ${totalSteps}${nextLabel ? ` - A seguir: ${nextLabel}` : ""}`
+      }
       className={`w-full flex flex-col gap-2 ${className}`}
     >
       {/* Sleek Modern Segmented Progress Track */}
@@ -49,7 +61,7 @@ export default function ProgressBar({
       {/* Step info text */}
       <div className="flex justify-between items-center text-xs text-slate-500 font-sans font-medium px-0.5 select-none">
         <span className="tabular-nums">
-          Passo {currentStep} de {totalSteps}
+          {isEn ? `Step ${currentStep} of ${totalSteps}` : `Passo ${currentStep} de ${totalSteps}`}
         </span>
         {nextLabel && (
           <span className="font-sans text-slate-700 font-semibold">

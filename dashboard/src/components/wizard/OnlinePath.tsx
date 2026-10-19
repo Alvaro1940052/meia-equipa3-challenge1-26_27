@@ -280,18 +280,16 @@ export default function OnlinePath() {
                   setField("onlineOrderFound", true);
                   setField("proofOfPurchase", "CONFIRMACAO_ONLINE");
                 }}
-                className={`relative rounded-2xl p-4 sm:p-5 flex items-start gap-3.5 text-left transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-primary ${
-                  state.onlineOrderFound
+                className={`relative rounded-2xl p-4 sm:p-5 flex items-start gap-3.5 text-left transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-primary ${state.onlineOrderFound
                     ? "bg-emerald-50/70 border-2 border-primary shadow-sm translate-y-[-1px]"
                     : "bg-white border-2 border-surface-container-highest/80 hover:border-outline-variant opacity-70 hover:opacity-100"
-                }`}
+                  }`}
               >
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
-                    state.onlineOrderFound
+                  className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${state.onlineOrderFound
                       ? "bg-primary text-white shadow-xs"
                       : "border-2 border-outline-variant bg-white"
-                  }`}
+                    }`}
                 >
                   {state.onlineOrderFound && (
                     <span className="material-symbols-outlined text-[16px] font-bold">check</span>
@@ -316,18 +314,16 @@ export default function OnlinePath() {
                   setField("onlineOrderFound", false);
                   setField("proofOfPurchase", "SEM_COMPROVATIVO");
                 }}
-                className={`relative rounded-2xl p-4 sm:p-5 flex items-start gap-3.5 text-left transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-primary ${
-                  !state.onlineOrderFound
+                className={`relative rounded-2xl p-4 sm:p-5 flex items-start gap-3.5 text-left transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-primary ${!state.onlineOrderFound
                     ? "bg-amber-50/70 border-2 border-amber-500 shadow-sm translate-y-[-1px]"
                     : "bg-white border-2 border-surface-container-highest/80 hover:border-outline-variant opacity-70 hover:opacity-100"
-                }`}
+                  }`}
               >
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
-                    !state.onlineOrderFound
+                  className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${!state.onlineOrderFound
                       ? "bg-amber-600 text-white shadow-xs"
                       : "border-2 border-outline-variant bg-white"
-                  }`}
+                    }`}
                 >
                   {!state.onlineOrderFound && (
                     <span className="material-symbols-outlined text-[16px] font-bold">check</span>
@@ -368,10 +364,10 @@ export default function OnlinePath() {
                 {state.onlinePaymentMethod === "CC"
                   ? "Detetado: CC Tokenizado"
                   : state.onlinePaymentMethod === "BNPL"
-                  ? "Detetado: Afterpay (BNPL)"
-                  : state.onlinePaymentMethod === "PAYPAL"
-                  ? "Detetado: PayPal / Venmo"
-                  : "Detetado: Carteira Digital"}
+                    ? "Detetado: Afterpay (BNPL)"
+                    : state.onlinePaymentMethod === "PAYPAL"
+                      ? "Detetado: PayPal / Venmo"
+                      : "Detetado: Carteira Digital"}
               </span>
             </span>
           </div>
@@ -405,11 +401,10 @@ export default function OnlinePath() {
                 role="radio"
                 aria-checked={state.onlinePaymentMethod === "CC"}
                 onClick={() => setField("onlinePaymentMethod", "CC")}
-                className={`relative rounded-2xl p-4 flex flex-col gap-2.5 text-left transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-primary ${
-                  state.onlinePaymentMethod === "CC"
+                className={`relative rounded-2xl p-4 flex flex-col gap-2.5 text-left transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-primary ${state.onlinePaymentMethod === "CC"
                     ? "bg-emerald-50/70 border-2 border-primary shadow-sm"
                     : "bg-white border-2 border-surface-container-highest/80 hover:border-outline-variant opacity-80 hover:opacity-100"
-                }`}
+                  }`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
@@ -421,11 +416,10 @@ export default function OnlinePath() {
                     </span>
                   </div>
                   <div
-                    className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${
-                      state.onlinePaymentMethod === "CC"
+                    className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${state.onlinePaymentMethod === "CC"
                         ? "bg-primary text-white"
                         : "border-2 border-outline-variant"
-                    }`}
+                      }`}
                   >
                     {state.onlinePaymentMethod === "CC" && (
                       <span className="material-symbols-outlined text-[14px]">check</span>
@@ -448,11 +442,10 @@ export default function OnlinePath() {
                 role="radio"
                 aria-checked={state.onlinePaymentMethod === "BNPL"}
                 onClick={() => setField("onlinePaymentMethod", "BNPL")}
-                className={`relative rounded-2xl p-4 flex flex-col gap-2.5 text-left transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-primary ${
-                  state.onlinePaymentMethod === "BNPL"
+                className={`relative rounded-2xl p-4 flex flex-col gap-2.5 text-left transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-primary ${state.onlinePaymentMethod === "BNPL"
                     ? "bg-amber-50/80 border-2 border-amber-500 shadow-sm"
                     : "bg-white border-2 border-surface-container-highest/80 hover:border-amber-400 opacity-80 hover:opacity-100"
-                }`}
+                  }`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
@@ -478,11 +471,10 @@ export default function OnlinePath() {
                 role="radio"
                 aria-checked={state.onlinePaymentMethod === "PAYPAL"}
                 onClick={() => setField("onlinePaymentMethod", "PAYPAL")}
-                className={`relative rounded-2xl p-4 flex flex-col gap-2.5 text-left transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-primary ${
-                  state.onlinePaymentMethod === "PAYPAL"
+                className={`relative rounded-2xl p-4 flex flex-col gap-2.5 text-left transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-primary ${state.onlinePaymentMethod === "PAYPAL"
                     ? "bg-blue-50/80 border-2 border-secondary shadow-sm"
                     : "bg-white border-2 border-surface-container-highest/80 hover:border-outline-variant opacity-80 hover:opacity-100"
-                }`}
+                  }`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
@@ -494,11 +486,10 @@ export default function OnlinePath() {
                     </span>
                   </div>
                   <div
-                    className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${
-                      state.onlinePaymentMethod === "PAYPAL"
+                    className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${state.onlinePaymentMethod === "PAYPAL"
                         ? "bg-secondary text-white"
                         : "border-2 border-outline-variant"
-                    }`}
+                      }`}
                   >
                     {state.onlinePaymentMethod === "PAYPAL" && (
                       <span className="material-symbols-outlined text-[14px]">check</span>
@@ -516,11 +507,10 @@ export default function OnlinePath() {
                 role="radio"
                 aria-checked={state.onlinePaymentMethod === "WALLETS"}
                 onClick={() => setField("onlinePaymentMethod", "WALLETS")}
-                className={`relative rounded-2xl p-4 flex flex-col gap-2.5 text-left transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-primary ${
-                  state.onlinePaymentMethod === "WALLETS"
+                className={`relative rounded-2xl p-4 flex flex-col gap-2.5 text-left transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-primary ${state.onlinePaymentMethod === "WALLETS"
                     ? "bg-emerald-50/70 border-2 border-primary shadow-sm"
                     : "bg-white border-2 border-surface-container-highest/80 hover:border-outline-variant opacity-80 hover:opacity-100"
-                }`}
+                  }`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
@@ -532,11 +522,10 @@ export default function OnlinePath() {
                     </span>
                   </div>
                   <div
-                    className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${
-                      state.onlinePaymentMethod === "WALLETS"
+                    className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${state.onlinePaymentMethod === "WALLETS"
                         ? "bg-primary text-white"
                         : "border-2 border-outline-variant"
-                    }`}
+                      }`}
                   >
                     {state.onlinePaymentMethod === "WALLETS" && (
                       <span className="material-symbols-outlined text-[14px]">check</span>
@@ -589,18 +578,16 @@ export default function OnlinePath() {
                   setField("onlineDaysWindow", "UNDER_30");
                   setField("daysSincePurchase", 14);
                 }}
-                className={`relative rounded-2xl p-4 sm:p-5 flex items-start gap-3.5 text-left transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-primary ${
-                  state.onlineDaysWindow === "UNDER_30"
+                className={`relative rounded-2xl p-4 sm:p-5 flex items-start gap-3.5 text-left transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-primary ${state.onlineDaysWindow === "UNDER_30"
                     ? "bg-emerald-50/70 border-2 border-primary shadow-sm"
                     : "bg-white border-2 border-surface-container-highest/80 hover:border-outline-variant opacity-70 hover:opacity-100"
-                }`}
+                  }`}
               >
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
-                    state.onlineDaysWindow === "UNDER_30"
+                  className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${state.onlineDaysWindow === "UNDER_30"
                       ? "bg-primary text-white"
                       : "border-2 border-outline-variant bg-white"
-                  }`}
+                    }`}
                 >
                   {state.onlineDaysWindow === "UNDER_30" && (
                     <span className="material-symbols-outlined text-[16px] font-bold">check</span>
@@ -625,18 +612,16 @@ export default function OnlinePath() {
                   setField("onlineDaysWindow", "OVER_30");
                   setField("daysSincePurchase", 45);
                 }}
-                className={`relative rounded-2xl p-4 sm:p-5 flex items-start gap-3.5 text-left transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-primary ${
-                  state.onlineDaysWindow === "OVER_30"
+                className={`relative rounded-2xl p-4 sm:p-5 flex items-start gap-3.5 text-left transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-primary ${state.onlineDaysWindow === "OVER_30"
                     ? "bg-amber-50/70 border-2 border-amber-500 shadow-sm"
                     : "bg-white border-2 border-surface-container-highest/80 hover:border-outline-variant opacity-70 hover:opacity-100"
-                }`}
+                  }`}
               >
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
-                    state.onlineDaysWindow === "OVER_30"
+                  className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${state.onlineDaysWindow === "OVER_30"
                       ? "bg-amber-600 text-white"
                       : "border-2 border-outline-variant bg-white"
-                  }`}
+                    }`}
                 >
                   {state.onlineDaysWindow === "OVER_30" && (
                     <span className="material-symbols-outlined text-[16px] font-bold">check</span>
@@ -672,11 +657,10 @@ export default function OnlinePath() {
                   setField("requestType", "TROCA");
                   setField("exchangeOption", "MESMO_MODELO");
                 }}
-                className={`font-sans font-semibold text-xs py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                  state.onlineInStoreExchange
+                className={`font-sans font-semibold text-xs py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${state.onlineInStoreExchange
                     ? "bg-blue-100/80 border-2 border-secondary text-secondary shadow-xs font-bold"
                     : "bg-white border-2 border-surface-container-highest hover:border-outline-variant text-on-surface-variant opacity-80 hover:opacity-100"
-                }`}
+                  }`}
               >
                 <span className="material-symbols-outlined text-[18px]">cached</span>
                 <span>Sim, trocar tamanho/cor no balcão</span>
@@ -689,11 +673,10 @@ export default function OnlinePath() {
                   setField("requestType", "DEVOLUCAO");
                   setField("exchangeOption", "NENHUMA");
                 }}
-                className={`font-sans font-semibold text-xs py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                  !state.onlineInStoreExchange
+                className={`font-sans font-semibold text-xs py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer ${!state.onlineInStoreExchange
                     ? "bg-emerald-100/70 border-2 border-primary text-primary shadow-xs font-bold"
                     : "bg-white border-2 border-surface-container-highest hover:border-outline-variant text-on-surface-variant opacity-80 hover:opacity-100"
-                }`}
+                  }`}
               >
                 <span className="material-symbols-outlined text-[18px]">
                   assignment_returned

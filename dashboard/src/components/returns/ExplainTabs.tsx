@@ -5,12 +5,15 @@ import { ApiClientError, api } from "@/client/api";
 import ErrorBanner from "@/components/shared/ErrorBanner";
 import {
   ELIGIBILITY,
-  WHAT_IF_PRESETS,
+  getWhatIfPresets,
   cause,
   cleanRuleCodes,
   label,
   moduleLabel,
 } from "@/config/returnsLabels";
+import { translateRuleOutput } from "@/config/ruleTranslations";
+import { useLocale } from "@/contexts/LocaleContext";
+import type { Locale } from "@/contexts/LocaleContext";
 import type {
   CondicaoDto,
   DadoEmFaltaDto,
@@ -23,21 +26,42 @@ import type {
 } from "@/types/returns";
 
 const ExplainBaseContext = createContext<string>("/api/returns");
-const LOCALE = "locale=pt-PT";
 
 export type TabId = "how" | "whynot" | "whatif" | "missing";
 
-const TABS: { id: TabId; label: string; icon: string }[] = [
-  { id: "how", label: "Como Decidiu?", icon: "route" },
-  { id: "whynot", label: "Porque Não...?", icon: "help_outline" },
-  { id: "whatif", label: "Simulação E Se...", icon: "science" },
-  { id: "missing", label: "Factos e Validações", icon: "fact_check" },
-];
+function getTabs(locale: Locale): { id: TabId; label: string; icon: string }[] {
+  return [
+    {
+      id: "how",
+      label: locale === "en" ? "How It Decided" : "Como Decidiu?",
+      icon: "route",
+    },
+    {
+      id: "whynot",
+      label: locale === "en" ? "Why Not...?" : "Porque Não...?",
+      icon: "help_outline",
+    },
+    {
+      id: "whatif",
+      label: locale === "en" ? "What-If Simulation" : "Simulação E Se...",
+      icon: "science",
+    },
+    {
+      id: "missing",
+      label: locale === "en" ? "Facts & Validations" : "Factos e Validações",
+      icon: "fact_check",
+    },
+  ];
+}
 
-const messageOf = (err: unknown) =>
-  err instanceof ApiClientError ? err.message : "Não foi possível obter a resposta do motor.";
+const messageOf = (err: unknown, locale: Locale) =>
+  err instanceof ApiClientError
+    ? err.message
+    : locale === "en"
+    ? "Could not obtain response from inference engine."
+    : "Não foi possível obter a resposta do motor.";
 
-function useRemote<T>(load: () => Promise<T>) {
+function useRemote<T>(load: () => Promise<T>, locale: Locale) {
   const [settled, setSettled] = useState<{
     source: () => Promise<T>;
     data: T | null;
@@ -49,11 +73,11 @@ function useRemote<T>(load: () => Promise<T>) {
     let cancelled = false;
     load()
       .then((data) => !cancelled && setSettled({ source: load, data, error: null }))
-      .catch((err) => !cancelled && setSettled({ source: load, data: null, error: messageOf(err) }));
+      .catch((err) => !cancelled && setSettled({ source: load, data: null, error: messageOf(err, locale) }));
     return () => {
       cancelled = true;
     };
-  }, [load, attempt]);
+  }, [load, attempt, locale]);
 
   const current = settled?.source === load ? settled : null;
   const retry = useCallback(() => {
@@ -73,67 +97,126 @@ function Status({
   loading,
   error,
   retry,
+  locale,
 }: {
   loading: boolean;
   error: string | null;
   retry: () => void;
+  locale: Locale;
 }) {
   if (error) return <ErrorBanner message={error} onRetry={retry} />;
   if (loading)
     return (
       <div className="flex items-center gap-2.5 p-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-xs sm:text-sm font-medium animate-pulse">
         <span className="material-symbols-outlined text-emerald-600 text-[20px] animate-spin">sync</span>
-        <span>A consultar o motor de inferência pericial...</span>
+        <span>
+          {locale === "en"
+            ? "Querying expert inference engine..."
+            : "A consultar o motor de inferência pericial..."}
+        </span>
       </div>
     );
   return null;
 }
 
-function Conditions({ items }: { items: CondicaoDto[] }) {
+function humanizeConditionName(name: string, locale: Locale): string {
+  if (locale === "pt") return name;
+  const lower = name.toLowerCase();
+  if (lower.includes("colaborador_autorizado") || lower.includes("colaboradorautorizado")) {
+    return "Authorized associate credentials";
+  }
+  if (lower.includes("sessao_pos_propria") || lower.includes("sessaopospropria")) {
+    return "Dedicated POS terminal session";
+  }
+  if (lower.includes("sku_reconhecido") || lower.includes("skureconhecido")) {
+    return "Recognized POS SKU";
+  }
+  if (lower.includes("marca")) {
+    return "Allowed brand (Levi's)";
+  }
+  if (lower.includes("dias_desde_compra") || lower.includes("diasdesdecompra")) {
+    return "Days since purchase <= 30";
+  }
+  if (lower.includes("comprovativo")) {
+    return "Valid proof of purchase";
+  }
+  if (lower.includes("estado_produto") || lower.includes("estadoproduto") || lower.includes("condicaouso")) {
+    return "Physical condition unworn with tags";
+  }
+  if (lower.includes("personalizado") || lower.includes("embainhado")) {
+    return "Garment not altered or hemmed";
+  }
+  if (lower.includes("defeito_fabrico") || lower.includes("defeitofabrico")) {
+    return "Manufacturing defect verified";
+  }
+  if (lower.includes("canal_compra") || lower.includes("canalcompra")) {
+    return "Original purchase channel supported";
+  }
+  return name;
+}
+
+function Conditions({ items, locale }: { items: CondicaoDto[]; locale: Locale }) {
   if (items.length === 0) {
     return (
       <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 text-xs text-slate-500 italic flex items-center gap-2 mt-1">
         <span className="material-symbols-outlined text-[16px] text-slate-400 shrink-0">info</span>
-        <span>As condições estruturais desta regra não foram atingidas no contexto deste pedido.</span>
+        <span>
+          {locale === "en"
+            ? "Structural conditions for this rule were not met in this request context."
+            : "As condições estruturais desta regra não foram atingidas no contexto deste pedido."}
+        </span>
       </div>
     );
   }
 
   return (
     <ul className="flex flex-col gap-2 mt-2">
-      {items.map((item, index) => (
-        <li
-          key={index}
-          className={`flex items-start gap-2.5 p-3 rounded-xl text-xs transition-all ${
-            item.cumprida
-              ? "bg-emerald-50/70 border border-emerald-200/80 text-emerald-950"
-              : "bg-rose-50/70 border border-rose-200/80 text-rose-950"
-          }`}
-        >
-          <span
-            className={`material-symbols-outlined text-[18px] shrink-0 mt-0.5 ${
-              item.cumprida ? "text-emerald-600" : "text-rose-500"
+      {items.map((item, index) => {
+        const conditionTitle = humanizeConditionName(item.nome || item.descricao || "Critério de validação", locale);
+        const conditionDesc = item.descricao && item.descricao !== item.nome ? humanizeConditionName(item.descricao, locale) : null;
+        const displayValue = item.valor != null
+          ? (String(item.valor) === "true"
+              ? (locale === "en" ? "Yes" : "Sim")
+              : String(item.valor) === "false"
+              ? (locale === "en" ? "No" : "Não")
+              : label(item.valor, locale))
+          : null;
+
+        return (
+          <li
+            key={index}
+            className={`flex items-start gap-2.5 p-3 rounded-xl text-xs transition-all ${
+              item.cumprida
+                ? "bg-emerald-50/70 border border-emerald-200/80 text-emerald-950"
+                : "bg-rose-50/70 border border-rose-200/80 text-rose-950"
             }`}
           >
-            {item.cumprida ? "check_circle" : "cancel"}
-          </span>
-          <div className="flex flex-col flex-1 min-w-0">
-            <span className="font-semibold text-slate-900 leading-snug">
-              {item.nome || item.descricao || "Critério de validação"}
+            <span
+              className={`material-symbols-outlined text-[18px] shrink-0 mt-0.5 ${
+                item.cumprida ? "text-emerald-600" : "text-rose-500"
+              }`}
+            >
+              {item.cumprida ? "check_circle" : "cancel"}
             </span>
-            {item.descricao && item.descricao !== item.nome && (
-              <span className="text-[11px] text-slate-600 mt-0.5">
-                {item.descricao}
+            <div className="flex flex-col flex-1 min-w-0">
+              <span className="font-semibold text-slate-900 leading-snug">
+                {conditionTitle}
               </span>
-            )}
-            {item.valor && (
-              <span className="text-[11px] text-slate-500 font-sans mt-0.5">
-                Valor apurado no pedido: <strong className="text-slate-800 tabular-nums">{item.valor}</strong>
-              </span>
-            )}
-          </div>
-        </li>
-      ))}
+              {conditionDesc && (
+                <span className="text-[11px] text-slate-600 mt-0.5">
+                  {conditionDesc}
+                </span>
+              )}
+              {displayValue && (
+                <span className="text-[11px] text-slate-500 font-sans mt-0.5">
+                  {locale === "en" ? "Assessed request value:" : "Valor apurado no pedido:"}{" "}
+                  <strong className="text-slate-800 tabular-nums">{displayValue}</strong>
+                </span>
+              )}
+            </div>
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -141,30 +224,40 @@ function Conditions({ items }: { items: CondicaoDto[] }) {
 /** 1. Aba Como Decidiu (como/1) */
 function HowTab({ evaluationId }: { evaluationId: string }) {
   const base = useContext(ExplainBaseContext);
-  const load = useCallback(
-    () => api<ExplicacaoComoResponse>(`${base}/avaliacoes/${evaluationId}/explicacoes/como?${LOCALE}`),
-    [base, evaluationId]
-  );
-  const { data, error, loading, retry } = useRemote(load);
+  const { locale } = useLocale();
+  const apiLocale = locale === "en" ? "locale=en" : "locale=pt-PT";
 
-  // Determinar a regra terminal para o banner de conclusão
+  const load = useCallback(
+    () => api<ExplicacaoComoResponse>(`${base}/avaliacoes/${evaluationId}/explicacoes/como?${apiLocale}`),
+    [base, evaluationId, apiLocale]
+  );
+  const { data, error, loading, retry } = useRemote(load, locale);
+
   const lastStep = data?.passos && data.passos.length > 0 ? data.passos[data.passos.length - 1] : null;
-  const conclusionText = lastStep
-    ? `Decisão estabelecida pela Regra [${lastStep.codigoRegra ?? "NORM"}] — ${cleanRuleCodes(lastStep.nomeRegra || lastStep.mensagem || "Decisão terminal")}`
+  const translatedLastStep = lastStep ? translateRuleOutput(lastStep.codigoRegra, lastStep.nomeRegra, lastStep.mensagem, locale) : null;
+
+  const conclusionText = translatedLastStep
+    ? (locale === "en"
+        ? `Decision determined by Rule [${translatedLastStep.code}] — ${translatedLastStep.title}`
+        : `Decisão estabelecida pela Regra [${translatedLastStep.code}] — ${translatedLastStep.title}`)
     : data?.paragem
     ? cleanRuleCodes(data.paragem)
+    : locale === "en"
+    ? "Expert decision established"
     : "Decisão pericial estabelecida";
 
   return (
     <div className="flex flex-col gap-4 text-left">
-      <Status loading={loading} error={error} retry={retry} />
+      <Status loading={loading} error={error} retry={retry} locale={locale} />
       {data && (
         <>
-          {/* Banner de Conclusão Elegante e Minimalista */}
+          {/* Banner de Conclusão */}
           <div className="font-sans p-3.5 sm:p-4 rounded-xl bg-emerald-50/70 border border-emerald-200/80 text-emerald-950 text-xs sm:text-sm font-medium flex items-center gap-2.5 shadow-2xs">
             <span className="material-symbols-outlined text-emerald-600 text-[20px] shrink-0">task_alt</span>
             <div className="flex flex-wrap items-center gap-1.5 min-w-0">
-              <strong className="text-emerald-900 font-bold whitespace-nowrap">Cadeia Dedutiva Concluída:</strong>
+              <strong className="text-emerald-900 font-bold whitespace-nowrap">
+                {locale === "en" ? "Deductive Chain Completed:" : "Cadeia Dedutiva Concluída:"}
+              </strong>
               <span className="text-emerald-800">{conclusionText}</span>
             </div>
           </div>
@@ -174,7 +267,9 @@ function HowTab({ evaluationId }: { evaluationId: string }) {
             <div className="font-sans p-4 rounded-xl bg-slate-50 border border-slate-200/80 text-slate-700 text-xs sm:text-sm leading-relaxed flex items-start gap-2.5">
               <span className="material-symbols-outlined text-slate-400 text-[18px] shrink-0 mt-0.5">account_tree</span>
               <div className="flex flex-col gap-0.5">
-                <strong className="font-sans text-slate-900 block">Resumo do Raciocínio Normativo:</strong>
+                <strong className="font-sans text-slate-900 block">
+                  {locale === "en" ? "Normative Reasoning Summary:" : "Resumo do Raciocínio Normativo:"}
+                </strong>
                 <span>{cleanRuleCodes(data.resumo)}</span>
               </div>
             </div>
@@ -183,9 +278,11 @@ function HowTab({ evaluationId }: { evaluationId: string }) {
           {/* Linha Temporal de Regras Disparadas */}
           <div className="flex flex-col gap-3 relative before:absolute before:top-4 before:bottom-4 before:left-5 before:w-0.5 before:bg-slate-200 before:z-0">
             {data.passos.map((step) => {
-              const ruleCode = step.codigoRegra || (step.nomeRegra?.match(/^[A-Z]{2,4}-\d{3,4}/)?.[0] ?? null);
-              const ruleTitle = cleanRuleCodes(step.nomeRegra) || step.nomeRegra || moduleLabel(step.modulo);
-              const message = cleanRuleCodes(step.mensagem);
+              const translated = translateRuleOutput(step.codigoRegra, step.nomeRegra, step.mensagem, locale);
+              const ruleCode = translated.code;
+              const ruleTitle = translated.title;
+              const message = translated.message;
+
               const isApproved = step.resultado === "PERMITIR";
               const isRejected = step.resultado === "RECUSAR";
               const isReview = step.resultado === "REVER";
@@ -195,7 +292,6 @@ function HowTab({ evaluationId }: { evaluationId: string }) {
                   key={step.ordem}
                   className="p-4 bg-white border border-slate-200 rounded-xl shadow-2xs relative z-10 ml-0 sm:ml-2 flex items-start gap-3.5 hover:border-slate-300 transition-all"
                 >
-                  {/* Número de Ordem */}
                   <div
                     className={`font-mono tabular-nums w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 shadow-2xs ${
                       isApproved
@@ -212,7 +308,6 @@ function HowTab({ evaluationId }: { evaluationId: string }) {
 
                   <div className="flex flex-col flex-1 gap-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap justify-between">
-                      {/* Código e Título da Regra */}
                       <div className="flex items-center gap-2 flex-wrap min-w-0">
                         {ruleCode && (
                           <span className="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200/90 shrink-0">
@@ -224,11 +319,10 @@ function HowTab({ evaluationId }: { evaluationId: string }) {
                         </span>
                       </div>
 
-                      {/* Badges de Módulo e Desfecho */}
                       <div className="flex items-center gap-1.5 flex-wrap font-sans">
                         {step.modulo && (
                           <span className="px-2 py-0.5 rounded-md bg-slate-100 text-[10px] font-semibold text-slate-600 border border-slate-200/80">
-                            {moduleLabel(step.modulo)}
+                            {moduleLabel(step.modulo, locale)}
                           </span>
                         )}
                         {step.resultado ? (
@@ -241,16 +335,16 @@ function HowTab({ evaluationId }: { evaluationId: string }) {
                                 : "bg-amber-50 text-amber-700 border border-amber-200"
                             }`}
                           >
-                            {ELIGIBILITY[step.resultado]?.label ?? step.resultado}
+                            {label(step.resultado, locale)}
                           </span>
                         ) : (
                           <span className="px-2 py-0.5 rounded-md bg-slate-50 text-slate-500 border border-slate-200 text-[10px] font-semibold">
-                            Conforme
+                            {locale === "en" ? "Conforming" : "Conforme"}
                           </span>
                         )}
                         {step.aValidar && (
                           <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 text-[10px] font-semibold border border-amber-200">
-                            Requer Validação
+                            {locale === "en" ? "Requires Validation" : "Requer Validação"}
                           </span>
                         )}
                       </div>
@@ -281,6 +375,9 @@ function WhyNotTab({
   obtained: Elegibilidade | null;
 }) {
   const base = useContext(ExplainBaseContext);
+  const { locale } = useLocale();
+  const apiLocale = locale === "en" ? "locale=en" : "locale=pt-PT";
+
   const targets = (Object.keys(ELIGIBILITY) as Elegibilidade[]).filter((value) => value !== obtained);
   const [target, setTarget] = useState<Elegibilidade>(targets[0] || "PERMITIR");
 
@@ -289,23 +386,25 @@ function WhyNotTab({
       api<ExplicacaoPorqueNaoConclusaoResponse>(
         `${base}/avaliacoes/${evaluationId}/explicacoes/porque-nao?conclusao=${encodeURIComponent(
           `OUT-001:${target}`
-        )}&${LOCALE}`
+        )}&${apiLocale}`
       ),
-    [base, evaluationId, target]
+    [base, evaluationId, target, apiLocale]
   );
-  const { data, error, loading, retry } = useRemote(load);
+  const { data, error, loading, retry } = useRemote(load, locale);
 
   return (
     <div className="flex flex-col gap-4 text-left">
       {/* Pílulas de Seleção de Desfecho Alternativo */}
       <div className="flex flex-col gap-1.5">
         <span className="font-sans text-xs font-semibold text-slate-500">
-          Selecione o desfecho alternativo para analisar as regras e critérios não cumpridos:
+          {locale === "en"
+            ? "Select an alternative outcome to analyze unfulfilled rules and premises:"
+            : "Selecione o desfecho alternativo para analisar as regras e critérios não cumpridos:"}
         </span>
         <div className="flex flex-wrap gap-2">
           {targets.map((value) => {
             const isActive = value === target;
-            const elInfo = ELIGIBILITY[value];
+            const targetLabel = label(value, locale);
             return (
               <button
                 key={value}
@@ -318,9 +417,9 @@ function WhyNotTab({
                 aria-pressed={isActive}
                 onClick={() => setTarget(value)}
               >
-                <span>Porque não</span>
+                <span>{locale === "en" ? "Why not" : "Porque não"}</span>
                 <span className={isActive ? "text-emerald-300" : "text-slate-900 font-extrabold"}>
-                  &ldquo;{elInfo?.label ?? value}&rdquo;?
+                  &ldquo;{targetLabel}&rdquo;?
                 </span>
               </button>
             );
@@ -328,7 +427,7 @@ function WhyNotTab({
         </div>
       </div>
 
-      <Status loading={loading} error={error} retry={retry} />
+      <Status loading={loading} error={error} retry={retry} locale={locale} />
 
       {data && (
         <div className="flex flex-col gap-4">
@@ -336,20 +435,21 @@ function WhyNotTab({
             <div className="font-sans p-4 rounded-xl bg-slate-50 border border-slate-200/80 text-slate-700 text-xs sm:text-sm leading-relaxed flex items-start gap-2.5">
               <span className="material-symbols-outlined text-slate-400 text-[18px] shrink-0 mt-0.5">help</span>
               <div className="flex flex-col gap-0.5">
-                <strong className="font-sans text-slate-900 block">Diagnóstico de Não Disparo:</strong>
+                <strong className="font-sans text-slate-900 block">
+                  {locale === "en" ? "Non-Triggering Diagnosis:" : "Diagnóstico de Não Disparo:"}
+                </strong>
                 <span>{cleanRuleCodes(data.resumo)}</span>
               </div>
             </div>
           )}
 
-          {/* Lista de Regras Candidatas com Nome Explícito e Critérios de Falha */}
+          {/* Lista de Regras Candidatas com Tradução Canónica */}
           <div className="grid grid-cols-1 gap-3">
             {data.regras.map((rule, index) => {
-              const ruleTitle = rule.variante
-                ? rule.variante
-                : rule.codigoRegra
-                ? `${rule.codigoRegra}: ${cleanRuleCodes(rule.resumo || "Critério Alternativo")}`
-                : cause(rule.causa);
+              const translated = translateRuleOutput(rule.codigoRegra, rule.variante, rule.resumo, locale);
+              const ruleCode = translated.code;
+              const ruleTitle = translated.title;
+              const ruleResumo = translated.message;
 
               return (
                 <div
@@ -358,13 +458,13 @@ function WhyNotTab({
                 >
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <div className="flex items-center gap-2 flex-wrap min-w-0">
-                      {rule.codigoRegra && (
+                      {ruleCode && (
                         <span className="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200/90 shrink-0">
-                          {rule.codigoRegra}
+                          {ruleCode}
                         </span>
                       )}
                       <span className="font-sans font-bold text-sm text-slate-900 leading-snug">
-                        {rule.variante ? cleanRuleCodes(rule.variante) : ruleTitle}
+                        {ruleTitle}
                       </span>
                     </div>
 
@@ -379,17 +479,18 @@ function WhyNotTab({
                           : "bg-blue-50 text-blue-700 border-blue-200"
                       }`}
                     >
-                      Teria resultado em: {ELIGIBILITY[target]?.label ?? target}
+                      {locale === "en" ? "Would have resulted in: " : "Teria resultado em: "}
+                      {label(target, locale)}
                     </span>
                   </div>
 
-                  {rule.resumo && (
+                  {ruleResumo && (
                     <p className="font-sans text-xs sm:text-sm text-slate-600 leading-relaxed">
-                      {rule.resumo}
+                      {ruleResumo}
                     </p>
                   )}
 
-                  <Conditions items={rule.condicoes} />
+                  <Conditions items={rule.condicoes} locale={locale} />
                 </div>
               );
             })}
@@ -403,6 +504,10 @@ function WhyNotTab({
 /** 3. Aba E Se...? (whatif - Simulação Contrafactual) */
 function WhatIfTab({ evaluationId }: { evaluationId: string }) {
   const base = useContext(ExplainBaseContext);
+  const { locale } = useLocale();
+  const apiLocale = locale === "en" ? "locale=en" : "locale=pt-PT";
+  const presets = getWhatIfPresets(locale);
+
   const [simulation, setSimulation] = useState<SimulacaoResponse | null>(null);
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -415,14 +520,14 @@ function WhatIfTab({ evaluationId }: { evaluationId: string }) {
     setError(null);
     try {
       setSimulation(
-        await api<SimulacaoResponse>(`${base}/avaliacoes/${evaluationId}/simulacoes?${LOCALE}`, {
+        await api<SimulacaoResponse>(`${base}/avaliacoes/${evaluationId}/simulacoes?${apiLocale}`, {
           method: "POST",
           body: { alteracoes: changes },
         })
       );
     } catch (err) {
       setSimulation(null);
-      setError(messageOf(err));
+      setError(messageOf(err, locale));
     } finally {
       setLoading(false);
     }
@@ -444,12 +549,14 @@ function WhatIfTab({ evaluationId }: { evaluationId: string }) {
   return (
     <div className="flex flex-col gap-4 text-left">
       <p className="font-sans text-xs sm:text-sm text-slate-600 leading-relaxed">
-        Simule como a deliberação pericial mudaria caso os pressupostos da peça ou da compra do cliente fossem alterados:
+        {locale === "en"
+          ? "Simulate how the expert decision would change if garment or purchase assumptions were altered:"
+          : "Simule como a deliberação pericial mudaria caso os pressupostos da peça ou da compra do cliente fossem alterados:"}
       </p>
 
       {/* Cartões de Presets com Moldura Ativa */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {WHAT_IF_PRESETS.map((preset) => {
+        {presets.map((preset) => {
           const isSelected = selectedPreset === preset.label;
           return (
             <button
@@ -468,7 +575,7 @@ function WhatIfTab({ evaluationId }: { evaluationId: string }) {
             >
               <div className="flex items-center gap-1.5 text-emerald-700 font-sans font-bold text-[10px] uppercase tracking-wider mb-1.5">
                 <span className="material-symbols-outlined text-[15px]">science</span>
-                <span>Hipótese Rápida</span>
+                <span>{locale === "en" ? "Quick Hypothesis" : "Hipótese Rápida"}</span>
               </div>
               <span className="font-sans font-bold text-xs sm:text-sm text-slate-900 leading-snug block">
                 {preset.label}
@@ -481,7 +588,7 @@ function WhatIfTab({ evaluationId }: { evaluationId: string }) {
       {/* Simulador Personalizado */}
       <details className="group rounded-xl border border-slate-200 bg-slate-50/70 p-3.5">
         <summary className="font-sans text-xs font-bold uppercase tracking-wider text-slate-500 cursor-pointer flex items-center justify-between">
-          <span>Personalizar Parâmetro Contrafactual</span>
+          <span>{locale === "en" ? "Customize Counterfactual Parameter" : "Personalizar Parâmetro Contrafactual"}</span>
           <span className="material-symbols-outlined text-[18px] group-open:rotate-180 transition-transform">
             expand_more
           </span>
@@ -490,14 +597,14 @@ function WhatIfTab({ evaluationId }: { evaluationId: string }) {
           <input
             className="font-sans w-full sm:flex-1 px-3 py-2 rounded-lg bg-white border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             aria-label="Caminho do campo"
-            placeholder="Ex: artigos[0].estado.etiquetas"
+            placeholder={locale === "en" ? "Ex: articles[0].condition.tags" : "Ex: artigos[0].estado.etiquetas"}
             value={path}
             onChange={(event) => setPath(event.target.value)}
           />
           <input
             className="font-sans w-full sm:flex-1 px-3 py-2 rounded-lg bg-white border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             aria-label="Novo valor"
-            placeholder="Ex: COLOCADAS"
+            placeholder={locale === "en" ? "Ex: ATTACHED" : "Ex: COLOCADAS"}
             value={value}
             onChange={(event) => setValue(event.target.value)}
           />
@@ -510,7 +617,7 @@ function WhatIfTab({ evaluationId }: { evaluationId: string }) {
               simulate(customChange());
             }}
           >
-            Simular Hipótese
+            {locale === "en" ? "Simulate Hypothesis" : "Simular Hipótese"}
           </button>
         </div>
       </details>
@@ -518,7 +625,11 @@ function WhatIfTab({ evaluationId }: { evaluationId: string }) {
       {loading && (
         <div className="font-sans flex items-center gap-2 p-3 text-xs text-slate-500 font-medium animate-pulse">
           <span className="material-symbols-outlined text-emerald-600 text-[18px] animate-spin">sync</span>
-          <span>A deduzir desfecho hipotético no motor...</span>
+          <span>
+            {locale === "en"
+              ? "Deducing hypothetical outcome in inference engine..."
+              : "A deduzir desfecho hipotético no motor..."}
+          </span>
         </div>
       )}
 
@@ -528,7 +639,7 @@ function WhatIfTab({ evaluationId }: { evaluationId: string }) {
         <div className="p-4 sm:p-5 bg-white border border-slate-200 rounded-xl shadow-2xs flex flex-col gap-3.5">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <span className="font-sans text-xs font-bold uppercase tracking-wider text-slate-500">
-              Resultado da Hipótese Contrafactual
+              {locale === "en" ? "Counterfactual Hypothesis Outcome" : "Resultado da Hipótese Contrafactual"}
             </span>
             {simulated && (
               <span
@@ -540,7 +651,8 @@ function WhatIfTab({ evaluationId }: { evaluationId: string }) {
                     : "bg-amber-50 text-amber-800 border-amber-300"
                 }`}
               >
-                Decisão Simulada: {ELIGIBILITY[simulated]?.label ?? simulated}
+                {locale === "en" ? "Simulated Decision: " : "Decisão Simulada: "}
+                {label(simulated, locale)}
               </span>
             )}
           </div>
@@ -556,7 +668,9 @@ function WhatIfTab({ evaluationId }: { evaluationId: string }) {
             <div className="flex flex-wrap items-center gap-3 pt-1 text-xs font-sans">
               {simulation.regrasNovas.length > 0 && (
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-slate-500 font-medium">Regras ativadas:</span>
+                  <span className="text-slate-500 font-medium">
+                    {locale === "en" ? "Activated rules:" : "Regras ativadas:"}
+                  </span>
                   {simulation.regrasNovas.map((code) => (
                     <span
                       key={code}
@@ -569,7 +683,9 @@ function WhatIfTab({ evaluationId }: { evaluationId: string }) {
               )}
               {simulation.regrasRemovidas.length > 0 && (
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-slate-500 font-medium">Regras desativadas:</span>
+                  <span className="text-slate-500 font-medium">
+                    {locale === "en" ? "Deactivated rules:" : "Regras desativadas:"}
+                  </span>
                   {simulation.regrasRemovidas.map((code) => (
                     <span
                       key={code}
@@ -589,19 +705,19 @@ function WhatIfTab({ evaluationId }: { evaluationId: string }) {
               <table className="w-full text-left border-collapse text-xs font-sans tabular-nums">
                 <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
                   <tr>
-                    <th scope="col" className="p-2.5">Onde</th>
-                    <th scope="col" className="p-2.5">Campo Alterado</th>
-                    <th scope="col" className="p-2.5">Valor Original</th>
-                    <th scope="col" className="p-2.5">Valor Hipotético</th>
+                    <th scope="col" className="p-2.5">{locale === "en" ? "Scope" : "Onde"}</th>
+                    <th scope="col" className="p-2.5">{locale === "en" ? "Changed Field" : "Campo Alterado"}</th>
+                    <th scope="col" className="p-2.5">{locale === "en" ? "Original Value" : "Valor Original"}</th>
+                    <th scope="col" className="p-2.5">{locale === "en" ? "Hypothetical Value" : "Valor Hipotético"}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 bg-white">
                   {realDiffs.map((diff, index) => (
                     <tr key={index} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="p-2.5 font-sans font-bold text-slate-900">{diff.alvo ?? "Pedido"}</td>
-                      <td className="p-2.5 text-slate-700 font-medium">{label(diff.campo)}</td>
-                      <td className="p-2.5 text-rose-700 font-semibold">{label(diff.original)}</td>
-                      <td className="p-2.5 text-emerald-700 font-bold">{label(diff.simulado)}</td>
+                      <td className="p-2.5 font-sans font-bold text-slate-900">{diff.alvo ?? (locale === "en" ? "Request" : "Pedido")}</td>
+                      <td className="p-2.5 text-slate-700 font-medium">{label(diff.campo, locale)}</td>
+                      <td className="p-2.5 text-rose-700 font-semibold">{label(diff.original, locale)}</td>
+                      <td className="p-2.5 text-emerald-700 font-bold">{label(diff.simulado, locale)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -610,7 +726,11 @@ function WhatIfTab({ evaluationId }: { evaluationId: string }) {
           ) : (
             <div className="font-sans p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-slate-600 text-xs flex items-center gap-2 mt-1">
               <span className="material-symbols-outlined text-[18px] text-slate-400 shrink-0">info</span>
-              <span>Esta alteração contrafactual pontual não modifica o veredito de elegibilidade calculado pelo motor pericial.</span>
+              <span>
+                {locale === "en"
+                  ? "This specific counterfactual alteration does not change the eligibility verdict calculated by the expert engine."
+                  : "Esta alteração contrafactual pontual não modifica o veredito de elegibilidade calculado pelo motor pericial."}
+              </span>
             </div>
           )}
         </div>
@@ -622,7 +742,7 @@ function WhatIfTab({ evaluationId }: { evaluationId: string }) {
 type RecordUnknown = Record<string, unknown>;
 
 /** Extração de Factos e Pressupostos Auditados a partir do Pedido do Wizard */
-function getAuditedFacts(request: ReturnRequest) {
+function getAuditedFacts(request: ReturnRequest, locale: Locale) {
   const req = request as RecordUnknown;
   const loja = (typeof req.loja === "object" && req.loja !== null ? req.loja : {}) as RecordUnknown;
   const compra = (typeof req.compraOriginal === "object" && req.compraOriginal !== null ? req.compraOriginal : {}) as RecordUnknown;
@@ -638,50 +758,50 @@ function getAuditedFacts(request: ReturnRequest) {
 
   return [
     {
-      category: "Canal de Aquisição",
+      category: locale === "en" ? "Acquisition Channel" : "Canal de Aquisição",
       icon: "storefront",
-      value: compra.canal ? label(compra.canal) : (loja.tipoLoja ? label(loja.tipoLoja) : "Loja Própria (Mainline)"),
-      detail: compra.idTransacao ? `Transação: ${String(compra.idTransacao)}` : "Canal validado pelo motor",
+      value: compra.canal ? label(compra.canal, locale) : (loja.tipoLoja ? label(loja.tipoLoja, locale) : (locale === "en" ? "Mainline Retail Store" : "Loja Própria (Mainline)")),
+      detail: compra.idTransacao ? (locale === "en" ? `Transaction: ${String(compra.idTransacao)}` : `Transação: ${String(compra.idTransacao)}`) : (locale === "en" ? "Validated purchase channel" : "Canal validado pelo motor"),
     },
     {
-      category: "Loja de Atendimento",
+      category: locale === "en" ? "Servicing Store" : "Loja de Atendimento",
       icon: "domain",
-      value: (loja.nome as string) || (loja.tipoLoja ? `Loja ${label(loja.tipoLoja)}` : "Loja Física Oficial"),
-      detail: loja.codigo ? `Unidade: ${String(loja.codigo)} (${String(loja.mercado || "EUA")})` : "Conformidade geográfica confirmada",
+      value: (loja.nome as string) || (loja.tipoLoja ? `${label(loja.tipoLoja, locale)}` : (locale === "en" ? "Official Retail Store" : "Loja Física Oficial")),
+      detail: loja.codigo ? (locale === "en" ? `Unit: ${String(loja.codigo)} (${String(loja.mercado || "USA")})` : `Unidade: ${String(loja.codigo)} (${String(loja.mercado || "EUA")})`) : (locale === "en" ? "Geographical jurisdiction verified" : "Conformidade geográfica confirmada"),
     },
     {
-      category: "Estado Físico da Peça",
+      category: locale === "en" ? "Physical Condition" : "Estado Físico da Peça",
       icon: "checkroom",
       value: estadoArt.condicaoUso
-        ? `${label(estadoArt.condicaoUso)}, Etiquetas ${label(estadoArt.etiquetas || "COLOCADAS")}`
-        : "Artigo não usado com etiquetas originais afixadas",
-      detail: prod.sku ? `SKU: ${String(prod.sku)}` : "Inspeção física aprovada",
+        ? `${label(estadoArt.condicaoUso, locale)}, ${locale === "en" ? "Tags" : "Etiquetas"} ${label(estadoArt.etiquetas || "COLOCADAS", locale)}`
+        : (locale === "en" ? "Pristine unworn garment with attached tags" : "Artigo não usado com etiquetas originais afixadas"),
+      detail: prod.sku ? `SKU: ${String(prod.sku)}` : (locale === "en" ? "Physical inspection passed" : "Inspeção física aprovada"),
     },
     {
-      category: "Comprovativo de Compra",
+      category: locale === "en" ? "Proof of Purchase" : "Comprovativo de Compra",
       icon: "receipt_long",
       value: isBlind
-        ? "Sem comprovativo (Processo às Cegas)"
-        : (comprovativo?.tipo ? label(comprovativo.tipo) : "Recibo de compra apresentado"),
-      detail: comprovativo?.idComprovativo ? `Ref: ${String(comprovativo.idComprovativo)}` : "Verificação de compra apurada",
+        ? (locale === "en" ? "No Proof (Blind Return)" : "Sem comprovativo (Processo às Cegas)")
+        : (comprovativo?.tipo ? label(comprovativo.tipo, locale) : (locale === "en" ? "Receipt presented" : "Recibo de compra apresentado")),
+      detail: comprovativo?.idComprovativo ? `Ref: ${String(comprovativo.idComprovativo)}` : (locale === "en" ? "Purchase verification complete" : "Verificação de compra apurada"),
     },
     {
-      category: "Meio de Pagamento Original",
+      category: locale === "en" ? "Original Payment Tender" : "Meio de Pagamento Original",
       icon: "credit_card",
-      value: pagamento.meio ? label(pagamento.meio) : "Meio de pagamento verificado",
-      detail: pagamento.estadoConta ? `Conta ${label(pagamento.estadoConta).toLowerCase()}` : "Registo de liquidação validado",
+      value: pagamento.meio ? label(pagamento.meio, locale) : (locale === "en" ? "Verified payment tender" : "Meio de pagamento verificado"),
+      detail: pagamento.estadoConta ? (locale === "en" ? `Account ${label(pagamento.estadoConta, locale).toLowerCase()}` : `Conta ${label(pagamento.estadoConta).toLowerCase()}`) : (locale === "en" ? "Settlement record validated" : "Registo de liquidação validado"),
     },
     {
-      category: "Operador de Caixa",
+      category: locale === "en" ? "Cashier Associate" : "Operador de Caixa",
       icon: "badge",
-      value: colab.nome ? String(colab.nome) : "Operador de Balcão Autorizado",
-      detail: colab.funcao ? `Função: ${label(colab.funcao)} (POS Ativo)` : "Sessão POS autenticada",
+      value: colab.nome ? String(colab.nome) : (locale === "en" ? "Authorized Counter Associate" : "Operador de Balcão Autorizado"),
+      detail: colab.funcao ? (locale === "en" ? `Role: ${label(colab.funcao, locale)} (Active POS)` : `Função: ${label(colab.funcao, locale)} (POS Ativo)`) : (locale === "en" ? "Authenticated POS session" : "Sessão POS autenticada"),
     },
     {
-      category: "Janela Temporal / Prazo",
+      category: locale === "en" ? "Timeframe Window" : "Janela Temporal / Prazo",
       icon: "calendar_today",
-      value: compra.dataCompra ? `Compra registada a ${String(compra.dataCompra)}` : "Dentro do prazo regulamentar",
-      detail: "Conformidade com a janela de 28 dias da política",
+      value: compra.dataCompra ? (locale === "en" ? `Purchase on ${String(compra.dataCompra)}` : `Compra registada a ${String(compra.dataCompra)}`) : (locale === "en" ? "Within policy timeframe" : "Dentro do prazo regulamentar"),
+      detail: locale === "en" ? "Compliance with official 30-day policy" : "Conformidade com a janela regulamentar da política",
     },
   ];
 }
@@ -689,22 +809,25 @@ function getAuditedFacts(request: ReturnRequest) {
 /** 4. Aba Factos e Validações (missing / dados-em-falta) */
 function MissingTab({ request }: { request: ReturnRequest }) {
   const base = useContext(ExplainBaseContext);
+  const { locale } = useLocale();
+  const apiLocale = locale === "en" ? "locale=en" : "locale=pt-PT";
+
   const load = useCallback(
     () =>
-      api<DadosEmFaltaResponse>(`${base}/dados-em-falta?${LOCALE}`, {
+      api<DadosEmFaltaResponse>(`${base}/dados-em-falta?${apiLocale}`, {
         method: "POST",
         body: request,
       }),
-    [base, request]
+    [base, request, apiLocale]
   );
-  const { data, error, loading, retry } = useRemote(load);
+  const { data, error, loading, retry } = useRemote(load, locale);
 
-  const auditedFacts = getAuditedFacts(request);
+  const auditedFacts = getAuditedFacts(request, locale);
   const sortedDados = (data?.dados || []).slice().sort((a, b) => (b.obrigatorio ? 1 : 0) - (a.obrigatorio ? 1 : 0));
 
   return (
     <div className="flex flex-col gap-5 text-left">
-      <Status loading={loading} error={error} retry={retry} />
+      <Status loading={loading} error={error} retry={retry} locale={locale} />
       {data && (
         <>
           {/* Banner de Auditoria */}
@@ -725,23 +848,31 @@ function MissingTab({ request }: { request: ReturnRequest }) {
             <div className="flex flex-col gap-0.5">
               <strong className="font-bold">
                 {data.completo
-                  ? "Auditoria Normativa Concluída com Sucesso"
+                  ? locale === "en"
+                    ? "Normative Audit Completed Successfully"
+                    : "Auditoria Normativa Concluída com Sucesso"
+                  : locale === "en"
+                  ? "Missing Data Pending Action"
                   : "Pendências de Dados Identificadas"}
               </strong>
               <span className="leading-relaxed">
                 {data.completo
-                  ? "O pedido reúne a totalidade dos dados requeridos pelas políticas comerciais para uma deliberação vinculativa e auditável."
+                  ? locale === "en"
+                    ? "The request satisfies all data requirements mandated by commercial return policies for an auditable deliberation."
+                    : "O pedido reúne a totalidade dos dados requeridos pelas políticas comerciais para uma deliberação vinculativa e auditável."
+                  : locale === "en"
+                  ? "Complementary data is recommended to guarantee full compliance with auditing guidelines."
                   : "Existem dados complementares recomendados para assegurar conformidade integral com as normas de auditoria."}{" "}
                 {cleanRuleCodes(data.resumo)}
               </span>
             </div>
           </div>
 
-          {/* Dados em Falta (se existirem) ordenados por prioridade */}
+          {/* Dados em Falta */}
           {sortedDados.length > 0 && (
             <div className="flex flex-col gap-2.5">
               <span className="font-sans text-xs font-bold uppercase tracking-wider text-rose-600">
-                Dados em Falta ou Recomendações Normativas
+                {locale === "en" ? "Missing Data or Policy Recommendations" : "Dados em Falta ou Recomendações Normativas"}
               </span>
               <div className="flex flex-col gap-2.5">
                 {sortedDados.map((item: DadoEmFaltaDto) => (
@@ -755,27 +886,28 @@ function MissingTab({ request }: { request: ReturnRequest }) {
                           {item.codigo}
                         </span>
                         <span className="font-sans font-bold text-xs sm:text-sm text-slate-900">
-                          {item.descricao ?? "Dado de balcão"}
+                          {item.descricao ?? (locale === "en" ? "Counter data" : "Dado de balcão")}
                         </span>
                       </div>
                       {item.obrigatorio ? (
                         <span className="font-sans px-2.5 py-0.5 rounded-md bg-rose-50 text-rose-700 text-[10px] font-bold uppercase tracking-wider border border-rose-200 shrink-0">
-                          Obrigatório
+                          {locale === "en" ? "Mandatory" : "Obrigatório"}
                         </span>
                       ) : (
                         <span className="font-sans px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-semibold border border-slate-200 shrink-0">
-                          Recomendado
+                          {locale === "en" ? "Recommended" : "Recomendado"}
                         </span>
                       )}
                     </div>
                     {item.porque?.resumo && (
                       <p className="font-sans text-xs text-slate-600 leading-relaxed">
-                        <strong>Impacto Normativo:</strong> {item.porque.resumo}
+                        <strong>{locale === "en" ? "Normative Impact: " : "Impacto Normativo: "}</strong>
+                        {item.porque.resumo}
                       </p>
                     )}
                     {item.porque?.regrasQueDependem && item.porque.regrasQueDependem.length > 0 && (
                       <div className="flex items-center gap-1.5 flex-wrap text-[11px] text-slate-500 font-sans">
-                        <span>Afeta as regras:</span>
+                        <span>{locale === "en" ? "Affects rules:" : "Afeta as regras:"}</span>
                         {item.porque.regrasQueDependem.map((r) => (
                           <span key={r} className="font-mono text-[10px] font-bold px-1.5 py-0.5 bg-slate-100 rounded text-slate-700">
                             {r}
@@ -789,14 +921,14 @@ function MissingTab({ request }: { request: ReturnRequest }) {
             </div>
           )}
 
-          {/* Grelha de 2 Colunas com os Factos Auditados pelo Motor */}
+          {/* Grelha de Factos Auditados */}
           <div className="flex flex-col gap-2.5">
             <div className="flex items-center justify-between px-1">
               <span className="font-sans text-xs font-bold uppercase tracking-wider text-slate-500">
-                Factos e Premissas Auditados pelo Motor
+                {locale === "en" ? "Facts and Assumptions Audited by Engine" : "Factos e Premissas Auditados pelo Motor"}
               </span>
               <span className="font-sans text-[11px] text-slate-400">
-                {auditedFacts.length} pressupostos validados
+                {auditedFacts.length} {locale === "en" ? "validated assumptions" : "pressupostos validados"}
               </span>
             </div>
 
@@ -816,7 +948,7 @@ function MissingTab({ request }: { request: ReturnRequest }) {
                       </span>
                       <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200 shrink-0">
                         <span className="material-symbols-outlined text-[12px]">check</span>
-                        <span>Validado</span>
+                        <span>{locale === "en" ? "Validated" : "Validado"}</span>
                       </span>
                     </div>
                     <span className="font-sans font-bold text-xs sm:text-sm text-slate-900 leading-snug">
@@ -836,14 +968,18 @@ function MissingTab({ request }: { request: ReturnRequest }) {
   );
 }
 
-function MissingEvaluationBanner({ tab }: { tab: string }) {
+function MissingEvaluationBanner({ tab, locale }: { tab: string; locale: Locale }) {
   return (
     <div className="font-sans p-5 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-xs sm:text-sm text-left flex items-start sm:items-center gap-3">
       <span className="material-symbols-outlined text-amber-500 text-[22px] shrink-0 mt-0.5 sm:mt-0">info</span>
       <div className="flex flex-col gap-0.5">
-        <span className="font-bold text-slate-800">Identificador de Avaliação Indisponível</span>
+        <span className="font-bold text-slate-800">
+          {locale === "en" ? "Evaluation Identifier Unavailable" : "Identificador de Avaliação Indisponível"}
+        </span>
         <span className="text-slate-500 leading-relaxed">
-          Não é possível carregar a análise &ldquo;{tab}&rdquo; sem um ID de avaliação registado pelo motor.
+          {locale === "en"
+            ? `Cannot load "${tab}" analysis without an evaluation ID recorded by the engine.`
+            : `Não é possível carregar a análise "${tab}" sem um ID de avaliação registado pelo motor.`}
         </span>
       </div>
     </div>
@@ -863,17 +999,22 @@ export default function ExplainTabs({
   paymentMethod?: string;
 }) {
   const [active, setActive] = useState<TabId>("how");
+  const { locale } = useLocale();
+  const tabs = getTabs(locale);
   const hasEvaluationId = Boolean(evaluationId && evaluationId.trim().length > 0);
 
   return (
     <ExplainBaseContext.Provider value={base}>
-      <section className="w-full flex flex-col gap-4 text-left" aria-label="Explicações da decisão">
+      <section
+        className="w-full flex flex-col gap-4 text-left"
+        aria-label={locale === "en" ? "Decision explanations" : "Explicações da decisão"}
+      >
         {/* Navigation Tabs Pill Bar */}
         <div
           role="tablist"
           className="flex flex-wrap gap-1.5 p-1.5 bg-slate-100/90 rounded-xl border border-slate-200/80"
         >
-          {TABS.map((tab) => {
+          {tabs.map((tab) => {
             const isActive = active === tab.id;
             return (
               <button
@@ -902,21 +1043,21 @@ export default function ExplainTabs({
           {hasEvaluationId ? (
             <HowTab evaluationId={evaluationId} />
           ) : (
-            <MissingEvaluationBanner tab="Como Decidiu" />
+            <MissingEvaluationBanner tab={locale === "en" ? "How It Decided" : "Como Decidiu"} locale={locale} />
           )}
         </div>
         <div role="tabpanel" id="panel-whynot" aria-labelledby="tab-whynot" hidden={active !== "whynot"}>
           {hasEvaluationId ? (
             <WhyNotTab evaluationId={evaluationId} obtained={obtained} />
           ) : (
-            <MissingEvaluationBanner tab="Porque Não" />
+            <MissingEvaluationBanner tab={locale === "en" ? "Why Not" : "Porque Não"} locale={locale} />
           )}
         </div>
         <div role="tabpanel" id="panel-whatif" aria-labelledby="tab-whatif" hidden={active !== "whatif"}>
           {hasEvaluationId ? (
             <WhatIfTab evaluationId={evaluationId} />
           ) : (
-            <MissingEvaluationBanner tab="Simulação E Se" />
+            <MissingEvaluationBanner tab={locale === "en" ? "What-If Simulation" : "Simulação E Se"} locale={locale} />
           )}
         </div>
         <div role="tabpanel" id="panel-missing" aria-labelledby="tab-missing" hidden={active !== "missing"}>

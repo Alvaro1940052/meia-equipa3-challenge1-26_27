@@ -97,10 +97,14 @@ services:
     restart: unless-stopped
     networks:
       - retail-network
+      - smb-network
 
 networks:
   retail-network:
     driver: bridge
+  smb-network:
+    external: true
+    name: smbitsolutions_smb-network
 
 volumes:
   levis_postgres_data:

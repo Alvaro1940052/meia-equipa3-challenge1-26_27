@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useLocale } from "@/contexts/LocaleContext";
 
 export interface StepHeaderProps {
   step?: number;
@@ -20,11 +21,14 @@ export function StepEyebrow({
   totalSteps: number;
   className?: string;
 }) {
+  const { locale } = useLocale();
+  const isEn = locale === "en";
+
   return (
     <div className={`inline-flex items-center gap-2 text-xs select-none ${className}`}>
       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
       <span className="font-sans tabular-nums text-[11px] font-bold uppercase tracking-widest text-slate-400">
-        Passo {step} de {totalSteps}
+        {isEn ? `Step ${step} of ${totalSteps}` : `Passo ${step} de ${totalSteps}`}
       </span>
     </div>
   );
@@ -45,7 +49,7 @@ export default function StepHeader({
         <StepEyebrow step={step} totalSteps={totalSteps} className="mb-1" />
       )}
 
-      {/* Main Title (H2 uses font-sans per typographic rules) */}
+      {/* Main Title */}
       <h2 className="font-sans font-headline-lg text-on-surface tracking-tight max-w-2xl px-2">
         {title}
       </h2>

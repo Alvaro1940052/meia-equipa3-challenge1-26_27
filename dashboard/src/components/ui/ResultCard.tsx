@@ -7,6 +7,7 @@ import {
   formatTenderSubtext,
   formatOperationalAction,
 } from "@/config/returnsLabels";
+import { useLocale } from "@/contexts/LocaleContext";
 
 export interface ResultCardProps {
   eligibility: Elegibilidade;
@@ -51,6 +52,7 @@ export default function ResultCard({
   actions,
   className = "",
 }: ResultCardProps) {
+  const { locale } = useLocale();
   const isApproved = eligibility === "PERMITIR";
   const isRejected = eligibility === "RECUSAR";
   const isReview = eligibility === "REVER";
@@ -61,36 +63,44 @@ export default function ResultCard({
 
   const statusConfig = isApproved
     ? {
-        label: "Devolução Aprovada",
+        label: locale === "en" ? "Return Approved" : "Devolução Aprovada",
         subtitle:
           effectiveExplanation ||
-          "Todos os critérios de elegibilidade foram validados com sucesso no motor de inferência.",
+          (locale === "en"
+            ? "All eligibility criteria successfully validated by the inference engine."
+            : "Todos os critérios de elegibilidade foram validados com sucesso no motor de inferência."),
         iconContainerClass: "bg-emerald-50 text-emerald-700 border-emerald-200/60",
         icon: "check_circle",
       }
     : isRejected
     ? {
-        label: "Devolução Recusada",
+        label: locale === "en" ? "Return Denied" : "Devolução Recusada",
         subtitle:
           effectiveExplanation ||
-          "O pedido não cumpre os critérios normativos da política comercial padrão da loja.",
+          (locale === "en"
+            ? "The request does not comply with standard store commercial policy criteria."
+            : "O pedido não cumpre os critérios normativos da política comercial padrão da loja."),
         iconContainerClass: "bg-rose-50 text-rose-700 border-rose-200/60",
         icon: "cancel",
       }
     : isReview
     ? {
-        label: "Requer Análise de Exceção",
+        label: locale === "en" ? "Manager Exception Review" : "Requer Análise de Exceção",
         subtitle:
           effectiveExplanation ||
-          "A situação apresentada exige validação presencial do gestor de loja antes da liquidação.",
+          (locale === "en"
+            ? "This situation requires in-person store manager validation before settlement."
+            : "A situação apresentada exige validação presencial do gestor de loja antes da liquidação."),
         iconContainerClass: "bg-amber-50 text-amber-700 border-amber-200/60",
         icon: "shield",
       }
     : {
-        label: "Encaminhamento de Pedido",
+        label: locale === "en" ? "Escalate Request" : "Encaminhamento de Pedido",
         subtitle:
           effectiveExplanation ||
-          "A transação deve ser processada através do canal específico dedicado.",
+          (locale === "en"
+            ? "Transaction must be processed via dedicated specialized channel."
+            : "A transação deve ser processada através do canal específico dedicado."),
         iconContainerClass: "bg-sky-50 text-sky-700 border-sky-200/60",
         icon: "forward",
       };
@@ -100,12 +110,12 @@ export default function ResultCard({
   const resolutionMode =
     remedy ||
     (storeCredit
-      ? "Cartão-Oferta / Crédito de Loja"
+      ? (locale === "en" ? "Gift Card / Store Credit" : "Cartão-Oferta / Crédito de Loja")
       : isApproved
-      ? "Reembolso Original"
+      ? (locale === "en" ? "Original Tender Refund" : "Reembolso Original")
       : isRejected
-      ? "Sem Devolução Autorizada"
-      : "A Decidir pela Gestão");
+      ? (locale === "en" ? "No Return Authorized" : "Sem Devolução Autorizada")
+      : (locale === "en" ? "Management Discretion" : "A Decidir pela Gestão"));
 
   const effectiveResolutionSubtext =
     remedySubtext ||
@@ -113,11 +123,12 @@ export default function ResultCard({
       rawTransactionType ?? remedy ?? (storeCredit ? "CREDITO_LOJA" : undefined),
       rawRefundMethod ?? paymentMethod ?? (storeCredit ? "CARTAO_OFERTA" : undefined),
       eligibility,
-      rawOriginalPaymentMethod
+      rawOriginalPaymentMethod,
+      locale
     );
 
   const tenderMode =
-    paymentMethod || (storeCredit ? "Crédito de Loja" : isApproved ? "Meio Original" : "Nenhum");
+    paymentMethod || (storeCredit ? (locale === "en" ? "Store Credit" : "Crédito de Loja") : isApproved ? (locale === "en" ? "Original Tender" : "Meio Original") : (locale === "en" ? "None" : "Nenhum"));
 
   const effectiveTenderSubtext =
     tenderSubtext ||
@@ -125,17 +136,18 @@ export default function ResultCard({
       rawRefundMethod ?? paymentMethod ?? (storeCredit ? "CARTAO_OFERTA" : undefined),
       rawTransactionType ?? remedy ?? (storeCredit ? "CREDITO_LOJA" : undefined),
       eligibility,
-      rawOriginalPaymentMethod
+      rawOriginalPaymentMethod,
+      locale
     );
 
-  const defaultOp = formatOperationalAction(rawProcess, rawApproval, eligibility);
+  const defaultOp = formatOperationalAction(rawProcess, rawApproval, eligibility, locale);
   const resolvedAction = operationalAction || defaultOp.action;
   const resolvedHint = operationalHint || defaultOp.hint;
 
   return (
     <div
       role="region"
-      aria-label="Veredito oficial da devolução"
+      aria-label={locale === "en" ? "Official return verdict" : "Veredito oficial da devolução"}
       className={`rounded-2xl bg-white border border-slate-200 p-6 sm:p-7 shadow-xs flex flex-col gap-6 text-left transition-all ${className}`}
     >
       {/* 1. Header Minimalista do Veredito Oficial */}
@@ -165,7 +177,7 @@ export default function ResultCard({
         {/* Card 1: Valor Autorizado */}
         <div className="rounded-xl p-4 bg-slate-50/70 border border-slate-200/80 flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">
-            <span className="font-sans font-bold"><span className="font-mono tabular-nums">01</span> / Valor</span>
+            <span className="font-sans font-bold"><span className="font-mono tabular-nums">01</span> / {locale === "en" ? "Amount" : "Valor"}</span>
             <span className="material-symbols-outlined text-[16px] text-slate-400">payments</span>
           </div>
           <div className="flex items-baseline gap-1 my-1">
@@ -177,14 +189,14 @@ export default function ResultCard({
             </span>
           </div>
           <span className="font-sans text-[11px] text-slate-500 font-medium truncate">
-            {paymentMethod ? `Via ${paymentMethod}` : "Valor elegível de balcão"}
+            {paymentMethod ? (locale === "en" ? `Via ${paymentMethod}` : `Via ${paymentMethod}`) : (locale === "en" ? "Eligible counter amount" : "Valor elegível de balcão")}
           </span>
         </div>
 
         {/* Card 2: Modalidade de Resolução */}
         <div className="rounded-xl p-4 bg-slate-50/70 border border-slate-200/80 flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">
-            <span className="font-sans font-bold"><span className="font-mono tabular-nums">02</span> / Transação</span>
+            <span className="font-sans font-bold"><span className="font-mono tabular-nums">02</span> / {locale === "en" ? "Transaction" : "Transação"}</span>
             <span className="material-symbols-outlined text-[16px] text-slate-400">swap_horiz</span>
           </div>
           <span className="font-sans font-bold text-slate-900 text-sm sm:text-base leading-snug my-1 line-clamp-2" title={resolutionMode}>
@@ -198,7 +210,7 @@ export default function ResultCard({
         {/* Card 3: Meio de Liquidação */}
         <div className="rounded-xl p-4 bg-slate-50/70 border border-slate-200/80 flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">
-            <span className="font-sans font-bold"><span className="font-mono tabular-nums">03</span> / Liquidação</span>
+            <span className="font-sans font-bold"><span className="font-mono tabular-nums">03</span> / {locale === "en" ? "Tender" : "Liquidação"}</span>
             <span className="material-symbols-outlined text-[16px] text-slate-400">credit_card</span>
           </div>
           <span className="font-sans font-bold text-slate-900 text-sm sm:text-base leading-snug my-1 truncate" title={tenderMode}>
@@ -212,7 +224,7 @@ export default function ResultCard({
         {/* Card 4: Ação Imediata do Operador */}
         <div className="rounded-xl p-4 bg-slate-50/70 border border-slate-200/80 flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">
-            <span className="font-sans font-bold"><span className="font-mono tabular-nums">04</span> / Ação Imediata</span>
+            <span className="font-sans font-bold"><span className="font-mono tabular-nums">04</span> / {locale === "en" ? "Immediate Action" : "Ação Imediata"}</span>
             <span className="material-symbols-outlined text-[16px] text-slate-400">point_of_sale</span>
           </div>
           <span className="font-sans font-bold text-slate-900 text-sm leading-snug my-1 line-clamp-2" title={resolvedAction}>
@@ -231,9 +243,13 @@ export default function ResultCard({
             notification_important
           </span>
           <div className="flex flex-col gap-0.5 text-xs">
-            <span className="font-sans font-bold text-amber-950">Atenção ao Operador de Caixa:</span>
+            <span className="font-sans font-bold text-amber-950">
+              {locale === "en" ? "Attention POS Operator:" : "Atenção ao Operador de Caixa:"}
+            </span>
             <p className="font-sans text-amber-900 leading-relaxed">
-              Esta decisão requer confirmação presencial do supervisor de turno ou gestor de loja através de PIN de autorização no terminal POS antes da emissão do crédito.
+              {locale === "en"
+                ? "This decision requires in-person confirmation from shift supervisor or store manager via POS authorization credential PIN before issuing tender."
+                : "Esta decisão requer confirmação presencial do supervisor de turno ou gestor de loja através de PIN de autorização no terminal POS antes da emissão do crédito."}
             </p>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import ResultSummary from "@/components/shared/ResultSummary";
-import { ELIGIBILITY, label, money } from "@/config/returnsLabels";
+import { getEligibility, label, money } from "@/config/returnsLabels";
+import { useLocale } from "@/contexts/LocaleContext";
 import type { DecisaoResponse } from "@/types/returns";
 
 export default function DecisionSummary({
@@ -9,31 +10,45 @@ export default function DecisionSummary({
   decision: DecisaoResponse;
   durationMs: number;
 }) {
-  const eligibility = decision.elegibilidade ? ELIGIBILITY[decision.elegibilidade] : undefined;
+  const { locale } = useLocale();
+  const eligibility = decision.elegibilidade ? getEligibility(decision.elegibilidade, locale) : undefined;
   const details: [string, string][] = [
-    ["Transação autorizada", label(decision.tipoTransacao)],
-    ["Valor a devolver", decision.valorDevolucao != null ? money(decision.valorDevolucao) : "—"],
-    ["Base do valor", label(decision.baseValor)],
-    ["Meio de reembolso", label(decision.meioReembolso)],
-    ["Aprovação necessária", label(decision.aprovacao)],
-    ["Processo a seguir", label(decision.processo)],
-    ["Comprovativo", label(decision.tipoVerificacao)],
+    [locale === "en" ? "Authorized transaction" : "Transação autorizada", label(decision.tipoTransacao, locale)],
+    [
+      locale === "en" ? "Refund amount" : "Valor a devolver",
+      decision.valorDevolucao != null ? money(decision.valorDevolucao, locale) : "—",
+    ],
+    [locale === "en" ? "Valuation base" : "Base do valor", label(decision.baseValor, locale)],
+    [locale === "en" ? "Refund tender" : "Meio de reembolso", label(decision.meioReembolso, locale)],
+    [locale === "en" ? "Required approval" : "Aprovação necessária", label(decision.aprovacao, locale)],
+    [locale === "en" ? "Required workflow" : "Processo a seguir", label(decision.processo, locale)],
+    [locale === "en" ? "Proof verification" : "Comprovativo", label(decision.tipoVerificacao, locale)],
   ];
   const docs = decision.documentacao;
   const docNotes = [
-    docs?.assinaturaCliente && `Assinatura do cliente: ${docs.assinaturaCliente}`,
-    docs?.assinaturaProcessador && `Assinatura do colaborador: ${docs.assinaturaProcessador}`,
-    docs?.assinaturaTestemunha && `Assinatura de testemunha: ${docs.assinaturaTestemunha}`,
-    docs?.reciboAgrafado && "Agrafar o recibo ao registo de caixa",
-    docs?.notaRecibo && `Nota no recibo: ${docs.notaRecibo}`,
-    docs?.registoExcecao && `Registo de exceção: ${docs.registoExcecao}`,
+    docs?.assinaturaCliente &&
+      (locale === "en" ? `Customer signature: ${docs.assinaturaCliente}` : `Assinatura do cliente: ${docs.assinaturaCliente}`),
+    docs?.assinaturaProcessador &&
+      (locale === "en"
+        ? `Associate signature: ${docs.assinaturaProcessador}`
+        : `Assinatura do colaborador: ${docs.assinaturaProcessador}`),
+    docs?.assinaturaTestemunha &&
+      (locale === "en"
+        ? `Witness signature: ${docs.assinaturaTestemunha}`
+        : `Assinatura de testemunha: ${docs.assinaturaTestemunha}`),
+    docs?.reciboAgrafado &&
+      (locale === "en" ? "Staple physical receipt to register journal" : "Agrafar o recibo ao registo de caixa"),
+    docs?.notaRecibo &&
+      (locale === "en" ? `Receipt endorsement note: ${docs.notaRecibo}` : `Nota no recibo: ${docs.notaRecibo}`),
+    docs?.registoExcecao &&
+      (locale === "en" ? `Exception log record: ${docs.registoExcecao}` : `Registo de exceção: ${docs.registoExcecao}`),
   ].filter(Boolean) as string[];
 
   return (
     <ResultSummary
-      eyebrow="Resumo da Decisão"
+      eyebrow={locale === "en" ? "Decision Summary" : "Resumo da Decisão"}
       tone={eligibility?.tone ?? "info"}
-      headline={eligibility?.label ?? label(decision.elegibilidade)}
+      headline={eligibility?.label ?? label(decision.elegibilidade, locale)}
       meta={`${durationMs} ms`}
     >
       {eligibility && (
@@ -62,7 +77,11 @@ export default function DecisionSummary({
       {decision.excecaoRecusada && (
         <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs font-sans font-medium flex items-center gap-2">
           <span className="material-symbols-outlined text-rose-600 text-[18px]">gpp_bad</span>
-          <span>O pedido de exceção de balcão foi analisado e recusado pela política comercial.</span>
+          <span>
+            {locale === "en"
+              ? "Counter exception request was reviewed and denied by commercial policy."
+              : "O pedido de exceção de balcão foi analisado e recusado pela política comercial."}
+          </span>
         </div>
       )}
 
@@ -70,46 +89,49 @@ export default function DecisionSummary({
       {decision.artigos.length > 0 && (
         <div className="flex flex-col gap-2 mt-2">
           <span className="font-sans font-label-md text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-            Decisão por Artigo
+            {locale === "en" ? "Item-by-Item Decision" : "Decisão por Artigo"}
           </span>
           <div className="w-full overflow-x-auto rounded-xl border border-border-card shadow-xs">
             <table className="w-full text-left border-collapse text-xs font-sans tabular-nums">
               <thead className="bg-surface-container-low text-on-surface-variant font-bold border-b border-border-card">
                 <tr>
-                  <th scope="col" className="p-3">Artigo</th>
-                  <th scope="col" className="p-3">Resultado</th>
-                  <th scope="col" className="p-3">Valor</th>
-                  <th scope="col" className="p-3">Destino do Artigo</th>
-                  <th scope="col" className="p-3">Aprovação</th>
+                  <th scope="col" className="p-3">{locale === "en" ? "Item" : "Artigo"}</th>
+                  <th scope="col" className="p-3">{locale === "en" ? "Outcome" : "Resultado"}</th>
+                  <th scope="col" className="p-3">{locale === "en" ? "Amount" : "Valor"}</th>
+                  <th scope="col" className="p-3">{locale === "en" ? "Item Disposition" : "Destino do Artigo"}</th>
+                  <th scope="col" className="p-3">{locale === "en" ? "Approval" : "Aprovação"}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-card/50 bg-white">
-                {decision.artigos.map((item) => (
-                  <tr key={item.artigoId} className="hover:bg-surface-container-lowest">
-                    <td className="p-3 font-mono font-bold text-on-surface tabular-nums">{item.artigoId}</td>
-                    <td className="p-3">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-extrabold ${
-                          item.elegibilidade === "PERMITIR"
-                            ? "bg-emerald-100 text-emerald-800"
-                            : item.elegibilidade === "RECUSAR"
-                            ? "bg-rose-100 text-rose-800"
-                            : "bg-amber-100 text-amber-800"
-                        }`}
-                      >
-                        {item.elegibilidade ? (ELIGIBILITY[item.elegibilidade]?.label ?? item.elegibilidade) : "—"}
-                      </span>
-                    </td>
-                    <td className="p-3 font-sans font-bold text-on-surface tabular-nums">
-                      {item.valorDevolucao != null ? money(item.valorDevolucao) : "—"}
-                    </td>
-                    <td className="p-3 text-on-surface-variant">
-                      {label(item.destino)}
-                      {item.descontoSaldo ? ` (−${item.descontoSaldo}%)` : ""}
-                    </td>
-                    <td className="p-3 text-on-surface-variant">{label(item.aprovacao)}</td>
-                  </tr>
-                ))}
+                {decision.artigos.map((item) => {
+                  const itemElig = item.elegibilidade ? getEligibility(item.elegibilidade, locale) : undefined;
+                  return (
+                    <tr key={item.artigoId} className="hover:bg-surface-container-lowest">
+                      <td className="p-3 font-mono font-bold text-on-surface tabular-nums">{item.artigoId}</td>
+                      <td className="p-3">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-extrabold ${
+                            item.elegibilidade === "PERMITIR"
+                              ? "bg-emerald-100 text-emerald-800"
+                              : item.elegibilidade === "RECUSAR"
+                              ? "bg-rose-100 text-rose-800"
+                              : "bg-amber-100 text-amber-800"
+                          }`}
+                        >
+                          {itemElig?.label ?? item.elegibilidade ?? "—"}
+                        </span>
+                      </td>
+                      <td className="p-3 font-sans font-bold text-on-surface tabular-nums">
+                        {item.valorDevolucao != null ? money(item.valorDevolucao, locale) : "—"}
+                      </td>
+                      <td className="p-3 text-on-surface-variant">
+                        {label(item.destino, locale)}
+                        {item.descontoSaldo ? ` (−${item.descontoSaldo}%)` : ""}
+                      </td>
+                      <td className="p-3 text-on-surface-variant">{label(item.aprovacao, locale)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -120,7 +142,7 @@ export default function DecisionSummary({
       {docNotes.length > 0 && (
         <div className="flex flex-col gap-2 mt-2">
           <span className="font-sans font-label-md text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-            Procedimentos e Documentação
+            {locale === "en" ? "Procedures and Documentation" : "Procedimentos e Documentação"}
           </span>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {docNotes.map((note, index) => (
@@ -139,7 +161,11 @@ export default function DecisionSummary({
       {decision.regrasAValidar.length > 0 && (
         <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-sans flex items-center gap-2">
           <span className="material-symbols-outlined text-amber-600 text-[18px]">pending_actions</span>
-          <span>Existem procedimentos pendentes de confirmação do fecho de turno no terminal POS.</span>
+          <span>
+            {locale === "en"
+              ? "Pending procedures require end-of-day register closure confirmation at the POS terminal."
+              : "Existem procedimentos pendentes de confirmação do fecho de turno no terminal POS."}
+          </span>
         </div>
       )}
     </ResultSummary>

@@ -32,11 +32,10 @@ export default function StatusFooter({
         <div className="flex flex-wrap items-center justify-center md:justify-start gap-5">
           <div className="flex items-center gap-2">
             <span
-              className={`w-2.5 h-2.5 rounded-full ${
-                isDroolsOnline
+              className={`w-2.5 h-2.5 rounded-full ${isDroolsOnline
                   ? "bg-primary-container shadow-[0_0_8px_rgba(16,185,129,0.6)] animate-pulse"
                   : "bg-error"
-              }`}
+                }`}
             />
             <span className="font-mono tabular-nums">
               Drools v8.44:{" "}
@@ -48,11 +47,10 @@ export default function StatusFooter({
 
           <div className="flex items-center gap-2">
             <span
-              className={`w-2.5 h-2.5 rounded-full ${
-                isPrologOnline
+              className={`w-2.5 h-2.5 rounded-full ${isPrologOnline
                   ? "bg-primary-container shadow-[0_0_8px_rgba(16,185,129,0.6)] animate-pulse"
                   : "bg-error"
-              }`}
+                }`}
             />
             <span className="font-mono tabular-nums">
               Prolog Core:{" "}

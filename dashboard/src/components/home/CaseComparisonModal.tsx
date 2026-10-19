@@ -352,17 +352,15 @@ export default function CaseComparisonModal({
           <>
             {/* Consensus / Divergence Banner */}
             <div
-              className={`p-4 sm:p-5 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4 ${
-                data.consenso
+              className={`p-4 sm:p-5 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4 ${data.consenso
                   ? "bg-emerald-50/80 border-emerald-200 text-emerald-950"
                   : "bg-amber-50/90 border-amber-200 text-amber-950"
-              }`}
+                }`}
             >
               <div className="flex items-start gap-3.5">
                 <span
-                  className={`material-symbols-outlined text-[28px] shrink-0 mt-0.5 ${
-                    data.consenso ? "text-emerald-600" : "text-amber-600"
-                  }`}
+                  className={`material-symbols-outlined text-[28px] shrink-0 mt-0.5 ${data.consenso ? "text-emerald-600" : "text-amber-600"
+                    }`}
                 >
                   {data.consenso ? "verified" : "warning"}
                 </span>
@@ -375,11 +373,10 @@ export default function CaseComparisonModal({
                         : "Divergência Detetada entre Motores"}
                     </h4>
                     <span
-                      className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                        data.consenso
+                      className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${data.consenso
                           ? "bg-emerald-200/80 text-emerald-900 border border-emerald-300"
                           : "bg-amber-200/80 text-amber-900 border border-amber-300"
-                      }`}
+                        }`}
                     >
                       {data.consenso ? "100% Acordo" : "Atenção Requerida"}
                     </span>

@@ -138,10 +138,11 @@ async def obter_avaliacao(
 )
 async def explicacao_como(
     id: UUID = Path(..., description="UUID da avaliação"),
+    locale: Optional[str] = Query(None, description="Tag de idioma (ex.: pt-PT, en-US)"),
     retail_service: RetailPrologService = Depends(get_retail_prolog_service),
 ) -> ExplicacaoComoResponse:
     """Retrieve How explanation causal chain for an evaluation."""
-    return await retail_service.explain_how(id)
+    return await retail_service.explain_how(id, locale=locale)
 
 
 @router.get(
@@ -153,10 +154,11 @@ async def explicacao_como(
 async def explicacao_porque_nao(
     id: UUID = Path(..., description="UUID da avaliação"),
     conclusao: Optional[str] = Query(None, description="Conclusão alvo (ex.: OUT-001:PERMITIR)"),
+    locale: Optional[str] = Query(None, description="Tag de idioma (ex.: pt-PT, en-US)"),
     retail_service: RetailPrologService = Depends(get_retail_prolog_service),
 ) -> ExplicacaoPorqueNaoConclusaoResponse:
     """Retrieve Why Not explanation for unreached conclusions."""
-    return await retail_service.explain_whynot(id, target=conclusao)
+    return await retail_service.explain_whynot(id, target=conclusao, locale=locale)
 
 
 @router.post(
@@ -183,10 +185,11 @@ async def simular_whatif(
 )
 async def dados_em_falta(
     payload: Dict[str, Any] = Body(...),
+    locale: Optional[str] = Query(None, description="Tag de idioma (ex.: pt-PT, en-US)"),
     retail_service: RetailPrologService = Depends(get_retail_prolog_service),
 ) -> DadosEmFaltaResponse:
     """Check for missing premises using Prolog interactive ACM mechanics."""
-    return await retail_service.missing_data(payload)
+    return await retail_service.missing_data(payload, locale=locale)
 
 
 @router.post(
@@ -197,11 +200,12 @@ async def dados_em_falta(
 )
 async def explicar_porque_dado(
     dado: Optional[str] = Query(None, description="Código do dado em falta (ex.: IN-004)"),
+    locale: Optional[str] = Query(None, description="Tag de idioma (ex.: pt-PT, en-US)"),
     payload: Dict[str, Any] = Body(default_factory=dict),
     retail_service: RetailPrologService = Depends(get_retail_prolog_service),
 ) -> ExplicacaoPorqueResponse:
     """Explain why a specific premise is asked by the Prolog rule."""
-    return await retail_service.explain_why(dado or "IN-004", payload)
+    return await retail_service.explain_why(dado or "IN-004", payload, locale=locale)
 
 
 @router.get(

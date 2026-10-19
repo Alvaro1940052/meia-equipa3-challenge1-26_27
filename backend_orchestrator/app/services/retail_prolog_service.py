@@ -313,6 +313,170 @@ PROLOG_RULE_DETAILS: Dict[str, Dict[str, Any]] = {
     "CT-003": {"nome": "Mesmo colaborador conclui transação com credenciais", "conclusoes": ["OUT-001:PERMITIR"]},
 }
 
+# English ground truth knowledge mapping for Prolog observable input premises
+PROLOG_INPUT_KNOWLEDGE_EN: Dict[str, Dict[str, Any]] = {
+    "IN-001": {
+        "atributo": "mercado",
+        "pergunta": "What is the retail transaction market jurisdiction? (usa/canada/why)",
+        "regras": ["CH-007", "TN-011", "TN-011-SEM-CARTAO", "TN-012", "HS-004"],
+        "resumo": "Transaction market (United States vs. Canada) determines applicable tax rules, Canadian franchise restrictions (CH-007, HS-004), and Interac debit requirements (TN-011).",
+    },
+    "IN-002": {
+        "atributo": "tipo_loja",
+        "pergunta": "What is the receiving store commercial format? (mainline/outlet/why)",
+        "regras": ["CH-001", "CH-009", "CH-010"],
+        "resumo": "Receiving store format (Mainline vs. Outlet) conditions refund valuation rules, cross-channel returns, and promotional markdown prices (CH-001, CH-009, CH-010).",
+    },
+    "IN-003": {
+        "atributo": "canal_compra",
+        "pergunta": "What was the original purchase channel? (mainline/outlet/levi_com/levi_ca/wholesale/franchise_canada/why)",
+        "regras": ["CH-001", "CH-002", "CH-003", "CH-004", "CH-005", "CH-007", "CH-008", "HS-004"],
+        "resumo": "Original purchase channel determines whether the return is processed directly in-store, via BackPocket online portal (CH-002), referred back to wholesale (CH-008), or routed to Canadian franchise workflow (CH-007).",
+    },
+    "IN-004": {
+        "atributo": "comprovativo",
+        "pergunta": "What proof of purchase did the customer present? (paper_receipt/digital_receipt/order_confirmation/gift_receipt/trans_lookup/receipt_photo/backpocket_lookup/none/why)",
+        "regras": ["PT-001", "PT-002", "PT-003", "PT-004", "PT-005", "PT-006", "PT-007", "PT-008"],
+        "resumo": "Presented proof of purchase classifies the transaction as a verified return (PT-001) eligible for original tender refund, or a blind return (PT-002, PT-005) limited to store credit or exchange.",
+    },
+    "IN-005": {
+        "atributo": "tipo_pedido",
+        "pergunta": "What type of request is formulated by the customer? (return/exchange/price_adjustment/why)",
+        "regras": ["PT-003", "PT-005", "PT-007", "PT-008", "EP-001", "EP-002", "TN-007"],
+        "resumo": "Customer request type (refund, gift return, exchange, or price adjustment) establishes the deduction tree: refund eligibility (PT-003), even exchange value parity (EP-001), or 14-day price adjustment window (PT-007).",
+    },
+    "IN-006": {
+        "atributo": "dias_desde_compra",
+        "pergunta": "How many days have elapsed since purchase or shipment date? (number of days/why)",
+        "regras": ["PT-003", "PT-004", "PT-007", "PT-008", "CH-005"],
+        "resumo": "Elapsed days since purchase/shipment is the regulatory timeframe: up to 30 days permits full refund (PT-003); beyond 30 days requires manager review for store credit (PT-004); price adjustments are strictly capped at 14 days (PT-007, PT-008).",
+    },
+    "IN-007": {
+        "atributo": "sku_reconhecido",
+        "pergunta": "Is the SKU recognized in the POS system catalog and what is the garment brand? (yes/no/why)",
+        "regras": ["HS-001", "HS-002", "PC-007", "BW-001", "BW-002"],
+        "resumo": "SKU and brand check acts as a Hard Stop: unrecognized SKUs (HS-001) or excluded brands such as Dockers or Signature (HS-002) are immediately rejected at the register.",
+    },
+    "IN-008": {
+        "atributo": "estado_produto",
+        "pergunta": "What is the physical condition of the item? (unworn_with_tags/unworn_loose_tags/unworn_no_tags/clearly_used/washed/soiled_contaminated/why)",
+        "regras": ["HS-003", "PC-001", "PC-002", "PC-003", "PC-004", "PC-005", "PC-006", "PC-008"],
+        "resumo": "Physical condition determines immediate return approval (PC-001 for pristine items), resellability inspection for loose/missing tags (PC-002/PC-003), or strict refusal and biohazard isolation for soiled garments (PC-008).",
+    },
+    "IN-009": {
+        "atributo": "meio_pagamento",
+        "pergunta": "What was the original payment tender used in the purchase? (credit/debit/cash/afterpay/gift_card/paypal_venmo/interac/why)",
+        "regras": ["HS-005", "TN-001", "TN-002", "TN-003", "TN-004", "TN-005", "TN-008", "TN-009", "TN-010", "TN-011"],
+        "resumo": "Original payment tender dictates the mandatory refund channel: card refunds are tokenized automatically (TN-001), online Afterpay returns strictly prohibit counter exceptions (HS-005), and Canadian Interac transactions require physical card presentation (TN-011).",
+    },
+    "IN-010": {
+        "atributo": "revendivel",
+        "pergunta": "Is the item in resellable condition for immediate return to sales floor? (yes/no/why)",
+        "regras": ["PC-002", "PC-003", "PC-004", "EX-001", "EX-005"],
+        "resumo": "Immediate resellability is an indispensable premise for store leadership to authorize exceptions for garments with loose tags (PC-002) or missing tags (PC-003).",
+    },
+    "EP-001": {
+        "atributo": "troca_apenas_tamanho",
+        "pergunta": "Is the exchange request strictly an even size exchange for identical style and color? (yes/no/why)",
+        "regras": ["EP-001", "EP-002", "CH-006", "TN-006"],
+        "resumo": "Exchange mode determines whether the original promotional pricing is preserved (even size exchange via EP-001) or processed as return and new sale at current price (EP-002, CH-006).",
+    },
+    "EX-001": {
+        "atributo": "pedido_excecao",
+        "pergunta": "Did customer request an exception to standard policy and what is store management decision? (yes/no/why)",
+        "regras": ["EX-001", "EX-003", "EX-004", "EX-006", "EX-007", "HS-005"],
+        "resumo": "Submission and authorization of a counter exception by Key Holder or Store Manager (EX-001, EX-003) enables POS override, provided it does not violate corporate non-overridable hard stops (EX-006, HS-005).",
+    },
+    "EX-002": {
+        "atributo": "cliente_contesta",
+        "pergunta": "Does customer dispute initial counter policy refusal or show agitation? (yes/no/why)",
+        "regras": ["EX-002", "EX-003", "EX-005", "PT-006"],
+        "resumo": "Upon customer dispute or agitation, service protocol mandates formal escalation to store leadership (EX-002, EX-003) and de-escalation resolution (EX-005).",
+    },
+    "HS-006": {
+        "atributo": "colaborador_autorizado",
+        "pergunta": "Does associate hold authenticated session and authorized POS credentials? (yes/no/why)",
+        "regras": ["HS-006", "CT-001", "CT-002", "CT-003"],
+        "resumo": "POS security access control prevents unauthorized transactions or processing by associates without appropriate permission level (HS-006, CT-001).",
+    },
+    "EX-008": {
+        "atributo": "risco_fraude",
+        "pergunta": "Are there indicators of fraud or suspicious return inconsistencies? (yes/no/why)",
+        "regras": ["EX-008"],
+        "resumo": "Fraud indicators or serial return patterns mandate immediate transaction suspension and security notification (EX-008).",
+    },
+    "CH-002": {
+        "atributo": "encomenda_encontrada",
+        "pergunta": "Was online order located in order lookup system and is returns portal operational? (yes/no/why)",
+        "regras": ["CH-002", "CH-003", "CH-004", "CH-005", "CH-006"],
+        "resumo": "Order verification and portal status determine whether return follows BackPocket original tender refund or falls back to blind return with gift card (CH-002, CH-003, CH-004).",
+    },
+}
+
+# English rule metadata catalog for candidate waiting rule explanations
+PROLOG_RULE_DETAILS_EN: Dict[str, Dict[str, Any]] = {
+    "HS-001": {"nome": "Reject item without recognized POS SKU", "conclusoes": ["OUT-001:RECUSAR"]},
+    "HS-002": {"nome": "Reject non-qualifying brand (Dockers/Signature/Beyond Yoga)", "conclusoes": ["OUT-001:RECUSAR"]},
+    "HS-003": {"nome": "Reject tailored, hemmed, or customized garments", "conclusoes": ["OUT-001:RECUSAR"]},
+    "HS-004": {"nome": "Escalate to Canada franchise procedure without generic SKU", "conclusoes": ["OUT-001:ENCAMINHAR"]},
+    "HS-005": {"nome": "Reject tender exception for online Afterpay returns", "conclusoes": ["OUT-001:RECUSAR"]},
+    "HS-006": {"nome": "Escalate transaction: associate lacks authorized POS credentials", "conclusoes": ["OUT-001:ENCAMINHAR"]},
+    "PC-001": {"nome": "Allow return eligibility: pristine unworn item with intact original tags", "conclusoes": ["OUT-001:PERMITIR"]},
+    "PC-002": {"nome": "Manager review: unworn item with detached tags; approve only if resellable", "conclusoes": ["OUT-001:REVER"]},
+    "PC-003": {"nome": "Manager review: unworn item without tags; approve only if prep-ready", "conclusoes": ["OUT-001:REVER"]},
+    "PC-004": {"nome": "Manager review: non-defective worn garment; authorize same-item exchange only", "conclusoes": ["OUT-001:REVER"]},
+    "PC-005": {"nome": "Reject washed garment without verified manufacturing defect", "conclusoes": ["OUT-001:RECUSAR"]},
+    "PC-006": {"nome": "Allow refund or direct replacement with damage write-off for defect", "conclusoes": ["OUT-001:PERMITIR"]},
+    "PC-007": {"nome": "Allow bodywear return under 100% satisfaction guarantee", "conclusoes": ["OUT-001:PERMITIR"]},
+    "PC-008": {"nome": "Reject and quarantine soiled, contaminated, or hazardous garment in biohazard bag", "conclusoes": ["OUT-001:RECUSAR"]},
+    "PT-001": {"nome": "Classify as verified return with valid proof of purchase", "conclusoes": ["OUT-001:TIPO_VERIFICADA"]},
+    "PT-002": {"nome": "Classify as blind return due to absence of proof of purchase", "conclusoes": ["OUT-001:TIPO_AS_CEGAS"]},
+    "PT-003": {"nome": "Allow full refund to original tender or exchange within 30 days", "conclusoes": ["OUT-001:PERMITIR"]},
+    "PT-004": {"nome": "Manager review: verified return beyond 30 days; store credit at discretion", "conclusoes": ["OUT-001:REVER"]},
+    "PT-005": {"nome": "Permit exclusively store credit or exchange for blind return", "conclusoes": ["OUT-002:CREDITO_LOJA"]},
+    "PT-006": {"nome": "Skip customer identification if data refused or language barrier", "conclusoes": ["OUT-001:REVER"]},
+    "PT-007": {"nome": "Allow one-time price adjustment in POS within 14 days with original receipt", "conclusoes": ["OUT-001:PERMITIR"]},
+    "PT-008": {"nome": "Reject price adjustment after 14 days or without original physical receipt", "conclusoes": ["OUT-001:RECUSAR"]},
+    "CH-001": {"nome": "Apply receiving store format policies for Mainline and Outlet locations", "conclusoes": ["OUT-001:PERMITIR"]},
+    "CH-002": {"nome": "Forward verified online purchase through BackPocket system", "conclusoes": ["OUT-001:ENCAMINHAR"]},
+    "CH-003": {"nome": "Online purchase without matching order handled as blind return", "conclusoes": ["OUT-002:CARTAO_OFERTA"]},
+    "CH-004": {"nome": "Manager review when online returns portal is unavailable or offline", "conclusoes": ["OUT-001:REVER"]},
+    "CH-005": {"nome": "Issue physical gift card for online returns shipped more than 30 days ago", "conclusoes": ["OUT-002:CARTAO_OFERTA"]},
+    "CH-006": {"nome": "Complete online exchange and refund remaining balance to original tender", "conclusoes": ["OUT-002:TROCA"]},
+    "CH-007": {"nome": "Forward Canadian franchise garment using franchise SKU workflow", "conclusoes": ["OUT-001:ENCAMINHAR"]},
+    "CH-008": {"nome": "Reject wholesale garment and refer customer back to original retail seller", "conclusoes": ["OUT-001:RECUSAR"]},
+    "CH-009": {"nome": "Calculate blind return in Outlet store based on current promotional price", "conclusoes": ["OUT-002:CREDITO_LOJA"]},
+    "CH-010": {"nome": "Return Mainline purchase in Outlet store at original MSRP", "conclusoes": ["OUT-001:PERMITIR"]},
+    "TN-001": {"nome": "Automatic tokenized card refund: physical card presentation not required", "conclusoes": ["OUT-003:ORIGINAL"]},
+    "TN-002": {"nome": "Automatic account refund for lost, stolen, or expired replacement bank card", "conclusoes": ["OUT-003:ORIGINAL"]},
+    "TN-003": {"nome": "Allow alternative tender if bank account is closed and refund declined", "conclusoes": ["OUT-003:ALTERNATIVO"]},
+    "TN-004": {"nome": "Strictly prohibit cash refund for card purchases without prior bank decline", "conclusoes": ["OUT-003:NUMERARIO"]},
+    "TN-005": {"nome": "Automatic tokenized refund for contactless purchase", "conclusoes": ["OUT-003:ORIGINAL"]},
+    "TN-006": {"nome": "Refund remaining balance to original tender during exchange", "conclusoes": ["OUT-003:ORIGINAL"]},
+    "TN-007": {"nome": "Gift return resolution: issue store credit or original cardholder refund", "conclusoes": ["OUT-002:CREDITO_LOJA"]},
+    "TN-008": {"nome": "Require customer in-app barcode scan for PayPal or Venmo returns", "conclusoes": ["OUT-003:APLICACAO"]},
+    "TN-009": {"nome": "Process store-bought Afterpay return via associate terminal app", "conclusoes": ["OUT-003:APLICACAO"]},
+    "TN-010": {"nome": "Process online Afterpay return strictly through BackPocket system", "conclusoes": ["OUT-001:ENCAMINHAR"]},
+    "TN-011": {"nome": "Mandatory physical Canadian Interac debit card presentation for refund", "conclusoes": ["OUT-003:INTERAC"]},
+    "TN-011-SEM-CARTAO": {"nome": "Manager review for Canadian Interac return without physical card", "conclusoes": ["OUT-001:REVER"]},
+    "TN-012": {"nome": "Process Interac BackPocket return with manual terminal debit reversal", "conclusoes": ["OUT-003:INTERAC"]},
+    "EP-001": {"nome": "Even size exchange for identical style and color preserving original price", "conclusoes": ["OUT-002:TROCA_DIRETA"]},
+    "EP-002": {"nome": "Different style or color exchange processed as return and new sale", "conclusoes": ["OUT-002:TROCA_COM_VALOR"]},
+    "EX-001": {"nome": "Store Manager discretion evaluates counter exception request", "conclusoes": ["OUT-001:REVER"]},
+    "EX-002": {"nome": "Explain policy firmly and present allowed alternative upon dispute", "conclusoes": ["OUT-001:REVER"]},
+    "EX-003": {"nome": "Escalate to senior store manager when customer displays agitated behavior", "conclusoes": ["OUT-001:REVER"]},
+    "EX-004": {"nome": "Authorize counter exception only when hard stops are absent", "conclusoes": ["OUT-001:PERMITIR"]},
+    "EX-005": {"nome": "Apply least permissive resolution when granting commercial policy exception", "conclusoes": ["OUT-001:PERMITIR"]},
+    "EX-006": {"nome": "Strictly refuse exception that overrides Afterpay policy or unauthorized brands", "conclusoes": ["OUT-001:RECUSAR"]},
+    "EX-007": {"nome": "Document business justification formally on manager exception log", "conclusoes": ["OUT-001:PERMITIR"]},
+    "EX-008": {"nome": "Immediately suspend return and notify store security upon fraud indicators", "conclusoes": ["OUT-001:RECUSAR"]},
+    "BW-001": {"nome": "Return intact, unopened bodywear package directly to sales floor", "conclusoes": ["OUT-004:AREA_VENDAS"]},
+    "BW-002": {"nome": "Quarantine and dispose of opened, broken-seal, or worn bodywear", "conclusoes": ["OUT-004:DESTRUICAO"]},
+    "CT-001": {"nome": "Verified return processed by associate with authenticated POS credentials", "conclusoes": ["OUT-001:PERMITIR"]},
+    "CT-002": {"nome": "Blind return requires approval from Store Manager", "conclusoes": ["OUT-001:REVER"]},
+    "CT-003": {"nome": "Same associate completes transaction from start to finish with private credentials", "conclusoes": ["OUT-001:PERMITIR"]},
+}
+
 
 def _module_for_rule(code: str) -> str:
     prefix = code[:2].upper()
@@ -687,8 +851,9 @@ class RetailPrologService:
         return entry["decision"] if entry else None
 
     @staticmethod
-    def _humanize_prolog_condition(raw_text: str) -> str:
-        """Translate raw Prolog condition or premise into operational store Portuguese."""
+    def _humanize_prolog_condition(raw_text: str, locale: Optional[str] = None) -> str:
+        """Translate raw Prolog condition or premise into operational store Portuguese or English."""
+        is_en = bool(locale and locale.lower().startswith("en"))
         s = raw_text.strip()
         if s.startswith("Condition "):
             s = s[len("Condition "):].strip()
@@ -699,88 +864,95 @@ class RetailPrologService:
 
         # Domain condition mappings
         if "marca" in s:
-            return "Artigo pertence a uma marca não autorizada para devolução"
+            return "Garment belongs to an excluded brand (Dockers/Signature)" if is_en else "Artigo pertence a uma marca não autorizada para devolução"
         if "sku_reconhecido" in s:
-            return "Código SKU não reconhecido no catálogo do sistema POS"
+            return "SKU code not recognized in POS catalog" if is_en else "Código SKU não reconhecido no catálogo do sistema POS"
         if "sujo_contaminado_inseguro" in s:
-            return "Artigo com sujidade ou risco biológico de manuseamento"
+            return "Item soiled, contaminated, or posing biohazard risk" if is_en else "Artigo com sujidade ou risco biológico de manuseamento"
         if "comprovativo(nenhum)" in s:
-            return "Ausência de comprovativo válido de compra"
+            return "Absence of verifiable proof of purchase" if is_en else "Ausência de comprovativo válido de compra"
         if "comprovativo" in s and ("recibo" in s or "fatura" in s):
-            return "Apresentação de recibo válido (físico ou digital)"
+            return "Presentation of valid receipt (physical or digital)" if is_en else "Apresentação de recibo válido (físico ou digital)"
         if "dias_desde_compra" in s:
-            return "Prazo decorrido desde a compra superior ao limite regulamentar"
+            return "Elapsed days since purchase exceeds policy limit" if is_en else "Prazo decorrido desde a compra superior ao limite regulamentar"
         if "dias_desde_envio" in s:
-            return "Prazo decorrido desde o envio da encomenda online"
+            return "Elapsed days since online order shipment" if is_en else "Prazo decorrido desde o envio da encomenda online"
         if "elegibilidade_produto(aprovada)" in s:
-            return "Condição de elegibilidade do artigo aprovada (etiquetas intactas)"
+            return "Item condition approved with intact original tags" if is_en else "Condição de elegibilidade do artigo aprovada (etiquetas intactas)"
         if "categoria_produto(bodywear)" in s:
-            return "Artigo pertence à categoria Bodywear / Roupa Interior"
+            return "Item belongs to Bodywear / Underwear category" if is_en else "Artigo pertence à categoria Bodywear / Roupa Interior"
         if "defeito_fabrico" in s:
-            return "Presença de defeito ou vício de fabrico comprovado"
+            return "Verified manufacturing or material defect present" if is_en else "Presença de defeito ou vício de fabrico comprovado"
         if "estado_produto(nao_usado_com_etiquetas)" in s:
-            return "Artigo novo com todas as etiquetas originais afixadas"
+            return "New unworn item with intact original tags attached" if is_en else "Artigo novo com todas as etiquetas originais afixadas"
         if "estado_produto(nao_usado_etiquetas_soltas)" in s:
-            return "Artigo não usado mas com etiquetas soltas"
+            return "Unworn item with detached tags" if is_en else "Artigo não usado mas com etiquetas soltas"
         if "estado_produto(claramente_usado)" in s:
-            return "Artigo com sinais evidentes de uso"
+            return "Item with visible signs of wear" if is_en else "Artigo com sinais evidentes de uso"
         if "estado_produto(lavado)" in s:
-            return "Artigo lavado sem defeito de fabrico"
+            return "Washed garment without manufacturing defect" if is_en else "Artigo lavado sem defeito de fabrico"
         if "tipo_verificacao(as_cegas)" in s:
-            return "Classificação como devolução às cegas (sem comprovativo)"
+            return "Classified as blind return (without proof of purchase)" if is_en else "Classificação como devolução às cegas (sem comprovativo)"
         if "tipo_verificacao(verificada)" in s:
-            return "Classificação como devolução verificada com comprovativo"
+            return "Classified as verified return with proof of purchase" if is_en else "Classificação como devolução verificada com comprovativo"
         if "canal_compra" in s and ("levi_com" in s or "online" in s):
-            return "Compra efetuada através do canal oficial online (levi.com)"
+            return "Purchase made through official online store (levi.com)" if is_en else "Compra efetuada através do canal oficial online (levi.com)"
         if "canal_compra(franquia_canada)" in s:
-            return "Compra efetuada em loja franquiada no Canadá"
+            return "Purchase made at Canadian franchise location" if is_en else "Compra efetuada em loja franquiada no Canadá"
         if "canal_compra(grossista)" in s:
-            return "Artigo adquirido através de revendedor grossista"
+            return "Garment purchased through wholesale retailer" if is_en else "Artigo adquirido através de revendedor grossista"
         if "canal_compra" in s and "mainline" in s:
-            return "Compra efetuada em loja física própria (Mainline)"
+            return "Purchase made at retail store (Mainline)" if is_en else "Compra efetuada em loja física própria (Mainline)"
         if "canal_compra" in s and "outlet" in s:
-            return "Compra efetuada em loja outlet oficial"
+            return "Purchase made at official outlet store" if is_en else "Compra efetuada em loja outlet oficial"
         if "encomenda_encontrada" in s:
-            return "Número de encomenda online localizado no sistema"
+            return "Online order number verified in system" if is_en else "Número de encomenda online localizado no sistema"
         if "portal_online_disponivel" in s:
-            return "Portal online BackPocket disponível e operacional"
+            return "BackPocket online returns portal operational" if is_en else "Portal online BackPocket disponível e operacional"
         if "decisao(rever)" in s or "decisao(recusar)" in s:
-            return "Inexistência de decisão impeditiva prévia de recusa ou revisão"
+            return "No prior blocking decision (denial or manager review)" if is_en else "Inexistência de decisão impeditiva prévia de recusa ou revisão"
         if "colaborador_autorizado" in s:
-            return "Colaborador autorizado com credenciais próprias de POS"
+            return "Authorized associate with POS terminal credentials" if is_en else "Colaborador autorizado com credenciais próprias de POS"
         if "sessao_pos_propria" in s:
-            return "Operação conduzida na sessão própria do operador"
+            return "Transaction performed under operator's dedicated session" if is_en else "Operação conduzida na sessão própria do operador"
         if "personalizado_ou_alterado" in s:
-            return "Artigo personalizado, estampado ou alterado"
+            return "Tailored, hemmed, or customized garment" if is_en else "Artigo personalizado, estampado ou alterado"
         if "cliente_fornece_dados" in s:
-            return "Identificação do cliente fornecida no balcão"
+            return "Customer identification provided at counter" if is_en else "Identificação do cliente fornecida no balcão"
         if "cliente_contesta" in s:
-            return "Contestação ou desacordo manifestado pelo cliente"
+            return "Customer dispute or objection at counter" if is_en else "Contestação ou desacordo manifestado pelo cliente"
         if "cliente_agitado" in s:
-            return "Comportamento agitado ou conflituoso do cliente"
+            return "Hostile, agitated, or escalated customer behavior" if is_en else "Comportamento agitado ou conflituoso do cliente"
         if "afterpay_pede_excecao" in s:
-            return "Pedido de exceção de balcão para pagamento Afterpay"
+            return "Counter exception request for Afterpay transaction" if is_en else "Pedido de exceção de balcão para pagamento Afterpay"
         if "cartao_interac" in s or "interac" in s:
-            return "Apresentação do cartão físico Interac para estorno"
+            return "Physical Interac debit card presented for reversal" if is_en else "Apresentação do cartão físico Interac para estorno"
         if "recibo_original" in s:
-            return "Apresentação de recibo ou fatura original"
+            return "Presentation of original physical receipt" if is_en else "Apresentação de recibo ou fatura original"
         if "troca_apenas_tamanho" in s:
-            return "Troca direta de tamanho do mesmo artigo"
+            return "Direct even size exchange for identical style/color" if is_en else "Troca direta de tamanho do mesmo artigo"
         if "risco_fraude" in s:
-            return "Ausência de indicadores de fraude ou abuso de devoluções"
+            return "Absence of fraud indicators or suspicious return activity" if is_en else "Ausência de indicadores de fraude ou abuso de devoluções"
 
         # Fallback: humanize raw syntax
         clean = s.replace("nao ", "ausência de ").replace("_", " ").replace("(", ": ").replace(")", "").strip()
-        return f"Critério não verificado: {clean}"
+        return f"Unsatisfied criterion: {clean}" if is_en else f"Critério não verificado: {clean}"
 
-    async def explain_how(self, evaluation_id: Union[str, UUID]) -> ExplicacaoComoResponse:
+    async def explain_how(
+        self, evaluation_id: Union[str, UUID], locale: Optional[str] = None
+    ) -> ExplicacaoComoResponse:
         """Provide How causal rule trace from the Prolog evaluation."""
+        is_en = bool(locale and locale.lower().startswith("en"))
         entry = self._evaluations_cache.get(str(evaluation_id))
         if not entry:
             return ExplicacaoComoResponse(
                 passos=[],
                 modulosPercorridos=[],
-                resumo="Avaliação não encontrada no cache local da sessão.",
+                resumo=(
+                    "Evaluation not found in local session cache."
+                    if is_en
+                    else "Avaliação não encontrada no cache local da sessão."
+                ),
             )
 
         raw = entry["raw_result"]
@@ -789,6 +961,7 @@ class RetailPrologService:
 
         passos: List[PassoExplicacaoDto] = []
         modulos: List[str] = []
+        rule_catalog = PROLOG_RULE_DETAILS_EN if is_en else PROLOG_RULE_DETAILS
 
         for idx, just in enumerate(justifications, start=1):
             rule_id = "REGRA"
@@ -802,8 +975,8 @@ class RetailPrologService:
             if mod not in modulos:
                 modulos.append(mod)
 
-            rule_info = PROLOG_RULE_DETAILS.get(rule_id, {})
-            rule_title = rule_info.get("nome", f"Critério {rule_id}")
+            rule_info = rule_catalog.get(rule_id, {})
+            rule_title = rule_info.get("nome", f"Criterion {rule_id}" if is_en else f"Critério {rule_id}")
 
             passos.append(
                 PassoExplicacaoDto(
@@ -818,12 +991,20 @@ class RetailPrologService:
 
         if passos:
             last_code = passos[-1].codigoRegra
-            last_rule_name = PROLOG_RULE_DETAILS.get(last_code, {}).get("nome", last_code)
-            paragem = f"Decisão terminal fixada por: {last_rule_name}"
+            last_rule_name = rule_catalog.get(last_code, {}).get("nome", last_code)
+            paragem = (
+                f"Terminal decision determined by: {last_rule_name}"
+                if is_en
+                else f"Decisão terminal fixada por: {last_rule_name}"
+            )
         else:
-            paragem = "Conclusão alcançada"
+            paragem = "Conclusion reached" if is_en else "Conclusão alcançada"
 
-        resumo = f"O motor SWI-Prolog avaliou {raw.get('total_facts', 0)} factos e disparou {len(passos)} regras normativas."
+        resumo = (
+            f"The SWI-Prolog engine evaluated {raw.get('total_facts', 0)} facts and fired {len(passos)} normative rules."
+            if is_en
+            else f"O motor SWI-Prolog avaliou {raw.get('total_facts', 0)} factos e disparou {len(passos)} regras normativas."
+        )
 
         return ExplicacaoComoResponse(
             passos=passos,
@@ -836,8 +1017,10 @@ class RetailPrologService:
         self,
         evaluation_id: Union[str, UUID],
         target: Optional[str] = None,
+        locale: Optional[str] = None,
     ) -> ExplicacaoPorqueNaoConclusaoResponse:
         """Provide Why Not failure tree analysis from Prolog."""
+        is_en = bool(locale and locale.lower().startswith("en"))
         target_atom = "permitir"
         if target:
             clean = target.replace("OUT-001:", "").lower()
@@ -854,20 +1037,29 @@ class RetailPrologService:
             whynot_raw = await self.prolog_client.whynot_retail({"decision": target_atom})
             lines = whynot_raw.get("explanation", [])
         except Exception:
-            lines = [f"A conclusão {target_atom} não foi atingida pelas condições ativas."]
+            lines = [
+                f"Conclusion {target_atom} was not reached under active conditions."
+                if is_en
+                else f"A conclusão {target_atom} não foi atingida pelas condições ativas."
+            ]
 
         regras: List[ExplicacaoPorqueNaoResponse] = []
         current_rule: Optional[str] = None
         current_conds: List[CondicaoDto] = []
+        rule_catalog = PROLOG_RULE_DETAILS_EN if is_en else PROLOG_RULE_DETAILS
 
         def _append_current_rule():
             nonlocal current_rule, current_conds
             if not current_rule:
                 return
-            rule_info = PROLOG_RULE_DETAILS.get(current_rule, {})
+            rule_info = rule_catalog.get(current_rule, {})
             rule_name = rule_info.get("nome", current_rule)
             variante = f"{current_rule}: {rule_name}"
-            resumo = f"A regra '{rule_name}' não disparou porque os critérios exigidos não se verificaram no pedido."
+            resumo = (
+                f"Rule '{rule_name}' did not trigger because the required criteria were not met in the request."
+                if is_en
+                else f"A regra '{rule_name}' não disparou porque os critérios exigidos não se verificaram no pedido."
+            )
             regras.append(
                 ExplicacaoPorqueNaoResponse(
                     codigoRegra=current_rule,
@@ -884,12 +1076,16 @@ class RetailPrologService:
                 current_rule = line.split("[")[1].split("]")[0].strip()
                 current_conds = []
             elif "Condition" in line or "Premise" in line:
-                human_text = self._humanize_prolog_condition(line)
+                human_text = self._humanize_prolog_condition(line, locale=locale)
                 if not any(c.nome == human_text for c in current_conds):
                     current_conds.append(
                         CondicaoDto(
                             nome=human_text,
-                            descricao=f"Condição requerida: {human_text}",
+                            descricao=(
+                                f"Required condition: {human_text}"
+                                if is_en
+                                else f"Condição requerida: {human_text}"
+                            ),
                             cumprida=False,
                         )
                     )
@@ -902,7 +1098,11 @@ class RetailPrologService:
             obtida=False,
             propostaPor=[],
             regras=regras,
-            resumo=f"A conclusão '{target_atom.upper()}' não foi alcançada devido a condições não satisfeitas nas regras candidatas.",
+            resumo=(
+                f"Conclusion '{target_atom.upper()}' was not reached due to unmet conditions in candidate rules."
+                if is_en
+                else f"A conclusão '{target_atom.upper()}' não foi alcançada devido a condições não satisfeitas nas regras candidatas."
+            ),
         )
 
     async def simulate_whatif(
@@ -1039,8 +1239,11 @@ class RetailPrologService:
         """Convert input payload to Prolog facts."""
         return pedido_to_prolog_facts(payload) if payload else []
 
-    async def missing_data(self, payload: Dict[str, Any]) -> DadosEmFaltaResponse:
+    async def missing_data(
+        self, payload: Dict[str, Any], locale: Optional[str] = None
+    ) -> DadosEmFaltaResponse:
         """Check for missing data using Prolog interactive ACM mechanics."""
+        is_en = bool(locale and locale.lower().startswith("en"))
         facts = self._map_pedido_to_prolog_facts(payload)
         resp = await self.prolog_client.interactive_retail({"initial_facts": facts})
 
@@ -1048,28 +1251,44 @@ class RetailPrologService:
             q = resp["question"]
             attr = q.get("attribute", "comprovativo")
             code = "IN-004" if "comprovativo" in attr else "IN-010"
-            porque_exp = await self.explain_why(code, payload)
+            porque_exp = await self.explain_why(code, payload, locale=locale)
+            prompt_default = (
+                "Pending premise for full evaluation"
+                if is_en
+                else "Dado pendente para avaliação completa"
+            )
             dado = DadoEmFaltaDto(
                 codigo=code,
                 caminho=f"artigos[0].{attr}",
-                descricao=q.get("prompt", "Dado pendente para avaliação completa"),
+                descricao=q.get("prompt", prompt_default),
                 obrigatorio=True,
                 porque=porque_exp,
             )
             return DadosEmFaltaResponse(
                 dados=[dado],
                 completo=False,
-                resumo="Existem premissas perguntáveis em falta para conclusão definitiva.",
+                resumo=(
+                    "Missing askable premises to reach definitive conclusion."
+                    if is_en
+                    else "Existem premissas perguntáveis em falta para conclusão definitiva."
+                ),
             )
 
         return DadosEmFaltaResponse(
             dados=[],
             completo=True,
-            resumo="Todos os dados necessários para o diagnóstico foram recolhidos.",
+            resumo=(
+                "All data required for diagnosis has been gathered."
+                if is_en
+                else "Todos os dados necessários para o diagnóstico foram recolhidos."
+            ),
         )
 
-    async def explain_why(self, dado: str, payload: Dict[str, Any]) -> ExplicacaoPorqueResponse:
+    async def explain_why(
+        self, dado: str, payload: Dict[str, Any], locale: Optional[str] = None
+    ) -> ExplicacaoPorqueResponse:
         """Explain why a particular input premise is needed (Why Ask)."""
+        is_en = bool(locale and locale.lower().startswith("en"))
         dado_clean = (dado or "IN-004").strip()
         facts = self._map_pedido_to_prolog_facts(payload)
 
@@ -1091,6 +1310,11 @@ class RetailPrologService:
                 if dado_clean not in prolog_resp.get("pergunta", "") and dado_clean.lower() in prolog_resp.get("pergunta", ""):
                     prolog_resp["pergunta"] = prolog_resp["pergunta"].replace(dado_clean.lower(), dado_clean)
 
+                if is_en and dado_clean.upper() in PROLOG_INPUT_KNOWLEDGE_EN:
+                    en_kb = PROLOG_INPUT_KNOWLEDGE_EN[dado_clean.upper()]
+                    prolog_resp["pergunta"] = en_kb["pergunta"]
+                    prolog_resp["resumo"] = en_kb["resumo"]
+
                 return ExplicacaoPorqueResponse.model_validate(prolog_resp)
         except Exception as exc:
             logger.warning(
@@ -1100,13 +1324,23 @@ class RetailPrologService:
 
         # 2. Resilient fallback using PROLOG_INPUT_KNOWLEDGE if SWI-Prolog is unreachable
         dado_upper = dado_clean.upper()
-        info = PROLOG_INPUT_KNOWLEDGE.get(dado_upper)
+        input_catalog = PROLOG_INPUT_KNOWLEDGE_EN if is_en else PROLOG_INPUT_KNOWLEDGE
+        rule_catalog = PROLOG_RULE_DETAILS_EN if is_en else PROLOG_RULE_DETAILS
+        info = input_catalog.get(dado_upper)
         if not info:
             return ExplicacaoPorqueResponse(
                 codigo=dado_upper,
                 dado=dado_upper,
-                pergunta=f"Qual é o valor do atributo {dado_upper}?",
-                resumo=f"O atributo {dado_upper} é requerido pelo motor pericial para validar as regras normativas de devolução.",
+                pergunta=(
+                    f"What is the value of attribute {dado_upper}?"
+                    if is_en
+                    else f"Qual é o valor do atributo {dado_upper}?"
+                ),
+                resumo=(
+                    f"Attribute {dado_upper} is required by the expert engine to validate return rules."
+                    if is_en
+                    else f"O atributo {dado_upper} é requerido pelo motor pericial para validar as regras normativas de devolução."
+                ),
                 regrasQueDependem=[],
                 regrasEmEspera=[],
             )
@@ -1118,10 +1352,16 @@ class RetailPrologService:
         # Construct candidate regrasEmEspera based on rule details
         regras_em_espera: List[RegraEmEsperaDto] = []
         for rule_id in regras_dependentes:
-            r_meta = PROLOG_RULE_DETAILS.get(rule_id, {})
-            nome = r_meta.get("nome", f"Regra {rule_id}")
+            r_meta = rule_catalog.get(rule_id, {})
+            nome = r_meta.get("nome", f"Rule {rule_id}" if is_en else f"Regra {rule_id}")
             conclusoes = r_meta.get("conclusoes", [])
             modulo = _module_for_rule(rule_id)
+
+            cond_desc = (
+                f"Evaluation of premise '{info['atributo']}' for rule {rule_id}"
+                if is_en
+                else f"Avaliação da premissa '{info['atributo']}' para a regra {rule_id}"
+            )
 
             regras_em_espera.append(
                 RegraEmEsperaDto(
@@ -1132,7 +1372,7 @@ class RetailPrologService:
                     condicoesDoDado=[
                         CondicaoDto(
                             nome=info["atributo"],
-                            descricao=f"Avaliação da premissa '{info['atributo']}' para a regra {rule_id}",
+                            descricao=cond_desc,
                             cumprida=False,
                         )
                     ],

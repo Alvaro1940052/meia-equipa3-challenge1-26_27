@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useLocale } from "@/contexts/LocaleContext";
 
 export interface QuickActionsProps {
   onSwitchOperator?: () => void;
@@ -13,9 +14,12 @@ export default function QuickActions({
   onSimulateTraining,
   onViewPolicies,
 }: QuickActionsProps) {
+  const { locale } = useLocale();
+  const isEn = locale === "en";
+
   return (
     <section
-      aria-label="Atalhos rápidos de balcão"
+      aria-label={isEn ? "Quick counter shortcuts" : "Atalhos rápidos de balcão"}
       className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full"
     >
       {/* 1. Trocar de Operador */}
@@ -30,10 +34,10 @@ export default function QuickActions({
           </div>
           <div className="flex flex-col">
             <span className="font-sans text-sm font-bold text-slate-900">
-              Trocar de Operador
+              {isEn ? "Switch Operator" : "Trocar de Operador"}
             </span>
             <span className="font-sans text-xs text-slate-500">
-              Passar caixa ao colega
+              {isEn ? "Hand register to colleague" : "Passar caixa ao colega"}
             </span>
           </div>
         </div>
@@ -54,10 +58,10 @@ export default function QuickActions({
           </div>
           <div className="flex flex-col">
             <span className="font-sans text-sm font-bold text-slate-900">
-              Simular Cenário de Treino
+              {isEn ? "Simulate Training Scenario" : "Simular Cenário de Treino"}
             </span>
             <span className="font-sans text-xs text-slate-500">
-              Modo Sandbox seguro
+              {isEn ? "Safe sandbox mode" : "Modo Sandbox seguro"}
             </span>
           </div>
         </div>
@@ -78,10 +82,10 @@ export default function QuickActions({
           </div>
           <div className="flex flex-col">
             <span className="font-sans text-sm font-bold text-slate-900">
-              Políticas Atualizadas
+              {isEn ? "Current Policies" : "Políticas Atualizadas"}
             </span>
             <span className="font-sans text-xs text-slate-500">
-              Regras em vigor no balcão
+              {isEn ? "Rules in force at counter" : "Regras em vigor no balcão"}
             </span>
           </div>
         </div>

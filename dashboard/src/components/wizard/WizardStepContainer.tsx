@@ -16,12 +16,13 @@ import NavigationFooter from "@/components/ui/NavigationFooter";
 import WhyAskWidget from "./WhyAskWidget";
 import { api, ApiClientError } from "@/client/api";
 import type { DecisaoResponse } from "@/types/returns";
+import { useLocale } from "@/contexts/LocaleContext";
 
 interface WizardStepContainerProps {
   stepNumber: number;
 }
 
-const STEP_META: Record<
+const STEP_META_PT: Record<
   number,
   { title: string; subtitle: string; nextLabel: string; nextHint: string }
 > = {
@@ -69,8 +70,57 @@ const STEP_META: Record<
   },
 };
 
+const STEP_META_EN: Record<
+  number,
+  { title: string; subtitle: string; nextLabel: string; nextHint: string }
+> = {
+  1: {
+    title: "Select Evaluation Engine",
+    subtitle:
+      "Choose the inference engine to process retail return and exchange policies",
+    nextLabel: "Continue to Step 2",
+    nextHint: "Market & Store Format",
+  },
+  2: {
+    title: "Market & Store Format",
+    subtitle:
+      "Configure the fiscal territory, receiving store format, and original purchase channel",
+    nextLabel: "Continue to Step 3",
+    nextHint: "Product Eligibility",
+  },
+  3: {
+    title: "Product Eligibility",
+    subtitle:
+      "Verify garment details and physical condition to validate return compliance",
+    nextLabel: "Continue to Step 4",
+    nextHint: "Proof of Purchase & Timeline",
+  },
+  4: {
+    title: "Proof of Purchase & Timeline",
+    subtitle:
+      "Inspect request type, presented proof document, and elapsed time since purchase",
+    nextLabel: "Continue to Step 5",
+    nextHint: "Exchange Mode or Counter Exception",
+  },
+  5: {
+    title: "Exchange or Counter Exception",
+    subtitle:
+      "Specify whether customer requests size exchange or requires manager exception override",
+    nextLabel: "Continue to Step 6",
+    nextHint: "Refund Tender & Settlement",
+  },
+  6: {
+    title: "Refund Tender & Settlement",
+    subtitle:
+      "Confirm automatic tender refund and omnichannel payment reconciliation",
+    nextLabel: "Calculate Final Verdict",
+    nextHint: "Submit for Expert Evaluation",
+  },
+};
+
 export default function WizardStepContainer({ stepNumber }: WizardStepContainerProps) {
   const router = useRouter();
+  const { locale } = useLocale();
   const {
     state,
     totalSteps,
@@ -141,23 +191,23 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
   const isStep6Valid = isGift
     ? Boolean(state.totalPrice !== null && state.totalPrice > 0)
     : Boolean(
-        state.totalPrice !== null &&
-        state.totalPrice > 0 &&
-        state.originalPaymentMethod &&
-        state.accountState &&
-        isInteracValid &&
-        isPaypalValid &&
-        isEncerradaValid
-      );
+      state.totalPrice !== null &&
+      state.totalPrice > 0 &&
+      state.originalPaymentMethod &&
+      state.accountState &&
+      isInteracValid &&
+      isPaypalValid &&
+      isEncerradaValid
+    );
 
   const isCurrentStepValid =
     stepNumber === 1 ? isStep1Valid :
-    stepNumber === 2 ? isStep2Valid :
-    stepNumber === 3 ? isStep3Valid :
-    stepNumber === 4 ? isStep4Valid :
-    stepNumber === 5 ? isStep5Valid :
-    stepNumber === 6 ? isStep6Valid :
-    true;
+      stepNumber === 2 ? isStep2Valid :
+        stepNumber === 3 ? isStep3Valid :
+          stepNumber === 4 ? isStep4Valid :
+            stepNumber === 5 ? isStep5Valid :
+              stepNumber === 6 ? isStep6Valid :
+                true;
 
   const handleBack = () => {
     if (stepNumber <= 1) {
@@ -217,71 +267,82 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
   };
 
   const getStepHint = () => {
+    const isEn = locale === "en";
     if (stepNumber === 1) {
-      return state.engine ? "Mercado e Tipo de Loja" : "Selecione um motor para prosseguir";
+      return state.engine
+        ? (isEn ? "Market & Store Format" : "Mercado e Tipo de Loja")
+        : (isEn ? "Select an engine to continue" : "Selecione um motor para prosseguir");
     }
     if (stepNumber === 2) {
       if (!isStep2Valid) {
         const missing = [];
-        if (!state.marketJurisdiction) missing.push("Jurisdição");
-        if (!state.storeType) missing.push("Formato");
-        if (!state.purchaseChannel) missing.push("Canal");
-        return `Obrigatório: selecionar ${missing.join(", ")}`;
+        if (!state.marketJurisdiction) missing.push(isEn ? "Jurisdiction" : "Jurisdição");
+        if (!state.storeType) missing.push(isEn ? "Format" : "Formato");
+        if (!state.purchaseChannel) missing.push(isEn ? "Channel" : "Canal");
+        return isEn ? `Required: select ${missing.join(", ")}` : `Obrigatório: selecionar ${missing.join(", ")}`;
       }
       return meta.nextHint;
     }
     if (stepNumber === 3) {
       if (!isStep3Valid) {
         const missing: string[] = [];
-        if (state.barcodeRecognized === null) missing.push("Código de barras");
-        if (state.brandAllowed === null) missing.push("Marca");
-        if (state.alteredOrHemmed === null) missing.push("Bainhas");
-        if (!state.physicalCondition) missing.push("Estado Físico");
-        if (isResellRequired && state.readyToResell === null) missing.push("Revenda");
-        return `Obrigatório: selecionar ${missing.slice(0, 2).join(", ")}${missing.length > 2 ? "..." : ""}`;
+        if (state.barcodeRecognized === null) missing.push(isEn ? "Barcode" : "Código de barras");
+        if (state.brandAllowed === null) missing.push(isEn ? "Brand" : "Marca");
+        if (state.alteredOrHemmed === null) missing.push(isEn ? "Alterations" : "Bainhas");
+        if (!state.physicalCondition) missing.push(isEn ? "Condition" : "Estado Físico");
+        if (isResellRequired && state.readyToResell === null) missing.push(isEn ? "Resale" : "Revenda");
+        return isEn
+          ? `Required: select ${missing.slice(0, 2).join(", ")}${missing.length > 2 ? "..." : ""}`
+          : `Obrigatório: selecionar ${missing.slice(0, 2).join(", ")}${missing.length > 2 ? "..." : ""}`;
       }
       return meta.nextHint;
     }
     if (stepNumber === 4) {
       if (!isStep4Valid) {
         const missing: string[] = [];
-        if (!state.requestType) missing.push("Tipo de Pedido");
-        if (!state.proofOfPurchase) missing.push("Comprovativo");
-        if (state.daysSincePurchase === null) missing.push("Prazo");
-        return `Obrigatório: selecionar ${missing.slice(0, 2).join(", ")}${missing.length > 2 ? "..." : ""}`;
+        if (!state.requestType) missing.push(isEn ? "Request Type" : "Tipo de Pedido");
+        if (!state.proofOfPurchase) missing.push(isEn ? "Proof" : "Comprovativo");
+        if (state.daysSincePurchase === null) missing.push(isEn ? "Timeline" : "Prazo");
+        return isEn
+          ? `Required: select ${missing.slice(0, 2).join(", ")}${missing.length > 2 ? "..." : ""}`
+          : `Obrigatório: selecionar ${missing.slice(0, 2).join(", ")}${missing.length > 2 ? "..." : ""}`;
       }
-      return isExchange ? "Modalidade de Troca e Exceção" : "Situação de Balcão e Exceção";
+      return isExchange
+        ? (isEn ? "Exchange Mode or Exception" : "Modalidade de Troca e Exceção")
+        : (isEn ? "Counter Demeanor or Exception" : "Situação de Balcão e Exceção");
     }
     if (stepNumber === 5) {
       if (!isStep5Valid) {
         const missing: string[] = [];
         if (isExchange && (!state.exchangeOption || state.exchangeOption === "NENHUMA")) {
-          missing.push("Modalidade");
+          missing.push(isEn ? "Modality" : "Modalidade");
         }
-        if (!state.customerSituation) missing.push("Situação");
-        if (state.managerException === null) missing.push("Exceção");
-        return `Obrigatório: selecionar ${missing.join(", ")}`;
+        if (!state.customerSituation) missing.push(isEn ? "Demeanor" : "Situação");
+        if (state.managerException === null) missing.push(isEn ? "Exception" : "Exceção");
+        return isEn ? `Required: select ${missing.join(", ")}` : `Obrigatório: selecionar ${missing.join(", ")}`;
       }
       return meta.nextHint;
     }
     if (stepNumber === 6) {
       if (!isStep6Valid) {
         const missing: string[] = [];
-        if (state.totalPrice === null || state.totalPrice <= 0) missing.push("Valor do Artigo");
+        if (state.totalPrice === null || state.totalPrice <= 0) missing.push(isEn ? "Item Amount" : "Valor do Artigo");
         if (!isGift) {
-          if (!state.originalPaymentMethod) missing.push("Meio de Pagamento");
-          if (!state.accountState) missing.push("Estado da Conta");
+          if (!state.originalPaymentMethod) missing.push(isEn ? "Payment Method" : "Meio de Pagamento");
+          if (!state.accountState) missing.push(isEn ? "Account Status" : "Estado da Conta");
           if (state.accountState === "ENCERRADA" && state.originalRefundRefused === null) {
-            missing.push("Recusa no Terminal");
+            missing.push(isEn ? "Terminal Refusal" : "Recusa no Terminal");
           }
           if (state.originalPaymentMethod === "INTERAC" && state.physicalCardPresent === null) {
-            missing.push("Cartão Físico");
+            missing.push(isEn ? "Physical Card" : "Cartão Físico");
           }
           if (state.originalPaymentMethod === "PAYPAL" && state.paymentAppAccessible === null) {
-            missing.push("Acesso App");
+            missing.push(isEn ? "App Access" : "Acesso App");
           }
         }
-        return `Obrigatório: selecionar ${missing.slice(0, 2).join(", ")}${missing.length > 2 ? "..." : ""}`;
+        return isEn
+          ? `Required: select ${missing.slice(0, 2).join(", ")}${missing.length > 2 ? "..." : ""}`
+          : `Obrigatório: selecionar ${missing.slice(0, 2).join(", ")}${missing.length > 2 ? "..." : ""}`;
       }
       return meta.nextHint;
     }
@@ -320,16 +381,23 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
     }
   };
 
-  const baseMeta = STEP_META[stepNumber] || STEP_META[1];
+  const stepMetaDict = locale === "en" ? STEP_META_EN : STEP_META_PT;
+  const baseMeta = stepMetaDict[stepNumber] || stepMetaDict[1];
   const meta = {
     ...baseMeta,
     ...(stepNumber === 5
       ? {
-          title: isExchange ? "Troca ou Exceção de Balcão" : "Situação de Balcão e Exceções",
-          subtitle: isExchange
-            ? "Indique a peça de substituição pretendida e se há contestação a requerer exceção"
+        title: isExchange
+          ? locale === "en" ? "Exchange or Counter Exception" : "Troca ou Exceção de Balcão"
+          : locale === "en" ? "Counter Scenario & Exceptions" : "Situação de Balcão e Exceções",
+        subtitle: isExchange
+          ? locale === "en"
+            ? "Specify the replacement garment and whether customer requests manager exception"
+            : "Indique a peça de substituição pretendida e se há contestação a requerer exceção"
+          : locale === "en"
+            ? "Specify whether customer accepts standard resolution or disputes for manager override"
             : "Indique se o cliente aceita a resolução padrão ou se há contestação a requerer exceção de gerência",
-        }
+      }
       : {}),
   };
 
@@ -385,26 +453,28 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
             </div>
             <div className="flex flex-col gap-1">
               <h3 className="font-sans text-on-surface text-xl font-bold">
-                A Calcular Veredito Oficial...
+                {locale === "en" ? "Calculating Official Verdict..." : "A Calcular Veredito Oficial..."}
               </h3>
               <p className="font-sans text-on-surface-variant text-xs sm:text-sm">
-                A submeter pedido ao motor{" "}
+                {locale === "en" ? "Submitting request to engine " : "A submeter pedido ao motor "}
                 <span className="font-bold text-primary">
-                  {state.engine === "prolog" ? "Prolog (Dedução Lógica)" : "Drools (Regras Rete-OO)"}
+                  {state.engine === "prolog"
+                    ? locale === "en" ? "Prolog (Logical Deduction)" : "Prolog (Dedução Lógica)"
+                    : locale === "en" ? "Drools (Rete-OO Rules)" : "Drools (Regras Rete-OO)"}
                 </span>{" "}
-                e a validar conformidade de balcão.
+                {locale === "en" ? "and validating retail compliance." : "e a validar conformidade de balcão."}
               </p>
             </div>
           </div>
         </div>
       )}
 
-      {/* 1. TOP ALIGNED: Step Indicator Eyebrow (circulado a vermelho) */}
+      {/* 1. TOP ALIGNED: Step Indicator Eyebrow */}
       <div className="w-full flex justify-center pt-2 sm:pt-4 shrink-0">
         <StepEyebrow step={stepNumber} totalSteps={totalSteps} />
       </div>
 
-      {/* 2. VERTICALLY CENTERED: Title + Subtitle + Content Cards (circulado a amarelo) */}
+      {/* 2. VERTICALLY CENTERED: Title + Subtitle + Content Cards */}
       <div className="w-full flex flex-col items-center my-auto py-4">
         {/* Screen Header (Title + Subtitle, without eyebrow) */}
         <StepHeader
@@ -435,7 +505,7 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
               </div>
               <div className="flex flex-col">
                 <span className="font-sans text-sm font-bold text-red-900">
-                  Não foi possível concluir a avaliação
+                  {locale === "en" ? "Unable to complete evaluation" : "Não foi possível concluir a avaliação"}
                 </span>
                 <span className="font-sans text-xs sm:text-sm text-red-800 mt-0.5">
                   {evaluationError}
@@ -449,13 +519,13 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
               className="w-full sm:w-auto px-5 py-2.5 rounded-full bg-red-600 hover:bg-red-700 text-white font-sans text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-[0_3px_0_#991b1b] hover:translate-y-0.5 active:translate-y-1 transition-all cursor-pointer shrink-0"
             >
               <span className="material-symbols-outlined text-[18px]">refresh</span>
-              <span>Tentar novamente</span>
+              <span>{locale === "en" ? "Try again" : "Tentar novamente"}</span>
             </button>
           </div>
         )}
       </div>
 
-      {/* Bottom Progress & Navigation Group (aligned to the bottom of the page) */}
+      {/* Bottom Progress & Navigation Group */}
       <div className="w-full mt-auto pt-12 sm:pt-16 pb-1 flex flex-col gap-2">
         {/* Segmented Progress Bar */}
         <ProgressBar
@@ -468,10 +538,14 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
           onBack={handleBack}
           onNext={handleNext}
           onLeave={stepNumber > 1 ? handleLeave : undefined}
-          leaveLabel="Painel Inicial"
+          leaveLabel={locale === "en" ? "Main Dashboard" : "Painel Inicial"}
           nextLabel={meta.nextLabel}
           nextHint={getStepHint()}
-          backLabel={stepNumber === 1 ? "Painel Inicial" : "Passo Anterior"}
+          backLabel={
+            stepNumber === 1
+              ? locale === "en" ? "Main Dashboard" : "Painel Inicial"
+              : locale === "en" ? "Previous Step" : "Passo Anterior"
+          }
           disabled={!isCurrentStepValid}
           isLoading={isEvaluating}
         />
