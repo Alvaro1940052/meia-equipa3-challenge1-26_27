@@ -10,7 +10,7 @@
   ],
   "justificacao": [
     "M3: calças embainhadas → HS-003 RECUSAR, mesmo com o defeito confirmado (HS-003 prevalece sobre PC-006).",
-    "M4: o recibo original confirma a compra (PT-001), mas sem artigo elegível não há prazo a aplicar (PT-003).",
+    "A paragem do único artigo termina o pedido (ADR 0004): M4 a M8 não são avaliados, por isso nem o comprovativo (PT-001) nem o prazo (PT-003).",
     "M9: artigo recusado → devolução ao cliente (OUT-007); o pedido fica RECUSAR sem transação (OUT-001).",
     "A pressão da viagem não altera a elegibilidade; o cliente não contesta formalmente (EX-002 não se aplica)."
   ],
@@ -43,11 +43,11 @@
   "indicadoresFraude": [],
   "esperado": {
     "elegibilidade": "RECUSAR",
-    "tipoVerificacao": "VERIFICADA",
+    "tipoVerificacao": "NAO_DETERMINADA",
     "tipoTransacao": "NENHUMA",
-    "terminal": false,
-    "regrasDisparadas": ["CT-003", "CH-001", "HS-003", "PT-001", "OUT-007", "OUT-001"],
-    "regrasNaoDisparadas": ["PC-006", "PC-004", "PT-003", "CT-005", "EX-002"],
+    "terminal": true,
+    "regrasDisparadas": ["CT-003", "CH-001", "HS-003", "OUT-007", "OUT-001"],
+    "regrasNaoDisparadas": ["PC-006", "PC-004", "PT-001", "PT-003", "CT-005", "EX-002"],
     "artigos": {
       "A-1": { "elegibilidade": "RECUSAR", "tipoTransacao": "NENHUMA", "destino": "DEVOLUCAO_CLIENTE", "regrasDisparadas": ["HS-003", "OUT-007"] }
     }

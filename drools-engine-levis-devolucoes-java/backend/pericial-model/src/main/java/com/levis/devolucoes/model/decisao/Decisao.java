@@ -50,6 +50,14 @@ public class Decisao extends DecisaoBase {
   }
 
   /**
+   * Termina o fluxo do pedido quando todos os artigos pararam numa paragem obrigatória: não resta
+   * nada a decidir para a transação (ADR 0004). A elegibilidade do pedido é agregada em OUT-001.
+   */
+  public void terminarPorParagemDosArtigos() {
+    terminar();
+  }
+
+  /**
    * Recusa o pedido de exceção do cliente (HS-005, EX-006). O registo fica com o resultado RECUSAR,
    * mas a elegibilidade do pedido não muda: a transação continua pelo processo obrigatório.
    */

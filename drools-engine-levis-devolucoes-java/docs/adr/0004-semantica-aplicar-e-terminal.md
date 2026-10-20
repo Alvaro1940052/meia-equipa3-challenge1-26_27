@@ -64,6 +64,13 @@
 12. **REVER produzido em M7** (TN-008 sem acesso à aplicação, TN-011 sem o cartão Interac) surge depois de M6, por isso não
     aciona EX-001: estas regras definem elas próprias a aprovação do responsável sénior.
 
+13. **Paragem de todos os artigos termina o pedido.** As paragens por artigo (HS-001 a HS-004 e CH-007 em M3) só
+    terminam o seu artigo (ADR 0002). Quando a paragem atinge o último artigo ainda por terminar, a própria regra marca
+    também o pedido como terminal (`Decisao.terminarPorParagemDosArtigos()`): não resta nada a decidir para a
+    transação, por isso as regras de M4 a M8 deixam de disparar (antes, por exemplo, PT-001 corria depois de HS-003).
+    A marcação é feita dentro do disparo da paragem para que o rasto a atribua a essa regra ("Como?" e "Porque não?").
+    Com outros artigos ainda elegíveis, o pedido continua a ser avaliado para esses artigos.
+
 ## Consequências
 
 - O resultado deixa de depender da ordem de disparo entre regras com resultados diferentes.
