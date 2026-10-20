@@ -49,6 +49,7 @@ test(hs_003_terminates_inference) :-
     cenario_hs003(Factos),
     retail_engine:evaluate_facts(Factos, R),
     assertion(R.decision == recusar),
+    assertion(R.hard_stop == 'HS-003'),
     regras_disparadas(Ids),
     assertion(Ids == ['HS-003']),
     decisoes(Ds),
@@ -120,7 +121,8 @@ test(transversal_rules_fire_after_stop) :-
 test(hs_005_is_not_terminal) :-
     retail_engine:evaluate_facts([
         colaborador_autorizado(true), meio_pagamento(afterpay), afterpay_pede_excecao(true)
-    ], _),
+    ], R),
+    assertion(R.hard_stop == null),
     assertion(has_fact(regra_disparada('HS-005'))),
     assertion(\+ retail_engine:paragem_ativa(_)).
 

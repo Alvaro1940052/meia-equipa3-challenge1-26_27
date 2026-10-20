@@ -170,10 +170,15 @@ run_engine(ResultDict) :-
     find_derived_facts(InitialCount, DerivedFacts),
     length(DerivedFacts, DerivedCount),
     decisao_final(Decisao),
+    (   paragem_ativa(HardStop)
+    ->  true
+    ;   HardStop = null
+    ),
     output_why(Justifications),
     ResultDict = _{
         status: "success",
         decision: Decisao,
+        hard_stop: HardStop,
         justification: Justifications,
         initial_facts_count: InitialCount,
         derived_facts_count: DerivedCount,

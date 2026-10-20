@@ -989,7 +989,15 @@ class RetailPrologService:
                 )
             )
 
-        if passos:
+        hard_stop = raw.get("hard_stop") or None
+        if hard_stop:
+            stop_name = rule_catalog.get(hard_stop, {}).get("nome", hard_stop)
+            paragem = (
+                f"Hard stop {hard_stop} ({stop_name}): inference terminated (RPAC 4.6)"
+                if is_en
+                else f"Paragem obrigatória {hard_stop} ({stop_name}): inferência terminada (RPAC 4.6)"
+            )
+        elif passos:
             last_code = passos[-1].codigoRegra
             last_rule_name = rule_catalog.get(last_code, {}).get("nome", last_code)
             paragem = (
@@ -1402,8 +1410,16 @@ class RetailPrologService:
         derived_facts = raw.get("derived_facts", [])
         fact_strings = [df.get("fact", "") for df in derived_facts]
 
+        # Terminal hard stop reported by the engine (RPAC 4.6): its decision prevails.
+        hard_stop = raw.get("hard_stop") or None
+        terminal = hard_stop is not None
+
         # 1. Map Elegibilidade (OUT-001)
-        if any("decisao(encaminhar)" in f or "processo_obrigatorio(backpocket)" in f for f in fact_strings):
+        if terminal and decision_raw == "encaminhar":
+            elegibilidade = ElegibilidadeEnum.ENCAMINHAR
+        elif terminal and decision_raw == "recusar":
+            elegibilidade = ElegibilidadeEnum.RECUSAR
+        elif any("decisao(encaminhar)" in f or "processo_obrigatorio(backpocket)" in f for f in fact_strings):
             elegibilidade = ElegibilidadeEnum.ENCAMINHAR
         elif any("decisao(recusar)" in f for f in fact_strings) or decision_raw in ["recusar", "rejected"]:
             elegibilidade = ElegibilidadeEnum.RECUSAR
@@ -1622,7 +1638,7 @@ class RetailPrologService:
                     baseValor=base_valor,
                     destino=destino,
                     aprovacao=aprovacao,
-                    terminal=False,
+                    terminal=terminal,
                 )
             )
 
@@ -1636,7 +1652,7 @@ class RetailPrologService:
                     baseValor=base_valor,
                     destino=DestinoProdutoEnum.AREA_VENDAS if elegibilidade != ElegibilidadeEnum.RECUSAR else DestinoProdutoEnum.DEVOLUCAO_CLIENTE,
                     aprovacao=aprovacao,
-                    terminal=False,
+                    terminal=terminal,
                 )
             )
 
@@ -1668,7 +1684,7 @@ class RetailPrologService:
             meioReembolso=meio_reembolso,
             aprovacao=aprovacao,
             processo=processo,
-            terminal=False,
+            terminal=terminal,
             excecaoRecusada=(elegibilidade == ElegibilidadeEnum.ENCAMINHAR),
             documentacao=doc,
             artigos=artigos_list,
