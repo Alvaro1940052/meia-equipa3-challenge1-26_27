@@ -30,6 +30,8 @@
 :- dynamic ja_perguntado/1.
 :- dynamic regra_ativa/2.
 :- dynamic regra_info/3.
+:- dynamic paragem_obrigatoria/1.
+:- dynamic regra_transversal/1.
 
 % ==============================================================================
 % Initial Fact Counter
@@ -134,6 +136,30 @@ facto_dispara_regras(recibo_entregue(_), ['CT-006']).
 facto_dispara_regras(destino_produto(_), ['CT-008']).
 facto_dispara_regras(embalagem_intacta(_), ['BW-001', 'BW-002']).
 facto_dispara_regras(pecas_em_falta(_), ['BW-002', 'BW-003']).
+
+% ==============================================================================
+% Metaknowledge: Hard-Stop Precedence and Inference Control (RPAC 4.6)
+% ==============================================================================
+% Terminal hard stops, in precedence order (HS-006 → CH-008/CH-007 → HS-001..004).
+% HS-004 is a specialisation of CH-007 (franchise product without a recognised
+% SKU) with the same conclusion, so it is tried just before CH-007 (specificity).
+% Once one fires the inference stops: only the transversal rules below may still
+% fire. HS-005 is not terminal — it only refuses the Afterpay method exception.
+paragem_obrigatoria('HS-006').
+paragem_obrigatoria('CH-008').
+paragem_obrigatoria('HS-004').
+paragem_obrigatoria('CH-007').
+paragem_obrigatoria('HS-001').
+paragem_obrigatoria('HS-002').
+paragem_obrigatoria('HS-003').
+
+% Transversal safety and customer-handling rules, which apply regardless of the
+% outcome (biohazard isolation, fraud escalation, customer dispute/agitation).
+regra_transversal('PC-008').
+regra_transversal('BW-004').
+regra_transversal('EX-008').
+regra_transversal('EX-002').
+regra_transversal('EX-003').
 
 % ==============================================================================
 % Rule Metadata (regra_info/3)

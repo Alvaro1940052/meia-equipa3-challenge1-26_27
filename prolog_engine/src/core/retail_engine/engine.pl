@@ -69,6 +69,8 @@
 :- dynamic ja_perguntado/1.
 :- dynamic regra_ativa/2.
 :- dynamic regra_info/3.
+:- dynamic paragem_obrigatoria/1.
+:- dynamic regra_transversal/1.
 
 % Import interactive dialogue manager
 :- use_module(interactive, [
@@ -147,6 +149,8 @@ reset_engine :-
     retractall(facto_dispara_regras(_, _)),
     retractall(perguntavel(_)),
     retractall(regra_info(_, _, _)),
+    retractall(paragem_obrigatoria(_)),
+    retractall(regra_transversal(_)),
     clear_mock_answers,
     disable_interactive_mode.
 
@@ -165,10 +169,7 @@ run_engine(ResultDict) :-
     count_facts(TotalCount),
     find_derived_facts(InitialCount, DerivedFacts),
     length(DerivedFacts, DerivedCount),
-    (   facto(_, decisao(Decisao))
-    ->  true
-    ;   Decisao = nao_concluido
-    ),
+    decisao_final(Decisao),
     output_why(Justifications),
     ResultDict = _{
         status: "success",
@@ -199,10 +200,7 @@ run_interactive(InitialFacts, ResultDict) :-
             garantir_factos_iniciais_interativos,
             run_engine(BaseResult),
             get_dialogue_log(DialogueLog),
-            (   facto(_, decisao(Decisao))
-            ->  true
-            ;   Decisao = nao_concluido
-            ),
+            decisao_final(Decisao),
             ResultDict = BaseResult.put(_{
                 decision: Decisao,
                 dialogue_log: DialogueLog
@@ -736,7 +734,7 @@ output_why(JustificationsList) :-
 %
 %   Prints the executive decision justification summary to standard output.
 output_why :-
-    (   facto(_, decisao(Dec))
+    (   decisao_final(Dec), Dec \== nao_concluido
     ->  format("=== [PORQUÊ DA DECISÃO: ~w] ===~n", [Dec])
     ;   format("=== [PORQUÊ DA DECISÃO: NÃO CONCLUÍDO] ===~n", [])
     ),
@@ -750,10 +748,7 @@ output_why :-
 %
 %   Retrieves the final canonical decision along with its executive justifications.
 decision_justification(Decision, JustificationsList) :-
-    (   facto(_, decisao(D))
-    ->  Decision = D
-    ;   Decision = nao_concluido
-    ),
+    decisao_final(Decision),
     output_why(JustificationsList).
 
 % ------------------------------------------------------------------------------
@@ -789,6 +784,15 @@ explain_whynot_internal(FactTerm, _, _, [Msg]) :-
     facto(_, FactTerm),
     !,
     format(string(Msg), "The fact ~w is already true in the knowledge base", [FactTerm]).
+explain_whynot_internal(FactTerm, Level, _, [Msg]) :-
+    paragem_ativa(Paragem),
+    findall(ID, (regra ID se _ entao RHS, memberchk(cria_facto(FactTerm), RHS)), Regras),
+    Regras \== [],
+    forall(member(ID, Regras), regra_bloqueada(ID)),
+    !,
+    indent_prefix(Level, Prefix),
+    format(string(Msg), "~wBecause: hard stop ~w terminated the inference (RPAC 4.6); rule(s) ~w were not evaluated",
+           [Prefix, Paragem, Regras]).
 explain_whynot_internal(FactTerm, Level, Visited, ExplanationList) :-
     encontra_regras_whynot(FactTerm, LLPF),
     LLPF \== [],
@@ -880,10 +884,7 @@ restore_working_memory(snapshot(Facts, Ultimo, Justs, JaPerg)) :-
 
 executar_simulacao_what_if(FactosAdicionar, FactosRemover, ComparacaoResultado) :-
     % 1. Capture baseline state
-    (   facto(_, decisao(BaseDec))
-    ->  BaselineDecision = BaseDec
-    ;   BaselineDecision = nao_concluido
-    ),
+    decisao_final(BaselineDecision),
     output_why(BaselineJustification),
 
     % 2. Extract baseline initial/base facts
@@ -908,10 +909,7 @@ executar_simulacao_what_if(FactosAdicionar, FactosRemover, ComparacaoResultado) 
     run_engine(SimBaseResult),
 
     % 6. Extract simulated outcome
-    (   facto(_, decisao(SimDec))
-    ->  SimulatedDecision = SimDec
-    ;   SimulatedDecision = nao_concluido
-    ),
+    decisao_final(SimulatedDecision),
     output_why(SimulatedJustification),
 
     % 7. Diff outcome
@@ -1048,6 +1046,7 @@ arranca_motor :-
 arranca_motor(N) :-
     facto(N, Facto),
     !,
+    aplica_paragens_prioritarias,
     facto_dispara_regras1(Facto, LRegras),
     dispara_regras(N, Facto, LRegras),
     N1 is N + 1,
@@ -1060,7 +1059,8 @@ facto_dispara_regras1(Facto, LRegras) :-
 facto_dispara_regras1(_, []).
 
 dispara_regras(N, Facto, [ID|LRegras]) :-
-    (   regra ID se LHS entao RHS,
+    (   \+ regra_bloqueada(ID),
+        regra ID se LHS entao RHS,
         facto_esta_numa_condicao(Facto, LHS),
         extrai_objetivo(RHS, Objetivo),
         setup_call_cleanup(
@@ -1077,6 +1077,59 @@ dispara_regras(N, Facto, [ID|LRegras]) :-
     !,
     dispara_regras(N, Facto, LRegras).
 dispara_regras(_, _, []) :- !.
+
+% ==============================================================================
+% Hard Stops: Precedence and Inference Termination (RPAC 4.6)
+% ==============================================================================
+
+%!  paragem_ativa(-RuleID) is semidet.
+%
+%   Succeeds when a terminal hard stop (paragem_obrigatoria/1) has fired in the
+%   current session. Derived from working memory, so it needs no extra state and
+%   is cleared with the session (including What-If sandboxes).
+paragem_ativa(ID) :-
+    paragem_obrigatoria(ID),
+    facto(_, regra_disparada(ID)),
+    !.
+
+%!  regra_bloqueada(+RuleID) is semidet.
+%
+%   After a terminal hard stop only the transversal rules (regra_transversal/1)
+%   may still fire; every other rule is skipped before its conditions are
+%   checked, so no further questions are asked.
+regra_bloqueada(ID) :-
+    paragem_ativa(_),
+    \+ regra_transversal(ID).
+
+%!  aplica_paragens_prioritarias is det.
+%
+%   Checks the terminal hard stops in precedence order against the facts already
+%   known, without asking questions, and fires the first one that holds. A
+%   lower-precedence rule can no longer decide first just because its triggering
+%   fact was inserted earlier.
+aplica_paragens_prioritarias :-
+    (   paragem_ativa(_)
+    ->  true
+    ;   paragem_obrigatoria(ID),
+        regra ID se LHS entao RHS,
+        verifica_condicoes_sem_perguntar(LHS, LFactos)
+    ->  concluir(RHS, ID, LFactos)
+    ;   true
+    ).
+
+%!  decisao_final(-Decisao) is det.
+%
+%   Session decision: a terminal hard stop prevails over any decision derived
+%   before or after it; otherwise the first decision derived.
+decisao_final(Decisao) :-
+    paragem_ativa(ID),
+    regra ID se _ entao RHS,
+    memberchk(cria_facto(decisao(Decisao)), RHS),
+    !.
+decisao_final(Decisao) :-
+    facto(_, decisao(Decisao)),
+    !.
+decisao_final(nao_concluido).
 
 extrai_objetivo([cria_facto(Obj)|_], Obj) :- !.
 extrai_objetivo(Obj, Obj).
@@ -1205,12 +1258,39 @@ condicao_satisfeita(X) :-
     facto(_, X).
 
 avalia_sem_perguntar(P) :-
+    avalia_sem_perguntar(_, P).
+
+avalia_sem_perguntar(N, P) :-
     P =.. [Functor, Entidade, Operando, Valor],
     P1 =.. [Functor, Entidade, Valor1],
-    facto(_, P1),
+    facto(N, P1),
     compara(Valor1, Operando, Valor).
-avalia_sem_perguntar(P) :-
+avalia_sem_perguntar(N, P) :-
     P =.. [Functor, Operando, Valor],
     P1 =.. [Functor, Valor1],
-    facto(_, P1),
+    facto(N, P1),
     compara(Valor1, Operando, Valor).
+
+%!  verifica_condicoes_sem_perguntar(+LHS, -LFactos) is semidet.
+%
+%   Same as verifica_condicoes/2 but only over facts already in working memory.
+verifica_condicoes_sem_perguntar([nao avalia(X) e Y], [nao X|LF]) :- !,
+    \+ avalia_sem_perguntar(X),
+    verifica_condicoes_sem_perguntar([Y], LF).
+verifica_condicoes_sem_perguntar([avalia(X) e Y], [N|LF]) :- !,
+    avalia_sem_perguntar(N, X),
+    verifica_condicoes_sem_perguntar([Y], LF).
+verifica_condicoes_sem_perguntar([nao avalia(X)], [nao X]) :- !,
+    \+ avalia_sem_perguntar(X).
+verifica_condicoes_sem_perguntar([avalia(X)], [N]) :- !,
+    avalia_sem_perguntar(N, X).
+verifica_condicoes_sem_perguntar([nao X e Y], [nao X|LF]) :- !,
+    \+ facto(_, X),
+    verifica_condicoes_sem_perguntar([Y], LF).
+verifica_condicoes_sem_perguntar([X e Y], [N|LF]) :- !,
+    facto(N, X),
+    verifica_condicoes_sem_perguntar([Y], LF).
+verifica_condicoes_sem_perguntar([nao X], [nao X]) :- !,
+    \+ facto(_, X).
+verifica_condicoes_sem_perguntar([X], [N]) :-
+    facto(N, X).

@@ -19,6 +19,7 @@
 :- [tests/test_retail_explainability].
 :- [tests/test_retail_api].
 :- [tests/test_retail_expert_scenarios].
+:- [tests/test_retail_hard_stops].
 :- [tests/test_inference_engine].
 
 %!  run_all is det.
