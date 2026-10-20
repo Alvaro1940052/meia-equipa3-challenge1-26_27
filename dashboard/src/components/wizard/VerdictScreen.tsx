@@ -22,6 +22,8 @@ import type {
 } from "@/types/returns";
 import type { EngineId } from "@/config/gateway";
 import { useRouter } from "next/navigation";
+import { api, ApiClientError } from "@/client/api";
+import CaseComparisonModal from "@/components/home/CaseComparisonModal";
 
 export interface VerdictScreenProps {
   result: DecisaoResponse;
@@ -47,6 +49,41 @@ export default function VerdictScreen({
   const [copied, setCopied] = useState<boolean>(false);
 
   const baseEndpoint = engine === "prolog" ? "/api/prolog" : "/api/returns";
+
+  // Comparação com o outro motor: o mesmo pedido (mesmo ID) é avaliado uma vez pelo outro motor e
+  // as duas avaliações ficam emparelhadas no histórico pelo pedidoId.
+  const outroMotorBase = engine === "prolog" ? "/api/returns" : "/api/prolog";
+  const outroMotorNome = engine === "prolog" ? "Drools" : "Prolog";
+  const pedidoId =
+    result.pedidoId ?? (typeof request.id === "string" ? request.id : null);
+  const [outroMotorAvaliado, setOutroMotorAvaliado] = useState<boolean>(false);
+  const [aComparar, setAComparar] = useState<boolean>(false);
+  const [erroComparacao, setErroComparacao] = useState<string | null>(null);
+  const [comparacaoAberta, setComparacaoAberta] = useState<boolean>(false);
+
+  const handleCompararMotores = async () => {
+    if (!pedidoId) return;
+    setErroComparacao(null);
+    if (!outroMotorAvaliado) {
+      setAComparar(true);
+      try {
+        await api<DecisaoResponse>(`${outroMotorBase}/avaliar`, { method: "POST", body: request });
+        setOutroMotorAvaliado(true);
+      } catch (err: unknown) {
+        setErroComparacao(
+          err instanceof ApiClientError || err instanceof Error
+            ? err.message
+            : locale === "en"
+              ? "Could not evaluate with the other engine."
+              : "Não foi possível avaliar com o outro motor."
+        );
+        return;
+      } finally {
+        setAComparar(false);
+      }
+    }
+    setComparacaoAberta(true);
+  };
 
   // Extrair valor numérico
   const refundVal =
@@ -414,6 +451,23 @@ export default function VerdictScreen({
                   <span className="material-symbols-outlined text-[16px] text-slate-500">print</span>
                   <span>{locale === "en" ? "Print Receipt" : "Imprimir Recibo"}</span>
                 </button>
+
+                {pedidoId && (
+                  <button
+                    type="button"
+                    onClick={handleCompararMotores}
+                    disabled={aComparar}
+                    aria-busy={aComparar}
+                    className="font-sans px-4 py-2 rounded-xl bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-2xs transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+                  >
+                    <span className={`material-symbols-outlined text-[16px] ${aComparar ? "animate-spin" : ""}`}>
+                      {aComparar ? "progress_activity" : "compare_arrows"}
+                    </span>
+                    <span>
+                      {locale === "en" ? `Compare with ${outroMotorNome}` : `Comparar com ${outroMotorNome}`}
+                    </span>
+                  </button>
+                )}
               </div>
 
               <button
@@ -424,10 +478,22 @@ export default function VerdictScreen({
                 <span className="material-symbols-outlined text-[18px]">add</span>
                 <span>{locale === "en" ? "New Request" : "Novo Atendimento"}</span>
               </button>
+
+              {erroComparacao && (
+                <p role="alert" className="w-full font-sans text-xs text-red-700">
+                  {erroComparacao}
+                </p>
+              )}
             </div>
           }
         />
       </div>
+
+      <CaseComparisonModal
+        pedidoId={pedidoId}
+        isOpen={comparacaoAberta}
+        onClose={() => setComparacaoAberta(false)}
+      />
 
       {/* 3. Secção 02: Especificações Oficiais da Decisão (RPAC-Team3 OUT-001 a OUT-008) */}
       <div className="w-full flex flex-col gap-3">

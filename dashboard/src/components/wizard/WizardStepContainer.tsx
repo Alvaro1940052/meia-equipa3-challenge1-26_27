@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useWizard, getFirstIncompleteStep } from "./WizardContext";
+import { useWizard, getFirstIncompleteStep, exigeEstadoDaConta } from "./WizardContext";
 import Step1EngineSelect from "./Step1EngineSelect";
 import Step2MarketStore from "./Step2MarketStore";
 import Step3ProductEligibility from "./Step3ProductEligibility";
@@ -232,7 +232,10 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
 
   const isInteracValid = state.originalPaymentMethod !== "INTERAC" || state.physicalCardPresent !== null;
   const isPaypalValid = state.originalPaymentMethod !== "PAYPAL" || state.paymentAppAccessible !== null;
-  const isEncerradaValid = state.accountState !== "ENCERRADA" || state.originalRefundRefused !== null;
+  // O estado da conta só se pergunta para cartão de crédito/débito (TN-002, TN-003)
+  const pedeEstadoDaConta = exigeEstadoDaConta(state.originalPaymentMethod);
+  const isEncerradaValid =
+    !pedeEstadoDaConta || state.accountState !== "ENCERRADA" || state.originalRefundRefused !== null;
 
   const isStep6Valid = isGift
     ? Boolean(state.totalPrice !== null && state.totalPrice > 0)
@@ -240,7 +243,7 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
       state.totalPrice !== null &&
       state.totalPrice > 0 &&
       state.originalPaymentMethod &&
-      state.accountState &&
+      (!pedeEstadoDaConta || state.accountState) &&
       isInteracValid &&
       isPaypalValid &&
       isEncerradaValid
@@ -381,8 +384,10 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
         if (state.totalPrice === null || state.totalPrice <= 0) missing.push(isEn ? "Item Amount" : "Valor do Artigo");
         if (!isGift) {
           if (!state.originalPaymentMethod) missing.push(isEn ? "Payment Method" : "Meio de Pagamento");
-          if (!state.accountState) missing.push(isEn ? "Account Status" : "Estado da Conta");
-          if (state.accountState === "ENCERRADA" && state.originalRefundRefused === null) {
+          if (pedeEstadoDaConta && !state.accountState) {
+            missing.push(isEn ? "Account Status" : "Estado da Conta");
+          }
+          if (pedeEstadoDaConta && state.accountState === "ENCERRADA" && state.originalRefundRefused === null) {
             missing.push(isEn ? "Terminal Refusal" : "Recusa no Terminal");
           }
           if (state.originalPaymentMethod === "INTERAC" && state.physicalCardPresent === null) {
