@@ -124,14 +124,27 @@ class CenariosApiIT {
 
   @Test
   void oQueFaltaEPorqueParaUmPedidoAindaVazio() throws IOException {
-    String token = Exemplos.bearer(emissor, Funcao.STYLIST);
+    String token = Exemplos.bearer(emissor, Funcao.KEY_HOLDER);
 
     ResponseEntity<String> emFalta =
         pedir(HttpMethod.POST, "/api/v1/avaliacoes/dados-em-falta", json.readTree("{}"), token);
     assertThat(emFalta.getStatusCode()).as(emFalta.getBody()).isEqualTo(HttpStatus.OK);
     JsonNode dados = json.readTree(emFalta.getBody());
     assertThat(dados.get("completo").asBoolean()).isFalse();
+    assertThat(dados.get("terminal").asBoolean()).isFalse();
     assertThat(dados.get("dados")).isNotEmpty();
+
+    // Um Stylist não está autorizado: HS-006 termina a inferência e não falta nada (ADR 0004)
+    ResponseEntity<String> naoAutorizado =
+        pedir(
+            HttpMethod.POST,
+            "/api/v1/avaliacoes/dados-em-falta",
+            json.readTree("{}"),
+            Exemplos.bearer(emissor, Funcao.STYLIST));
+    JsonNode paragem = json.readTree(naoAutorizado.getBody());
+    assertThat(paragem.get("terminal").asBoolean()).isTrue();
+    assertThat(paragem.get("paragem").asText()).isEqualTo("HS-006");
+    assertThat(paragem.get("dados")).isEmpty();
 
     // Como o assistente envia: artigo ainda sem SKU e artigo de troca por completar
     String emCurso =

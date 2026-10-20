@@ -141,6 +141,10 @@ export interface DadosEmFaltaResponse {
   dados: DadoEmFaltaDto[];
   completo?: boolean;
   resumo?: string | null;
+  /** Uma paragem obrigatória terminou a inferência: não é preciso mais nenhum dado. */
+  terminal?: boolean;
+  /** Regra de paragem que terminou a inferência (ex.: HS-003). */
+  paragem?: string | null;
 }
 
 export interface DiferencaDto {

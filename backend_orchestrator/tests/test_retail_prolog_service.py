@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from unittest.mock import AsyncMock
+
 import pytest
 
 from app.clients.prolog_client import PrologClient
 from app.core.config import settings
+from app.schemas.levis import ElegibilidadeEnum
 from app.services.retail_prolog_service import RetailPrologService, pedido_to_prolog_facts
 
 
@@ -13,6 +16,44 @@ def _get_service() -> RetailPrologService:
     url = getattr(settings, "PROLOG_ENGINE_URL", getattr(settings, "prolog_engine_url", "http://localhost:8080"))
     client = PrologClient(base_url=url)
     return RetailPrologService(prolog_client=client)
+
+
+@pytest.mark.asyncio
+async def test_hard_stop_maps_to_terminal_decision():
+    """A hard stop reported by the engine makes the decision terminal with the stop's outcome."""
+    client = AsyncMock()
+    client.evaluate_retail.return_value = {
+        "status": "success",
+        "decision": "rejected",
+        "retail_decision": "recusar",
+        "hard_stop": "HS-003",
+        "justification": ["[HS-003] Recusar produtos personalizados, alterados ou embainhados."],
+        "derived_facts": [{"id": 5, "fact": "decisao(recusar)", "rule_id": "HS-003", "justified_by": []}],
+        "total_facts": 5,
+    }
+    res = await RetailPrologService(prolog_client=client).evaluate_return({"compraOriginal": {"canal": "MAINLINE"}})
+
+    assert res.terminal is True
+    assert res.elegibilidade == ElegibilidadeEnum.RECUSAR
+    assert all(a.terminal for a in res.artigos)
+
+
+@pytest.mark.asyncio
+async def test_missing_data_after_hard_stop_asks_nothing():
+    """O que falta? after a terminal hard stop: nothing is missing and the stop is reported."""
+    client = AsyncMock()
+    client.interactive_retail.return_value = {
+        "status": "completed",
+        "decision": "rejected",
+        "retail_decision": "recusar",
+        "hard_stop": "CH-008",
+    }
+    res = await RetailPrologService(prolog_client=client).missing_data({"compraOriginal": {"canal": "GROSSISTA"}})
+
+    assert res.terminal is True
+    assert res.paragem == "CH-008"
+    assert res.completo is True
+    assert res.dados == []
 
 
 @pytest.mark.asyncio

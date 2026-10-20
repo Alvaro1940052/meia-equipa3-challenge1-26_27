@@ -204,9 +204,7 @@ class ElegibilidadeProdutoTest {
     void paragemNumArtigoNaoTerminaOPedidoComOutroElegivel() {
       ResultadoAvaliacao resultado =
           avaliar(
-              umPedido()
-                  .artigo(a -> a.getEstado().setAlterado(true))
-                  .maisUmArtigo("A-2", a -> {}));
+              umPedido().artigo(a -> a.getEstado().setAlterado(true)).maisUmArtigo("A-2", a -> {}));
 
       assertThat(resultado.artigo("A-1").isTerminal()).isTrue();
       assertThat(resultado.artigo("A-2").getElegibilidade()).isEqualTo(Elegibilidade.PERMITIR);

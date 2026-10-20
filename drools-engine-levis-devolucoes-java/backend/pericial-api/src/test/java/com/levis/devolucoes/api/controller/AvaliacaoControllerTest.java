@@ -211,7 +211,7 @@ class AvaliacaoControllerTest {
   @Test
   void dadosEmFaltaAceitaPedidoIncompletoENoIdiomaPedido() throws Exception {
     when(avaliacoes.dadosEmFalta(any(), any(), any()))
-        .thenReturn(new DadosEmFaltaResponse(List.of(), false, "Missing"));
+        .thenReturn(new DadosEmFaltaResponse(List.of(), false, "Missing", false, null));
 
     mvc.perform(
             post("/api/v1/avaliacoes/dados-em-falta")

@@ -1255,6 +1255,21 @@ class RetailPrologService:
         facts = self._map_pedido_to_prolog_facts(payload)
         resp = await self.prolog_client.interactive_retail({"initial_facts": facts})
 
+        # After a terminal hard stop the engine asks nothing more (RPAC 4.6)
+        hard_stop = resp.get("hard_stop") or None
+        if hard_stop:
+            return DadosEmFaltaResponse(
+                dados=[],
+                completo=True,
+                terminal=True,
+                paragem=hard_stop,
+                resumo=(
+                    f"Hard stop {hard_stop} ended the inference: no further data is needed."
+                    if is_en
+                    else f"A paragem obrigatória {hard_stop} terminou a inferência: não é preciso mais nenhum dado."
+                ),
+            )
+
         if resp.get("status") == "question" and "question" in resp:
             q = resp["question"]
             attr = q.get("attribute", "comprovativo")

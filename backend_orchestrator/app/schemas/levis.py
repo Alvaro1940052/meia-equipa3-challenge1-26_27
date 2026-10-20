@@ -730,6 +730,10 @@ class DadosEmFaltaResponse(LevisBaseModel):
     dados: List[DadoEmFaltaDto] = Field(default_factory=list, description="Lista de dados em falta.")
     completo: bool = Field(default=False, description="Indica se o pedido tem dados suficientes para decidir.")
     resumo: Optional[str] = Field(default=None, description="Resumo explicativo.")
+    terminal: bool = Field(
+        default=False, description="Uma paragem obrigatória terminou a inferência: não é preciso mais nenhum dado."
+    )
+    paragem: Optional[str] = Field(default=None, description="Regra de paragem que terminou a inferência.")
 
 
 class PassoExplicacaoDto(LevisBaseModel):

@@ -105,11 +105,15 @@ public class AvaliacaoService {
   @Transactional
   public DecisaoResponse avaliar(PedidoAvaliacaoRequest pedido, ColaboradorDto colaborador) {
     PedidoPreparado preparado = preparar(pedido, colaborador);
-    validador.validarCompletude(detetor.obrigatorios(preparado.pedido()));
+    List<DadoEmFalta> obrigatoriosEmFalta = detetor.obrigatorios(preparado.pedido());
 
     String pedidoJson = clonador.paraJson(preparado.pedido());
     String fraudesJson = clonador.paraJson(preparado.fraudes());
     ResultadoExecucao resultado = motor.avaliar(preparado.pedido(), preparado.fraudes());
+    // Uma paragem obrigatória decide sem os restantes dados (ADR 0004)
+    if (!resultado.decisao().isTerminal()) {
+      validador.validarCompletude(obrigatoriosEmFalta);
+    }
 
     LocalDateTime agora = LocalDateTime.now(relogio);
     DecisaoResponse decisao =
@@ -154,6 +158,16 @@ public class AvaliacaoService {
     List<DadoEmFalta> emFalta = detetor.detetar(preparado.pedido());
     ResultadoExecucao atual =
         motor.avaliar(clonador.clonar(preparado.pedido()), preparado.fraudes());
+    if (atual.decisao().isTerminal()) {
+      // Depois de uma paragem obrigatória não há mais nada a perguntar (ADR 0004)
+      String paragem = explicadores.como(locale).explicar(atual).paragem();
+      return new DadosEmFaltaResponse(
+          List.of(),
+          true,
+          explicadores.texto(locale).formatar("emfalta.paragem", paragem),
+          true,
+          paragem);
+    }
     ExplicadorPorque porque = explicadores.porque(locale);
 
     List<DadoEmFaltaDto> dados = new ArrayList<>();
@@ -173,7 +187,7 @@ public class AvaliacaoService {
             : explicadores
                 .texto(locale)
                 .formatar("emfalta.resumo", obrigatorios, emFalta.size() - obrigatorios);
-    return new DadosEmFaltaResponse(dados, obrigatorios == 0, resumo);
+    return new DadosEmFaltaResponse(dados, obrigatorios == 0, resumo, false, null);
   }
 
   /** "Porquê?": porque é que o sistema pergunta pelo dado indicado, para este pedido. */

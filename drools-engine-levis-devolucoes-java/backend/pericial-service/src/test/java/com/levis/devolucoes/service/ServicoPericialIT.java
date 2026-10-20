@@ -168,6 +168,36 @@ class ServicoPericialIT {
           avaliacoes.porque(cenario.pedido(), cenario.colaborador(), "IN-010", Locale.ENGLISH);
       assertThat(porque.resumo()).startsWith("I ask");
     }
+
+    @Test
+    void depoisDeUmaParagemNaoFaltaNadaEOPedidoEAvaliado() {
+      // Cenário 5 (grossista, CH-008) sem tipo de pedido nem loja: dados obrigatórios em falta
+      CenarioDto cenario = CenariosDto.ler(5);
+      PedidoAvaliacaoRequest incompleto =
+          new PedidoAvaliacaoRequest(
+              cenario.pedido().id(),
+              cenario.pedido().dataPedido(),
+              null,
+              null,
+              cenario.pedido().cliente(),
+              cenario.pedido().compraOriginal(),
+              cenario.pedido().comprovativo(),
+              cenario.pedido().artigos(),
+              cenario.pedido().artigosTroca(),
+              null,
+              null,
+              cenario.pedido().pedidoExcecao(),
+              null);
+
+      DadosEmFaltaResponse emFalta = avaliacoes.dadosEmFalta(incompleto, cenario.colaborador(), PT);
+      assertThat(emFalta.terminal()).isTrue();
+      assertThat(emFalta.paragem()).isEqualTo("CH-008");
+      assertThat(emFalta.completo()).isTrue();
+      assertThat(emFalta.dados()).isEmpty();
+
+      DecisaoResponse decisao = avaliacoes.avaliar(incompleto, cenario.colaborador());
+      assertThat(decisao.terminal()).isTrue();
+    }
   }
 
   @Nested

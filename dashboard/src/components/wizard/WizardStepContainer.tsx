@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useWizard, getFirstIncompleteStep } from "./WizardContext";
 import Step1EngineSelect from "./Step1EngineSelect";
@@ -15,7 +15,7 @@ import ProgressBar from "@/components/ui/ProgressBar";
 import NavigationFooter from "@/components/ui/NavigationFooter";
 import WhyAskWidget from "./WhyAskWidget";
 import { api, ApiClientError } from "@/client/api";
-import type { DecisaoResponse } from "@/types/returns";
+import type { DadosEmFaltaResponse, DecisaoResponse } from "@/types/returns";
 import { useLocale } from "@/contexts/LocaleContext";
 
 interface WizardStepContainerProps {
@@ -142,6 +142,52 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
   const [isEvaluating, setIsEvaluating] = useState<boolean>(false);
   const [evaluationError, setEvaluationError] = useState<string | null>(null);
 
+  // Paragem obrigatória detetada pelo motor para o estado atual do wizard (RPAC 4.6). A chave
+  // identifica o estado consultado, para que uma resposta antiga não valha depois de uma alteração.
+  const [paragem, setParagem] = useState<{ codigo: string; resumo: string; chave: string } | null>(
+    null
+  );
+  const buildRequestRef = useRef(buildReturnRequest);
+  useEffect(() => {
+    buildRequestRef.current = buildReturnRequest;
+  });
+  const chaveEstado = JSON.stringify(state);
+
+  // O motor decide se ainda é preciso perguntar: o "O que falta?" corre a inferência sem gravar
+  // nada e, se uma paragem obrigatória a terminou, o wizard passa diretamente ao veredito.
+  useEffect(() => {
+    if (!isHydrated || !state.engine || stepNumber < 2 || evaluationResult) return;
+    let cancelado = false;
+    const temporizador = setTimeout(async () => {
+      const base = state.engine === "prolog" ? "/api/prolog" : "/api/returns";
+      const apiLocale = locale === "en" ? "locale=en" : "locale=pt-PT";
+      try {
+        const resposta = await api<DadosEmFaltaResponse>(`${base}/dados-em-falta?${apiLocale}`, {
+          method: "POST",
+          body: buildRequestRef.current(),
+        });
+        if (cancelado) return;
+        setParagem(
+          resposta.terminal && resposta.paragem
+            ? { codigo: resposta.paragem, resumo: resposta.resumo ?? "", chave: chaveEstado }
+            : null
+        );
+      } catch {
+        // Sem resposta do motor, o wizard segue o fluxo normal
+        if (!cancelado) setParagem(null);
+      }
+    }, 350);
+    return () => {
+      cancelado = true;
+      clearTimeout(temporizador);
+    };
+  }, [isHydrated, state.engine, stepNumber, evaluationResult, locale, chaveEstado]);
+
+  const paragemAtiva =
+    paragem && paragem.chave === chaveEstado && stepNumber >= 2 && !evaluationResult
+      ? paragem
+      : null;
+
   // Guarda Sequencial de Passos (Step Guard):
   // Impede que um utilizador aceda diretamente via URL sem ter completado os passos obrigatórios anteriores
   useEffect(() => {
@@ -228,6 +274,12 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
   };
 
   const handleNext = async () => {
+    // Paragem obrigatória: o motor já decidiu e não há mais nada a perguntar
+    if (paragemAtiva) {
+      await handleEvaluate();
+      return;
+    }
+
     // No passo 1, é obrigatório selecionar um motor antes de prosseguir
     if (stepNumber === 1 && !isStep1Valid) {
       return;
@@ -493,6 +545,29 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
           {stepNumber === 6 && <Step6Refund />}
         </div>
 
+        {/* Paragem obrigatória: a inferência terminou, o veredito fica disponível */}
+        {paragemAtiva && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="w-full mt-6 p-4 sm:p-5 rounded-2xl bg-rose-50/95 border-2 border-rose-200 text-rose-950 flex items-start gap-3.5 shadow-sm animate-in fade-in duration-200"
+          >
+            <div className="w-11 h-11 rounded-2xl bg-rose-100 border border-rose-200 text-rose-600 flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-[26px]">block</span>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="font-sans text-sm font-bold text-rose-900">
+                {locale === "en"
+                  ? `Hard stop ${paragemAtiva.codigo}: no further questions`
+                  : `Paragem obrigatória ${paragemAtiva.codigo}: não há mais perguntas`}
+              </span>
+              {paragemAtiva.resumo && (
+                <span className="font-sans text-xs sm:text-sm text-rose-800">{paragemAtiva.resumo}</span>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Tactile Error Card with Retry Button */}
         {evaluationError && (
           <div
@@ -539,14 +614,22 @@ export default function WizardStepContainer({ stepNumber }: WizardStepContainerP
           onNext={handleNext}
           onLeave={stepNumber > 1 ? handleLeave : undefined}
           leaveLabel={locale === "en" ? "Main Dashboard" : "Painel Inicial"}
-          nextLabel={meta.nextLabel}
-          nextHint={getStepHint()}
+          nextLabel={
+            paragemAtiva ? (locale === "en" ? "View Verdict" : "Ver Veredito") : meta.nextLabel
+          }
+          nextHint={
+            paragemAtiva
+              ? locale === "en"
+                ? `Hard stop ${paragemAtiva.codigo}`
+                : `Paragem obrigatória ${paragemAtiva.codigo}`
+              : getStepHint()
+          }
           backLabel={
             stepNumber === 1
               ? locale === "en" ? "Main Dashboard" : "Painel Inicial"
               : locale === "en" ? "Previous Step" : "Passo Anterior"
           }
-          disabled={!isCurrentStepValid}
+          disabled={!paragemAtiva && !isCurrentStepValid}
           isLoading={isEvaluating}
         />
       </div>
