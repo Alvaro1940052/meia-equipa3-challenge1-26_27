@@ -163,9 +163,15 @@ export default function Step6Refund() {
   );
   const [prevTotalPrice, setPrevTotalPrice] = useState<number | null>(state.totalPrice);
 
+  // Só sincroniza o campo quando o valor muda por fora (ex.: rascunho carregado); enquanto se
+  // escreve, o texto já corresponde ao valor e não pode ser reformatado (ex.: "3" → "3.00").
   if (state.totalPrice !== prevTotalPrice) {
     setPrevTotalPrice(state.totalPrice);
-    setPriceInput(state.totalPrice !== null ? state.totalPrice.toFixed(2) : "");
+    const textoCorresponde =
+      state.totalPrice === null ? priceInput === "" : parseFloat(priceInput) === state.totalPrice;
+    if (!textoCorresponde) {
+      setPriceInput(state.totalPrice !== null ? state.totalPrice.toFixed(2) : "");
+    }
   }
 
   // Filtrar meios: destacar ou permitir Interac se Canadá
