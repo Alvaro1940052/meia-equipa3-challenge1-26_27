@@ -164,6 +164,133 @@ def test_acesso_aplicacao_pagamento_facts():
     assert "acesso_aplicacao_pagamento(false)" in facts
 
 
+def test_online_order_not_found_and_blind_return_policy_facts():
+    """CH-003 / CH-004 need the order lookup result and the blind-return policy, as in Drools."""
+    facts = pedido_to_prolog_facts({
+        "tipoPedido": "devolucao",
+        "politicaPermiteAsCegasOnline": False,
+        "compraOriginal": {"canal": "levi_com", "encomendaEncontrada": False},
+    })
+    assert "encomenda_encontrada(false)" in facts
+    assert "politica_permite_as_cegas_online(false)" in facts
+
+
+def test_soiled_item_keeps_its_condition_of_use():
+    """PC-008 only isolates the item: the condition of use still decides eligibility."""
+    facts = pedido_to_prolog_facts({
+        "artigos": [{"estado": {"condicaoUso": "USADO", "sujoOuInseguro": True}}],
+    })
+    assert "estado_produto(sujo_contaminado_inseguro)" in facts
+    assert "estado_produto(claramente_usado)" in facts
+
+
+def test_price_adjustment_digital_original_receipt_and_previous_adjustment():
+    """PT-007 accepts an original printed or digital receipt and is a one-time adjustment."""
+    facts = pedido_to_prolog_facts({
+        "tipoPedido": "ajuste_preco",
+        "comprovativo": {"tipo": "CONFIRMACAO_ENCOMENDA", "reciboOriginal": True},
+        "compraOriginal": {"canal": "mainline", "ajustePrecoAplicado": True},
+    })
+    assert "recibo_original(true)" in facts
+    assert "ajuste_preco_anterior(true)" in facts
+
+
+def test_price_adjustment_without_proof_has_no_original_receipt():
+    """A blind price adjustment (no comprovativo) lacks the original receipt, so PT-008 refuses it."""
+    facts = pedido_to_prolog_facts({
+        "tipoPedido": "ajuste_preco",
+        "comprovativo": None,
+        "compraOriginal": {"canal": "mainline"},
+    })
+    assert "comprovativo(nenhum)" in facts
+    assert "recibo_original(false)" in facts
+
+
+def test_exception_facts_for_ex_006_and_hs_005():
+    """EX-006 needs to know the exception bypasses a control; HS-005 only for online Afterpay."""
+    loja_afterpay_com_excecao = pedido_to_prolog_facts({
+        "tipoPedido": "devolucao",
+        "excecaoGerencia": True,
+        "pedidoExcecao": {"aprovada": True, "contornaProcessoObrigatorio": False},
+        "compraOriginal": {"canal": "mainline", "pagamento": {"meio": "afterpay"}},
+    })
+    assert "tentativa_excecao(true)" in loja_afterpay_com_excecao
+    assert "afterpay_pede_excecao(true)" not in loja_afterpay_com_excecao
+    assert "excecao_contorna_controlo(true)" not in loja_afterpay_com_excecao
+
+    contorna = pedido_to_prolog_facts({
+        "tipoPedido": "devolucao",
+        "pedidoExcecao": {"contornaProcessoObrigatorio": True},
+        "compraOriginal": {"canal": "levi_com", "pagamento": {"meio": "afterpay"}},
+    })
+    assert "afterpay_pede_excecao(true)" in contorna
+    assert "excecao_contorna_controlo(true)" in contorna
+
+
+def test_refused_exception_comes_from_the_engine_fact():
+    """excecaoRecusada reflects excecao_recusada(true) (HS-005 / EX-006), not the eligibility."""
+    service = RetailPrologService(prolog_client=AsyncMock())
+    raw = {
+        "status": "success",
+        "decision": "rejected",
+        "retail_decision": "encaminhar",
+        "hard_stop": None,
+        "justification": [],
+        "derived_facts": [
+            {"id": 30, "fact": "decisao(encaminhar)", "rule_id": "CH-002", "justified_by": []},
+            {"id": 31, "fact": "processo_obrigatorio(backpocket)", "rule_id": "CH-002", "justified_by": []},
+        ],
+        "total_facts": 31,
+    }
+    pedido = {"compraOriginal": {"canal": "LEVI_COM"}}
+    assert service._map_prolog_to_decisao(raw, pedido).excecaoRecusada is False
+
+    raw["derived_facts"].append({"id": 32, "fact": "excecao_recusada(true)", "rule_id": "HS-005", "justified_by": []})
+    assert service._map_prolog_to_decisao(raw, pedido).excecaoRecusada is True
+
+
+def _raw_engine_result(retail_decision: str, decision: str, regras_a_validar=None) -> dict:
+    return {
+        "status": "success",
+        "decision": decision,
+        "retail_decision": retail_decision,
+        "hard_stop": None,
+        "justification": [],
+        "regras_a_validar": regras_a_validar or [],
+        "derived_facts": [{"id": 20, "fact": "decisao(permitir)", "rule_id": "PT-003", "justified_by": []}],
+        "total_facts": 20,
+    }
+
+
+def test_no_deciding_rule_goes_to_review_not_refusal():
+    """nao_concluido (no rule decided) must not become RECUSAR without a justifying rule."""
+    service = RetailPrologService(prolog_client=AsyncMock())
+    raw = _raw_engine_result("nao_concluido", "manager_override")
+    raw["derived_facts"] = []
+    res = service._map_prolog_to_decisao(raw, {"compraOriginal": {"canal": "MAINLINE"}})
+    assert res.elegibilidade == ElegibilidadeEnum.REVER
+
+
+def test_engine_decision_is_used_as_is():
+    """The engine already returns the most severe decision (Drools order); the mapper keeps it."""
+    service = RetailPrologService(prolog_client=AsyncMock())
+    raw = _raw_engine_result("rever", "manager_override")
+    raw["derived_facts"].append({"id": 21, "fact": "decisao(rever)", "rule_id": "TN-011", "justified_by": []})
+    res = service._map_prolog_to_decisao(raw, {"compraOriginal": {"canal": "MAINLINE"}})
+    assert res.elegibilidade == ElegibilidadeEnum.REVER
+
+
+def test_rules_to_validate_come_from_the_engine():
+    """regrasAValidar lists the fired rules marked "a validar" in the KB, never a fixed list."""
+    service = RetailPrologService(prolog_client=AsyncMock())
+    pedido = {"compraOriginal": {"canal": "MAINLINE"}}
+    res = service._map_prolog_to_decisao(_raw_engine_result("permitir", "approved", ["PT-003"]), pedido)
+    assert res.regrasAValidar == ["PT-003"]
+
+    res = service._map_prolog_to_decisao(_raw_engine_result("rever", "manager_override"), pedido)
+    assert res.regrasAValidar == []
+
+
 @pytest.mark.asyncio
 async def test_explain_why_all_input_codes():
     """Verify explain_why returns accurate Prolog questions, rules, and waiting candidates."""

@@ -54,7 +54,10 @@ has_fact(Fact) :-
 test(all_71_rules_loaded) :-
     retail_engine:load_knowledge_base(retail_rules),
     aggregate_all(count, retail_engine:regra(_), Count),
-    assertion(Count == 75).
+    % 74 + 15 variantes (PC-002, PC-003: revendível / não revendível; PC-004: aprovado / recusado;
+    % PT-004: não revendível; PT-007: ajuste anterior / fora da loja; CH-002: em revisão;
+    % CH-003: não permitida; CH-004: às cegas; TN-008: sem app; EX-006: Afterpay; BW-003: usado)
+    assertion(Count == 89).
 
 test(nine_families_exact_counts) :-
     retail_engine:load_knowledge_base(retail_rules),
@@ -68,7 +71,7 @@ test(nine_families_exact_counts) :-
     aggregate_all(count, retail_engine:regra_info(_, ct, _), CtCount),
     aggregate_all(count, retail_engine:regra_info(_, bw, _), BwCount),
     assertion(HsCount == 6),
-    assertion(PcCount == 9),
+    assertion(PcCount == 8),
     assertion(PtCount == 10),
     assertion(ChCount == 10),
     assertion(TnCount == 13),
@@ -210,7 +213,9 @@ test(hs_005_afterpay_exception_prohibited) :-
         afterpay_pede_excecao(true)
     ]),
     retail_engine:run_engine(_),
-    assertion(has_fact(decisao(recusar))),
+    % Recusa a exceção ao meio, não a devolução (reembolso pela Afterpay)
+    assertion(has_fact(excecao_recusada(true))),
+    assertion(\+ has_fact(decisao(recusar))),
     assertion(has_fact(processo_obrigatorio(afterpay_app))),
     assertion(has_fact(regra_disparada('HS-005'))).
 
@@ -218,7 +223,8 @@ test(hs_005_afterpay_exception_prohibited) :-
 % 5. Precedence 4: Biohazard / Safety (PC-008, BW-004)
 % ------------------------------------------------------------------------------
 
-test(pc_008_biohazard_immediate_rejection_and_isolation) :-
+test(pc_008_biohazard_isolation_without_refusal) :-
+    % PC-008 isola a peça; não recusa — a elegibilidade fica com o estado de uso
     assert_scenario_facts([
         colaborador_autorizado(true),
         sku_reconhecido(true),
@@ -226,9 +232,18 @@ test(pc_008_biohazard_immediate_rejection_and_isolation) :-
         estado_produto(sujo_contaminado_inseguro)
     ]),
     retail_engine:run_engine(_),
-    assertion(has_fact(decisao(recusar))),
+    assertion(\+ has_fact(decisao(recusar))),
     assertion(has_fact(destino_produto(isolamento_risco_biologico))),
     assertion(has_fact(regra_disparada('PC-008'))).
+
+test(pc_008_soiled_worn_item_follows_pc_004) :-
+    verified_return_facts(claramente_usado, [estado_produto(sujo_contaminado_inseguro)], Facts),
+    assert_scenario_facts(Facts),
+    retail_engine:run_engine(_),
+    assertion(has_fact(destino_produto(isolamento_risco_biologico))),
+    assertion(has_fact(decisao(rever))),
+    assertion(has_fact(regra_disparada('PC-004'))),
+    assertion(\+ has_fact(decisao(recusar))).
 
 % ------------------------------------------------------------------------------
 % 6. Precedence 5: Category Specific (PC-007 Bodywear) vs General (PC-001..PC-005)
@@ -298,6 +313,91 @@ test(pc_004_worn_item_exact_item_swap_only) :-
     assertion(has_fact(tipo_transacao(troca_mesmo_artigo))),
     assertion(has_fact(regra_disparada('PC-004'))).
 
+% PC-002 / PC-003 com a resposta sobre a revenda (IN-010) e PC-004 com a decisão da gestão:
+% resposta positiva → produto elegível (o comprovativo e o prazo decidem); negativa → recusar.
+verified_return_facts(Estado, Extra, Facts) :-
+    append([
+        colaborador_autorizado(true), canal_compra(mainline), sku_reconhecido(true),
+        categoria_produto(vestuario), estado_produto(Estado), defeito_fabrico(false),
+        comprovativo(recibo_impresso), dias_desde_compra(10), tipo_pedido(devolucao)
+    ], Extra, Facts).
+
+test(pc_002_resellable_item_is_approved) :-
+    verified_return_facts(nao_usado_etiquetas_soltas, [revendivel(true)], Facts),
+    assert_scenario_facts(Facts),
+    retail_engine:run_engine(R),
+    assertion(R.decision == permitir),
+    assertion(has_fact(elegibilidade_produto(aprovada))),
+    assertion(has_fact(regra_disparada('PC-002'))),
+    assertion(\+ has_fact(decisao(rever))),
+    assertion(\+ has_fact(regra_disparada('EX-001'))).
+
+test(pc_002_not_resellable_item_is_refused) :-
+    verified_return_facts(nao_usado_etiquetas_soltas, [revendivel(false)], Facts),
+    assert_scenario_facts(Facts),
+    retail_engine:run_engine(R),
+    assertion(R.decision == recusar),
+    assertion(has_fact(tipo_transacao(nenhuma))),
+    assertion(has_fact(regra_disparada('PC-002'))),
+    assertion(\+ has_fact(elegibilidade_produto(aprovada))).
+
+test(pc_003_resellable_item_is_approved) :-
+    verified_return_facts(nao_usado_sem_etiquetas, [revendivel(true)], Facts),
+    assert_scenario_facts(Facts),
+    retail_engine:run_engine(R),
+    assertion(R.decision == permitir),
+    assertion(has_fact(regra_disparada('PC-003'))),
+    assertion(\+ has_fact(decisao(rever))).
+
+test(pc_003_not_resellable_item_is_refused) :-
+    verified_return_facts(nao_usado_sem_etiquetas, [revendivel(false)], Facts),
+    assert_scenario_facts(Facts),
+    retail_engine:run_engine(R),
+    assertion(R.decision == recusar),
+    assertion(has_fact(regra_disparada('PC-003'))).
+
+% Defeito de fabrico confirmado: PC-006 prevalece sobre PC-002 / PC-003, mesmo sem revenda possível
+defective_return_facts(Estado, Facts) :-
+    Facts = [
+        colaborador_autorizado(true), canal_compra(mainline), sku_reconhecido(true),
+        categoria_produto(vestuario), estado_produto(Estado), defeito_fabrico(true), revendivel(false),
+        comprovativo(recibo_impresso), dias_desde_compra(10), tipo_pedido(devolucao)
+    ].
+
+test(pc_006_defect_prevails_over_pc_002_loose_tags) :-
+    defective_return_facts(nao_usado_etiquetas_soltas, Facts),
+    assert_scenario_facts(Facts),
+    retail_engine:run_engine(R),
+    assertion(R.decision == permitir),
+    assertion(has_fact(regra_disparada('PC-006'))),
+    assertion(\+ has_fact(regra_disparada('PC-002'))),
+    assertion(\+ has_fact(decisao(recusar))).
+
+test(pc_006_defect_prevails_over_pc_003_no_tags) :-
+    defective_return_facts(nao_usado_sem_etiquetas, Facts),
+    assert_scenario_facts(Facts),
+    retail_engine:run_engine(R),
+    assertion(R.decision == permitir),
+    assertion(has_fact(regra_disparada('PC-006'))),
+    assertion(\+ has_fact(regra_disparada('PC-003'))).
+
+test(pc_004_management_approved_exact_item_exchange) :-
+    verified_return_facts(claramente_usado, [excecao_aprovada(true)], Facts),
+    assert_scenario_facts(Facts),
+    retail_engine:run_engine(_),
+    assertion(has_fact(elegibilidade_produto(aprovada))),
+    assertion(has_fact(tipo_transacao(troca_mesmo_artigo))),
+    assertion(has_fact(regra_disparada('PC-004'))),
+    assertion(\+ has_fact(decisao(rever))).
+
+test(pc_004_management_refused) :-
+    verified_return_facts(claramente_usado, [excecao_aprovada(false)], Facts),
+    assert_scenario_facts(Facts),
+    retail_engine:run_engine(R),
+    assertion(R.decision == recusar),
+    assertion(has_fact(tipo_transacao(nenhuma))),
+    assertion(has_fact(regra_disparada('PC-004'))).
+
 % ------------------------------------------------------------------------------
 % 7. Precedence 6: Proof & Timeframe (PT-001 to PT-008)
 % ------------------------------------------------------------------------------
@@ -360,6 +460,7 @@ test(pt_007_pt_008_price_adjustment_scenarios) :-
         canal_compra(mainline),
         tipo_pedido(ajuste_preco),
         comprovativo(recibo_impresso),
+        recibo_original(true),
         dias_desde_compra(10)
     ]),
     retail_engine:run_engine(_),
@@ -380,9 +481,100 @@ test(pt_007_pt_008_price_adjustment_scenarios) :-
     assertion(has_fact(decisao(recusar))),
     assertion(has_fact(regra_disparada('PT-008'))).
 
+test(pt_004_after_30_days_resellable_goes_to_review) :-
+    verified_return_facts(nao_usado_com_etiquetas, [revendivel(true)], Facts0),
+    once(select(dias_desde_compra(10), Facts0, dias_desde_compra(45), Facts)),
+    assert_scenario_facts(Facts),
+    retail_engine:run_engine(R),
+    assertion(R.decision == rever),
+    assertion(has_fact(regra_disparada('PT-004'))).
+
+test(pt_004_after_30_days_not_resellable_is_refused) :-
+    % "Otherwise DENY", also for an item still under review by another rule (defect, PC-006)
+    defective_return_facts(nao_usado_etiquetas_soltas, Facts0),
+    once(select(dias_desde_compra(10), Facts0, dias_desde_compra(45), Facts)),
+    assert_scenario_facts(Facts),
+    retail_engine:run_engine(R),
+    assertion(R.decision == recusar),
+    assertion(has_fact(regra_disparada('PT-004'))),
+    assertion(has_fact(tipo_transacao(nenhuma))).
+
+price_adjustment_facts(Extra, Facts) :-
+    append([colaborador_autorizado(true), tipo_pedido(ajuste_preco), dias_desde_compra(10)], Extra, Facts).
+
+test(pt_007_digital_original_receipt_allows_adjustment) :-
+    % IN-004: o recibo original pode ser impresso ou digital
+    price_adjustment_facts([canal_compra(mainline), comprovativo(confirmacao_encomenda), recibo_original(true)], Facts),
+    assert_scenario_facts(Facts),
+    retail_engine:run_engine(R),
+    assertion(R.decision == permitir),
+    assertion(has_fact(regra_disparada('PT-007'))).
+
+test(pt_007_adjustment_already_applied_is_refused) :-
+    price_adjustment_facts([canal_compra(mainline), comprovativo(recibo_impresso), recibo_original(true),
+                            ajuste_preco_anterior(true)], Facts),
+    assert_scenario_facts(Facts),
+    retail_engine:run_engine(R),
+    assertion(R.decision == recusar),
+    assertion(has_fact(regra_disparada('PT-007'))),
+    assertion(\+ has_fact(decisao(permitir))).
+
+test(pt_007_online_purchase_adjustment_goes_to_review) :-
+    price_adjustment_facts([canal_compra(levi_com), comprovativo(confirmacao_encomenda), recibo_original(true)], Facts),
+    assert_scenario_facts(Facts),
+    retail_engine:run_engine(R),
+    assertion(R.decision == rever),
+    assertion(has_fact(aprovacao(responsavel_senior))),
+    assertion(has_fact(regra_disparada('PT-007'))).
+
 % ------------------------------------------------------------------------------
 % 8. Channel & Tender Rules (CH, TN)
 % ------------------------------------------------------------------------------
+
+online_not_found_facts(Extra, Facts) :-
+    append([
+        colaborador_autorizado(true), canal_compra(levi_com), encomenda_encontrada(false),
+        sku_reconhecido(true), categoria_produto(vestuario), estado_produto(nao_usado_com_etiquetas),
+        comprovativo(nenhum), tipo_pedido(devolucao)
+    ], Extra, Facts).
+
+test(ch_002_online_item_under_review_is_routed_to_backpocket) :-
+    assert_scenario_facts([
+        colaborador_autorizado(true), canal_compra(levi_com), encomenda_encontrada(true),
+        portal_online_disponivel(true), sku_reconhecido(true), categoria_produto(vestuario),
+        estado_produto(claramente_usado), comprovativo(confirmacao_encomenda), tipo_pedido(devolucao)
+    ]),
+    retail_engine:run_engine(R),
+    assertion(R.decision == encaminhar),
+    assertion(has_fact(regra_disparada('PC-004'))),
+    assertion(has_fact(regra_disparada('CH-002'))),
+    assertion(has_fact(processo_obrigatorio(backpocket))).
+
+test(ch_003_blind_online_return_refused_when_policy_forbids) :-
+    online_not_found_facts([politica_permite_as_cegas_online(false), portal_online_disponivel(true)], Facts),
+    assert_scenario_facts(Facts),
+    retail_engine:run_engine(R),
+    assertion(R.decision == recusar),
+    assertion(has_fact(regra_disparada('CH-003'))),
+    assertion(\+ has_fact(meio_reembolso(cartao_oferta))).
+
+test(ch_003_blind_online_return_with_gift_card_when_policy_permits) :-
+    online_not_found_facts([politica_permite_as_cegas_online(true), portal_online_disponivel(true)], Facts),
+    assert_scenario_facts(Facts),
+    retail_engine:run_engine(R),
+    assertion(R.decision == permitir),
+    assertion(has_fact(tipo_verificacao(as_cegas))),
+    assertion(has_fact(meio_reembolso(cartao_oferta))),
+    assertion(has_fact(regra_disparada('CH-003'))),
+    assertion(\+ has_fact(regra_disparada('CH-004'))).
+
+test(ch_004_portal_outage_blind_return_to_original_tender) :-
+    online_not_found_facts([politica_permite_as_cegas_online(true), portal_online_disponivel(false)], Facts),
+    assert_scenario_facts(Facts),
+    retail_engine:run_engine(R),
+    assertion(R.decision == permitir),
+    assertion(has_fact(meio_reembolso(meio_original))),
+    assertion(has_fact(regra_disparada('CH-004'))).
 
 test(ch_009_outlet_blind_return_promotional_pricing) :-
     assert_scenario_facts([
@@ -406,6 +598,37 @@ test(tn_008_paypal_venmo_requires_app_flow) :-
     assertion(has_fact(processo_obrigatorio(fluxo_app))),
     assertion(has_fact(meio_reembolso(fluxo_app))),
     assertion(has_fact(regra_disparada('TN-008'))).
+
+test(tn_008_paypal_without_app_access_goes_to_review) :-
+    verified_return_facts(nao_usado_com_etiquetas, [meio_pagamento(paypal), acesso_aplicacao_pagamento(false)], Facts),
+    assert_scenario_facts(Facts),
+    retail_engine:run_engine(_),
+    assertion(has_fact(decisao(rever))),
+    assertion(has_fact(aprovacao(responsavel_senior))),
+    assertion(has_fact(meio_reembolso(fluxo_app))),
+    assertion(has_fact(regra_disparada('TN-008'))).
+
+test(tn_011_interac_without_card_goes_to_review) :-
+    verified_return_facts(nao_usado_com_etiquetas,
+                          [mercado(canada), meio_pagamento(interac), cartao_interac_presente(false)], Facts),
+    assert_scenario_facts(Facts),
+    retail_engine:run_engine(_),
+    assertion(has_fact(decisao(rever))),
+    assertion(has_fact(meio_reembolso(sem_meio_definido))),
+    assertion(has_fact(regra_disparada('TN-011'))).
+
+test(tn_011_missing_card_irrelevant_for_store_credit) :-
+    % Mais de 30 dias: o reembolso não vai para o Interac (PT-004, crédito de loja)
+    assert_scenario_facts([
+        colaborador_autorizado(true), canal_compra(mainline), sku_reconhecido(true),
+        categoria_produto(vestuario), estado_produto(nao_usado_com_etiquetas), defeito_fabrico(false),
+        comprovativo(recibo_impresso), dias_desde_compra(45), tipo_pedido(devolucao),
+        mercado(canada), meio_pagamento(interac), cartao_interac_presente(false)
+    ]),
+    retail_engine:run_engine(_),
+    assertion(has_fact(regra_disparada('PT-004'))),
+    assertion(\+ has_fact(regra_disparada('TN-011'))),
+    assertion(\+ has_fact(meio_reembolso(sem_meio_definido))).
 
 test(tn_011_interac_canada_in_store_physical_card) :-
     assert_scenario_facts([
@@ -479,6 +702,18 @@ test(bw_003_bodywear_missing_units_damage_out) :-
     assertion(has_fact(processo_obrigatorio(baixa_dano))),
     assertion(has_fact(regra_disparada('BW-003'))).
 
+test(bw_003_worn_bodywear_damage_out) :-
+    assert_scenario_facts([
+        colaborador_autorizado(true),
+        sku_reconhecido(true),
+        categoria_produto(bodywear),
+        estado_produto(claramente_usado)
+    ]),
+    retail_engine:run_engine(_),
+    assertion(has_fact(elegibilidade_produto(aprovada))),
+    assertion(has_fact(destino_produto(baixa_dano))),
+    assertion(has_fact(regra_disparada('BW-003'))).
+
 % ------------------------------------------------------------------------------
 % 11. Manager Exceptions & Hard Stop Integrity (EX-004, EX-006)
 % ------------------------------------------------------------------------------
@@ -486,12 +721,75 @@ test(bw_003_bodywear_missing_units_damage_out) :-
 test(ex_006_manager_exception_cannot_override_afterpay) :-
     assert_scenario_facts([
         colaborador_autorizado(true),
+        canal_compra(levi_com),
         tentativa_excecao(true),
-        meio_pagamento(afterpay)
+        meio_pagamento(afterpay),
+        afterpay_pede_excecao(true)
     ]),
     retail_engine:run_engine(_),
-    assertion(has_fact(decisao(recusar))),
+    % Recusa a exceção, não o pedido
+    assertion(has_fact(excecao_recusada(true))),
+    assertion(\+ has_fact(decisao(recusar))),
     assertion(has_fact(regra_disparada('EX-006'))).
+
+test(ex_006_exception_bypassing_mandatory_control_is_refused) :-
+    verified_return_facts(nao_usado_com_etiquetas, [tentativa_excecao(true), excecao_contorna_controlo(true)], Facts),
+    assert_scenario_facts(Facts),
+    retail_engine:run_engine(R),
+    assertion(has_fact(excecao_recusada(true))),
+    assertion(has_fact(regra_disparada('EX-006'))),
+    assertion(R.decision == permitir).
+
+test(ex_006_cancels_ex_004_and_ex_005) :-
+    verified_return_facts(nao_usado_com_etiquetas,
+                          [revendivel(true), cliente_agitado(true), risco_fraude(baixo), concluivel_no_sistema(true),
+                           tentativa_excecao(true), excecao_contorna_controlo(true)], Facts),
+    assert_scenario_facts(Facts),
+    retail_engine:run_engine(_),
+    assertion(has_fact(regra_disparada('EX-006'))),
+    assertion(\+ has_fact(regra_disparada('EX-004'))),
+    assertion(\+ has_fact(regra_disparada('EX-005'))).
+
+% ------------------------------------------------------------------------------
+% 12. Engine decision and rules to validate
+% ------------------------------------------------------------------------------
+
+test(final_decision_is_the_most_severe_not_the_first) :-
+    % PERMITIR < REVER < ENCAMINHAR < RECUSAR, as in Drools (ADR 0004)
+    assert_scenario_facts([decisao(permitir), decisao(recusar), decisao(rever)]),
+    retail_engine:decisao_final(D1),
+    assertion(D1 == recusar),
+    assert_scenario_facts([decisao(permitir), decisao(rever)]),
+    retail_engine:decisao_final(D2),
+    assertion(D2 == rever),
+    assert_scenario_facts([colaborador_autorizado(true)]),
+    retail_engine:decisao_final(D3),
+    assertion(D3 == nao_concluido).
+
+test(rules_to_validate_are_reported_from_fired_rules) :-
+    verified_return_facts(nao_usado_com_etiquetas, [], Facts),
+    assert_scenario_facts(Facts),
+    retail_engine:run_engine(R),
+    % PT-003 is marked [a validar: A-22]; PC-001 is not
+    assertion(memberchk('PT-003', R.regras_a_validar)),
+    assertion(\+ memberchk('PC-001', R.regras_a_validar)).
+
+test(rules_to_validate_use_the_visible_code_of_variants) :-
+    verified_return_facts(nao_usado_etiquetas_soltas, [revendivel(true)], Facts),
+    assert_scenario_facts(Facts),
+    retail_engine:run_engine(R),
+    assertion(memberchk('PC-002', R.regras_a_validar)),
+    assertion(\+ memberchk('PC-002-REVENDIVEL', R.regras_a_validar)).
+
+test(ex_006_in_store_afterpay_with_manager_exception_not_refused) :-
+    % Compra em loja com Afterpay e exceção da gerência: nada a contornar
+    verified_return_facts(nao_usado_com_etiquetas,
+                          [meio_pagamento(afterpay), tentativa_excecao(true), excecao_aprovada(true)], Facts),
+    assert_scenario_facts(Facts),
+    retail_engine:run_engine(R),
+    assertion(R.decision == permitir),
+    assertion(\+ has_fact(regra_disparada('EX-006'))),
+    assertion(\+ has_fact(excecao_recusada(true))).
 
 test(ct_001_ct_003_session_and_audit_controls) :-
     assert_scenario_facts([

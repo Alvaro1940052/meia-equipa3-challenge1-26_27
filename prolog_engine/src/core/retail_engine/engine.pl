@@ -71,6 +71,7 @@
 :- dynamic regra_info/3.
 :- dynamic paragem_obrigatoria/1.
 :- dynamic regra_transversal/1.
+:- dynamic regra_a_validar/2.
 
 % Import interactive dialogue manager
 :- use_module(interactive, [
@@ -151,6 +152,7 @@ reset_engine :-
     retractall(regra_info(_, _, _)),
     retractall(paragem_obrigatoria(_)),
     retractall(regra_transversal(_)),
+    retractall(regra_a_validar(_, _)),
     clear_mock_answers,
     disable_interactive_mode.
 
@@ -175,16 +177,32 @@ run_engine(ResultDict) :-
     ;   HardStop = null
     ),
     output_why(Justifications),
+    regras_a_validar(RegrasAValidar),
     ResultDict = _{
         status: "success",
         decision: Decisao,
         hard_stop: HardStop,
         justification: Justifications,
+        regras_a_validar: RegrasAValidar,
         initial_facts_count: InitialCount,
         derived_facts_count: DerivedCount,
         total_facts: TotalCount,
         derived_facts: DerivedFacts
     }.
+
+%!  regras_a_validar(-Codigos) is det.
+%
+%   Visible codes of the fired rules whose interpretation is still to be validated
+%   with the expert (regra_a_validar/2, the same "[a validar: A-xx]" marks as Drools).
+regras_a_validar(Codigos) :-
+    findall(Codigo,
+            (   justifica(_, ID, _),
+                regra_a_validar(ID, _),
+                regra ID se _ entao RHS,
+                memberchk(cria_facto(regra_disparada(Codigo)), RHS)
+            ),
+            Todos),
+    list_to_set(Todos, Codigos).
 
 %!  run_interactive(-ResultDict) is det.
 %!  run_interactive(+InitialFacts, -ResultDict) is det.
@@ -1125,16 +1143,28 @@ aplica_paragens_prioritarias :-
 %!  decisao_final(-Decisao) is det.
 %
 %   Session decision: a terminal hard stop prevails over any decision derived
-%   before or after it; otherwise the first decision derived.
+%   before or after it; otherwise the most severe decision derived, in the Drools
+%   order (ADR 0004) PERMITIR < REVER < ENCAMINHAR < RECUSAR, so the order in which
+%   the rules happened to fire does not matter. nao_concluido when no rule decided.
 decisao_final(Decisao) :-
     paragem_ativa(ID),
     regra ID se _ entao RHS,
     memberchk(cria_facto(decisao(Decisao)), RHS),
     !.
 decisao_final(Decisao) :-
+    findall(S-D, (facto(_, decisao(D)), severidade_decisao(D, S)), Pares),
+    Pares \== [],
+    !,
+    max_member(_-Decisao, Pares).
+decisao_final(Decisao) :-
     facto(_, decisao(Decisao)),
     !.
 decisao_final(nao_concluido).
+
+severidade_decisao(permitir, 0).
+severidade_decisao(rever, 1).
+severidade_decisao(encaminhar, 2).
+severidade_decisao(recusar, 3).
 
 extrai_objetivo([cria_facto(Obj)|_], Obj) :- !.
 extrai_objetivo(Obj, Obj).

@@ -536,6 +536,11 @@ def pedido_to_prolog_facts(pedido: Dict[str, Any]) -> List[str]:
 
     if compra.get("encomendaEncontrada") is True:
         facts.append("encomenda_encontrada(true)")
+    elif compra.get("encomendaEncontrada") is False:
+        facts.append("encomenda_encontrada(false)")
+    politica_as_cegas = pedido.get("politicaPermiteAsCegasOnline")
+    if politica_as_cegas is not None:
+        facts.append(f"politica_permite_as_cegas_online({str(bool(politica_as_cegas)).lower()})")
     portal = pedido.get("portalOnlineDisponivel")
     if portal is True:
         facts.append("portal_online_disponivel(true)")
@@ -571,9 +576,11 @@ def pedido_to_prolog_facts(pedido: Dict[str, Any]) -> List[str]:
         est = art.get("estado") or {}
         cond = _val(est.get("condicaoUso"))
         etiq = _val(est.get("etiquetas"))
+        # Sujo ou inseguro (PC-008) define o manuseamento; o estado de uso continua a decidir a
+        # elegibilidade, por isso também é enviado (no Drools são dois campos independentes)
         if est.get("sujoOuInseguro") or cond in ["manchado", "danificado"]:
             facts.append("estado_produto(sujo_contaminado_inseguro)")
-        elif cond == "lavado":
+        if cond == "lavado":
             facts.append("estado_produto(lavado)")
         elif cond in ["usado", "claramente_usado"]:
             facts.append("estado_produto(claramente_usado)")
@@ -629,7 +636,8 @@ def pedido_to_prolog_facts(pedido: Dict[str, Any]) -> List[str]:
 
     # Flag de Recibo Original em Ajuste de Preço
     if tipo_ped in ["ajuste_preco"]:
-        if recibo_orig is False or comp_tipo in [
+        # Sem comprovativo (tipo vazio) também não há recibo original: PT-008 recusa
+        if recibo_orig is False or not comp_tipo or comp_tipo in [
             "foto_recibo",
             "fotografia_recibo",
             "consulta_transacao",
@@ -640,8 +648,11 @@ def pedido_to_prolog_facts(pedido: Dict[str, Any]) -> List[str]:
             "none",
         ]:
             facts.append("recibo_original(false)")
-        elif recibo_orig is True and comp_tipo == "recibo_impresso":
+        elif recibo_orig is True:
+            # Recibo original impresso ou digital (IN-004), como o reciboOriginal do Drools
             facts.append("recibo_original(true)")
+        if compra.get("ajustePrecoAplicado") is True:
+            facts.append("ajuste_preco_anterior(true)")
 
     # Dias desde compra / envio
     dt_pedido = pedido.get("dataPedido")
@@ -667,9 +678,17 @@ def pedido_to_prolog_facts(pedido: Dict[str, Any]) -> List[str]:
     meio = str(pag.get("meio") or "").lower()
     if meio:
         facts.append(f"meio_pagamento({meio})")
+    pedido_excecao = pedido.get("pedidoExcecao") or {}
+    excecao_contorna_controlo = any(
+        pedido_excecao.get(campo) is True
+        for campo in ("exigeMeioProibido", "exigeSkuIncorreto", "envolveProdutoExcluido", "contornaProcessoObrigatorio")
+    )
     if "afterpay" in meio:
         is_online = canal in ["levi_com", "levi_ca"] or pedido.get("compraOnline") is True
-        pede_excecao = tipo_ped == "troca" or bool(pedido.get("pedidoExcecao")) or bool(pedido.get("excecaoGerencia"))
+        # HS-005 como no Drools: troca, ou exceção que exige outro meio ou contorna o processo obrigatório
+        pede_excecao = tipo_ped == "troca" or (
+            pedido_excecao.get("exigeMeioProibido") is True or pedido_excecao.get("contornaProcessoObrigatorio") is True
+        )
         if is_online and pede_excecao:
             facts.extend(["afterpay_pede_excecao(true)", "tentativa_excecao(true)"])
     if meio == "interac":
@@ -742,6 +761,12 @@ def pedido_to_prolog_facts(pedido: Dict[str, Any]) -> List[str]:
         if excecao.get("aprovada") is True or pedido.get("excecaoGerencia") is True:
             if "excecao_aprovada(true)" not in facts:
                 facts.append("excecao_aprovada(true)")
+        elif excecao.get("aprovada") is False:
+            # Management explicitly refused (PC-004 refused variant); None means still pending
+            facts.append("excecao_aprovada(false)")
+        if excecao_contorna_controlo:
+            # EX-006: the exception would bypass a mandatory control
+            facts.append("excecao_contorna_controlo(true)")
 
     # 9. Stylist
     stylist = compra.get("idStylistVenda")
@@ -1418,7 +1443,7 @@ class RetailPrologService:
     ) -> DecisaoResponse:
         """Map raw Prolog execution dictionary to canonical DecisaoResponse."""
         decision_raw = str(raw.get("retail_decision") or "").lower()
-        if not decision_raw or decision_raw == "nao_concluido":
+        if not decision_raw:
             decision_raw = str(raw.get("decision") or "").lower()
 
         # Parse derived facts
@@ -1429,21 +1454,27 @@ class RetailPrologService:
         hard_stop = raw.get("hard_stop") or None
         terminal = hard_stop is not None
 
-        # 1. Map Elegibilidade (OUT-001)
-        if terminal and decision_raw == "encaminhar":
-            elegibilidade = ElegibilidadeEnum.ENCAMINHAR
-        elif terminal and decision_raw == "recusar":
-            elegibilidade = ElegibilidadeEnum.RECUSAR
-        elif any("decisao(encaminhar)" in f or "processo_obrigatorio(backpocket)" in f for f in fact_strings):
-            elegibilidade = ElegibilidadeEnum.ENCAMINHAR
-        elif any("decisao(recusar)" in f for f in fact_strings) or decision_raw in ["recusar", "rejected"]:
-            elegibilidade = ElegibilidadeEnum.RECUSAR
-        elif any("decisao(rever)" in f for f in fact_strings) or decision_raw in ["rever"]:
+        # 1. Map Elegibilidade (OUT-001). The engine's decision is the most severe one derived
+        # (PERMITIR < REVER < ENCAMINHAR < RECUSAR, as Drools), so it is used as is. When no rule
+        # decided (nao_concluido) the case goes to review: never a refusal without a justifying rule.
+        engine_decisions = {
+            "permitir": ElegibilidadeEnum.PERMITIR,
+            "rever": ElegibilidadeEnum.REVER,
+            "encaminhar": ElegibilidadeEnum.ENCAMINHAR,
+            "recusar": ElegibilidadeEnum.RECUSAR,
+        }
+        if decision_raw in engine_decisions:
+            elegibilidade = engine_decisions[decision_raw]
+        elif decision_raw == "nao_concluido":
             elegibilidade = ElegibilidadeEnum.REVER
-        elif any("decisao(permitir)" in f for f in fact_strings) or decision_raw in ["permitir", "approved", "store_credit_only"]:
-            elegibilidade = ElegibilidadeEnum.PERMITIR
-        elif decision_raw in ["encaminhar"]:
+        elif any("decisao(recusar)" in f for f in fact_strings) or decision_raw == "rejected":
+            elegibilidade = ElegibilidadeEnum.RECUSAR
+        elif any("decisao(encaminhar)" in f for f in fact_strings):
             elegibilidade = ElegibilidadeEnum.ENCAMINHAR
+        elif any("decisao(rever)" in f for f in fact_strings) or decision_raw == "manager_override":
+            elegibilidade = ElegibilidadeEnum.REVER
+        elif any("decisao(permitir)" in f for f in fact_strings) or decision_raw in ["approved", "store_credit_only"]:
+            elegibilidade = ElegibilidadeEnum.PERMITIR
         else:
             elegibilidade = ElegibilidadeEnum.REVER
 
@@ -1700,9 +1731,10 @@ class RetailPrologService:
             aprovacao=aprovacao,
             processo=processo,
             terminal=terminal,
-            excecaoRecusada=(elegibilidade == ElegibilidadeEnum.ENCAMINHAR),
+            excecaoRecusada=any("excecao_recusada(true)" in f for f in fact_strings),
             documentacao=doc,
             artigos=artigos_list,
             regras=regras,
-            regrasAValidar=["A-19", "A-22"] if elegibilidade == ElegibilidadeEnum.REVER else [],
+            # Fired rules whose interpretation is still to be validated (regra_a_validar/2 in the KB)
+            regrasAValidar=[str(c) for c in (raw.get("regras_a_validar") or [])],
         )

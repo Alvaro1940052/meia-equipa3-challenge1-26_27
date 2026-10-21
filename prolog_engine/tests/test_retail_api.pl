@@ -63,6 +63,7 @@ test(evaluate_approved_canonical_apparel) :-
     assertion(Reply.justification \== []).
 
 test(evaluate_rejected_biohazard) :-
+    % PC-008 só isola a peça; a recusa vem da alteração (HS-003), e PC-008 dispara na mesma
     test_retail_port(Port),
     format(atom(Url), 'http://127.0.0.1:~w/retail/evaluate', [Port]),
     Payload = _{
@@ -70,6 +71,7 @@ test(evaluate_rejected_biohazard) :-
         sku_reconhecido: true,
         canal_compra: "mainline",
         categoria_produto: "vestuario",
+        personalizado_ou_alterado: true,
         estado_produto: "sujo_contaminado_inseguro",
         comprovativo: "recibo_original",
         dias_desde_compra: 5,
@@ -95,6 +97,21 @@ test(evaluate_manager_override_unauthorized_operator) :-
     assertion(Reply.status == "success"),
     assertion(Reply.decision == "manager_override"),
     assertion(Reply.retail_decision == "encaminhar").
+
+test(evaluate_without_deciding_rule_is_not_a_refusal) :-
+    % No rule decides (no condition, proof or request): not concluded, never "rejected"
+    test_retail_port(Port),
+    format(atom(Url), 'http://127.0.0.1:~w/retail/evaluate', [Port]),
+    Payload = _{
+        colaborador_autorizado: true,
+        sku_reconhecido: true,
+        canal_compra: "mainline"
+    },
+    http_post(Url, json(Payload), Reply, [json_object(dict)]),
+    assertion(Reply.status == "success"),
+    assertion(Reply.retail_decision == "nao_concluido"),
+    assertion(Reply.decision == "manager_override"),
+    assertion(is_list(Reply.regras_a_validar)).
 
 test(evaluate_store_credit_only_blind_return) :-
     test_retail_port(Port),

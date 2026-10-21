@@ -307,10 +307,12 @@ test(output_why_approved_decision_justifications) :-
     assertion(DecJusts == JustList).
 
 test(output_why_rejected_biohazard_decision_justifications) :-
+    % PC-008 isola a peça; a recusa vem do estado de uso (lavado, PC-005)
     setup_baseline_facts([
         colaborador_autorizado(true),
         sku_reconhecido(true),
-        estado_produto(sujo_contaminado_inseguro)
+        estado_produto(sujo_contaminado_inseguro),
+        estado_produto(lavado)
     ]),
     retail_engine:run_engine(Result),
     assertion(Result.decision == recusar),
@@ -396,7 +398,8 @@ test(whynot_already_true_fact_reports_truth) :-
     setup_baseline_facts([
         colaborador_autorizado(true),
         sku_reconhecido(true),
-        estado_produto(sujo_contaminado_inseguro)
+        estado_produto(sujo_contaminado_inseguro),
+        estado_produto(lavado)
     ]),
     retail_engine:run_engine(_),
     assertion(has_fact(decisao(recusar))),

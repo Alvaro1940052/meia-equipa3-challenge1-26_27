@@ -107,6 +107,7 @@ handle_retail_evaluate(Request) :-
                     retail_decision: ResultDict.decision,
                     hard_stop: ResultDict.hard_stop,
                     justification: ResultDict.justification,
+                    regras_a_validar: ResultDict.regras_a_validar,
                     initial_facts_count: ResultDict.initial_facts_count,
                     derived_facts_count: ResultDict.derived_facts_count,
                     total_facts: ResultDict.total_facts,
@@ -161,6 +162,7 @@ handle_retail_interactive(Request) :-
                         retail_decision: ResultDict.decision,
                         hard_stop: ResultDict.hard_stop,
                         justification: ResultDict.justification,
+                        regras_a_validar: ResultDict.regras_a_validar,
                         dialogue_log: FormattedLog,
                         total_facts: ResultDict.total_facts,
                         derived_facts: ResultDict.derived_facts
@@ -465,7 +467,8 @@ map_canonical_decision(rever, "manager_override") :- !.
 map_canonical_decision(encaminhar, "manager_override") :- !.
 map_canonical_decision(troca_direta, "approved") :- !.
 map_canonical_decision(vale_loja, "store_credit_only") :- !.
-map_canonical_decision(nao_concluido, "rejected") :- !.
+% No rule decided: the case needs management judgement, never a refusal without a justifying rule
+map_canonical_decision(nao_concluido, "manager_override") :- !.
 map_canonical_decision(approved, "approved") :- !.
 map_canonical_decision(rejected, "rejected") :- !.
 map_canonical_decision(manager_override, "manager_override") :- !.

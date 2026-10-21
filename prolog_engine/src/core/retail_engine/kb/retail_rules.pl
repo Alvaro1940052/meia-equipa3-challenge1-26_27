@@ -32,6 +32,7 @@
 :- dynamic regra_info/3.
 :- dynamic paragem_obrigatoria/1.
 :- dynamic regra_transversal/1.
+:- dynamic regra_a_validar/2.
 
 % ==============================================================================
 % Initial Fact Counter
@@ -89,26 +90,32 @@ perguntavel(recibo_original(_)).
 % Metaknowledge: Indexing Facts to Candidate Rules (facto_dispara_regras/2)
 % ==============================================================================
 facto_dispara_regras(colaborador_autorizado(_), ['HS-006', 'CT-001', 'CT-003']).
-facto_dispara_regras(recibo_original(_), ['PT-008', 'PT-008-SEM-RECIBO', 'PT-007']).
+facto_dispara_regras(recibo_original(_), ['PT-008', 'PT-008-SEM-RECIBO', 'PT-007', 'PT-007-FORA-LOJA']).
 facto_dispara_regras(sku_reconhecido(_), ['HS-001', 'HS-004']).
 facto_dispara_regras(marca(_), ['HS-002']).
 facto_dispara_regras(personalizado_ou_alterado(_), ['HS-003']).
-facto_dispara_regras(afterpay_pede_excecao(_), ['HS-005']).
-facto_dispara_regras(categoria_produto(_), ['PC-007', 'BW-001', 'BW-002', 'BW-003', 'BW-004']).
-facto_dispara_regras(estado_produto(_), ['PC-008', 'PC-008-RECUSA', 'BW-004', 'BW-001', 'BW-002', 'BW-003', 'PC-001', 'PC-002', 'PC-003', 'PC-004', 'PC-005']).
+facto_dispara_regras(afterpay_pede_excecao(_), ['HS-005', 'EX-006-AFTERPAY']).
+facto_dispara_regras(categoria_produto(_), ['PC-007', 'BW-001', 'BW-002', 'BW-003', 'BW-003-USADO', 'BW-004']).
+% As variantes com a resposta (revenda, decisão da gestão) vêm antes da "pendente": no modo
+% interativo a pergunta é feita primeiro e só sem resposta é que a regra fica em revisão.
+facto_dispara_regras(estado_produto(_), ['PC-008', 'BW-004', 'BW-001', 'BW-002', 'BW-003', 'BW-003-USADO', 'PC-001', 'PC-002-REVENDIVEL', 'PC-002-NAO-REVENDIVEL', 'PC-002', 'PC-003-REVENDIVEL', 'PC-003-NAO-REVENDIVEL', 'PC-003', 'PC-004-APROVADO', 'PC-004-RECUSADO', 'PC-004', 'PC-005']).
+facto_dispara_regras(revendivel(_), ['PC-002-REVENDIVEL', 'PC-002-NAO-REVENDIVEL', 'PC-003-REVENDIVEL', 'PC-003-NAO-REVENDIVEL', 'PT-004-NAO-REVENDIVEL']).
 facto_dispara_regras(defeito_fabrico(_), ['PC-006']).
-facto_dispara_regras(comprovativo(_), ['PT-001', 'PT-002', 'PT-007', 'PT-008', 'PT-008-FOTO', 'PT-008-SEM-RECIBO']).
-facto_dispara_regras(tipo_verificacao(_), ['PT-003', 'PT-004', 'PT-005', 'PT-006', 'CH-009', 'CH-010', 'TN-001', 'TN-007', 'EP-001', 'EP-003', 'EP-004', 'CT-001', 'CT-002', 'CT-004']).
-facto_dispara_regras(elegibilidade_produto(_), ['PT-003', 'PT-004', 'PT-005', 'CH-002', 'CH-003', 'CH-004', 'CH-005', 'CH-006', 'CH-009', 'CH-010', 'EP-001', 'EP-002', 'EP-003', 'EP-004', 'EP-005', 'EP-006', 'EP-007']).
-facto_dispara_regras(dias_desde_compra(_), ['PT-003', 'PT-004', 'PT-007', 'PT-008']).
+facto_dispara_regras(comprovativo(_), ['PT-001', 'PT-002', 'PT-008', 'PT-008-FOTO', 'PT-008-SEM-RECIBO']).
+facto_dispara_regras(tipo_verificacao(_), ['PT-003', 'PT-004', 'PT-004-NAO-REVENDIVEL', 'PT-005', 'PT-006', 'PT-007', 'CH-009', 'CH-010', 'TN-001', 'TN-007', 'EP-001', 'EP-003', 'EP-004', 'CT-001', 'CT-002', 'CT-004']).
+facto_dispara_regras(elegibilidade_produto(_), ['PT-003', 'PT-004', 'PT-005', 'CH-002', 'CH-003', 'CH-004', 'CH-004-AS-CEGAS', 'CH-005', 'CH-006', 'CH-009', 'CH-010', 'EP-001', 'EP-002', 'EP-003', 'EP-004', 'EP-005', 'EP-006', 'EP-007']).
+facto_dispara_regras(dias_desde_compra(_), ['PT-003', 'PT-004', 'PT-004-NAO-REVENDIVEL', 'PT-007', 'PT-007-FORA-LOJA', 'PT-008']).
 facto_dispara_regras(dias_desde_envio(_), ['CH-005']).
 facto_dispara_regras(cliente_fornece_dados(_), ['PT-006']).
-facto_dispara_regras(tipo_pedido(_), ['PT-007', 'PT-008', 'PT-008-SEM-RECIBO', 'PT-008-FOTO', 'CH-006', 'TN-001', 'TN-006', 'TN-007', 'EP-001', 'EP-002']).
-facto_dispara_regras(canal_compra(_), ['CH-008', 'CH-007', 'HS-004', 'CH-001', 'CH-002', 'CH-003', 'CH-004', 'CH-005', 'CH-006', 'TN-009', 'TN-010', 'TN-012', 'PT-007']).
+facto_dispara_regras(tipo_pedido(_), ['PT-007-AJUSTE-ANTERIOR', 'PT-007', 'PT-007-FORA-LOJA', 'PT-008', 'PT-008-SEM-RECIBO', 'PT-008-FOTO', 'CH-006', 'TN-001', 'TN-006', 'TN-007', 'EP-001', 'EP-002']).
+facto_dispara_regras(ajuste_preco_anterior(_), ['PT-007-AJUSTE-ANTERIOR']).
+facto_dispara_regras(canal_compra(_), ['CH-008', 'CH-007', 'HS-004', 'CH-001', 'CH-002', 'CH-003', 'CH-003-NAO-PERMITIDA', 'CH-004', 'CH-004-AS-CEGAS', 'CH-005', 'CH-006', 'TN-009', 'TN-010', 'TN-012', 'PT-007']).
 facto_dispara_regras(tipo_loja(_), ['CH-001', 'CH-009', 'CH-010']).
-facto_dispara_regras(encomenda_encontrada(_), ['CH-002', 'CH-003', 'CH-004']).
-facto_dispara_regras(portal_online_disponivel(_), ['CH-002', 'CH-004']).
-facto_dispara_regras(meio_pagamento(_), ['HS-005', 'TN-001', 'TN-002', 'TN-003', 'TN-004', 'TN-005', 'TN-008', 'TN-009', 'TN-010', 'TN-011', 'TN-011-SEM-CARTAO', 'TN-012', 'EX-006']).
+facto_dispara_regras(encomenda_encontrada(_), ['CH-002', 'CH-003', 'CH-003-NAO-PERMITIDA', 'CH-004', 'CH-004-AS-CEGAS']).
+facto_dispara_regras(portal_online_disponivel(_), ['CH-002', 'CH-004', 'CH-004-AS-CEGAS']).
+facto_dispara_regras(politica_permite_as_cegas_online(_), ['CH-003', 'CH-004-AS-CEGAS']).
+facto_dispara_regras(meio_pagamento(_), ['HS-005', 'TN-001', 'TN-002', 'TN-003', 'TN-004', 'TN-005', 'TN-008', 'TN-008-SEM-APP', 'TN-009', 'TN-010', 'TN-011', 'TN-011-SEM-CARTAO', 'TN-012']).
+facto_dispara_regras(acesso_aplicacao_pagamento(_), ['TN-008-SEM-APP']).
 facto_dispara_regras(cartao_perdido_ou_roubado(_), ['TN-002']).
 facto_dispara_regras(conta_cartao_ativa(_), ['TN-002', 'TN-003']).
 facto_dispara_regras(tentativa_cartao_recusada(_), ['TN-003', 'TN-004']).
@@ -120,13 +127,14 @@ facto_dispara_regras(promocao_escaloes(_), ['EP-003', 'EP-004']).
 facto_dispara_regras(artigo_entre_canais(_), ['EP-005', 'EP-006', 'EP-007']).
 facto_dispara_regras(no_sortido(_), ['EP-005', 'EP-006']).
 facto_dispara_regras(artigo_em_saldo(_), ['EP-007']).
-facto_dispara_regras(decisao(_), ['EX-001']).
+facto_dispara_regras(decisao(_), ['EX-001', 'CH-002-EM-REVISAO']).
 facto_dispara_regras(cliente_contesta(_), ['EX-002']).
 facto_dispara_regras(cliente_agitado(_), ['EX-003']).
 facto_dispara_regras(aprovacao(_), ['EX-004']).
 facto_dispara_regras(excecao_autorizavel(_), ['EX-005']).
-facto_dispara_regras(tentativa_excecao(_), ['EX-006']).
-facto_dispara_regras(excecao_aprovada(_), ['EX-007']).
+facto_dispara_regras(tentativa_excecao(_), ['EX-006', 'EX-006-AFTERPAY']).
+facto_dispara_regras(excecao_contorna_controlo(_), ['EX-006']).
+facto_dispara_regras(excecao_aprovada(_), ['EX-007', 'PC-004-APROVADO', 'PC-004-RECUSADO']).
 facto_dispara_regras(risco_fraude(_), ['EX-008', 'EX-004']).
 facto_dispara_regras(funcao_colaborador(_), ['CT-002']).
 facto_dispara_regras(sessao_pos_propria(_), ['CT-003']).
@@ -162,13 +170,49 @@ regra_transversal('EX-002').
 regra_transversal('EX-003').
 
 % ==============================================================================
+% Metaknowledge: Interpretations Still to Validate with the Expert (ADR 0003)
+% ==============================================================================
+% The same "[a validar: A-xx]" marks as the matching Drools rules, per variant. The
+% engine reports the visible code of each fired rule here as regras_a_validar.
+regra_a_validar('HS-006', ['A-23']).
+regra_a_validar('CH-007', ['A-07']).
+regra_a_validar('PC-002', ['A-19']).
+regra_a_validar('PC-002-REVENDIVEL', ['A-19']).
+regra_a_validar('PC-003', ['A-19']).
+regra_a_validar('PC-003-REVENDIVEL', ['A-19']).
+regra_a_validar('PC-004', ['A-18', 'A-19', 'A-29']).
+regra_a_validar('PC-004-APROVADO', ['A-18', 'A-29']).
+regra_a_validar('PC-004-RECUSADO', ['A-18', 'A-29']).
+regra_a_validar('PC-008', ['A-15', 'A-28']).
+regra_a_validar('PT-003', ['A-22']).
+regra_a_validar('PT-004', ['A-17', 'A-19']).
+regra_a_validar('PT-005', ['A-13', 'A-16']).
+regra_a_validar('PT-007-AJUSTE-ANTERIOR', ['A-14']).
+regra_a_validar('PT-007-FORA-LOJA', ['A-14']).
+regra_a_validar('PT-008', ['A-14']).
+regra_a_validar('PT-008-SEM-RECIBO', ['A-14']).
+regra_a_validar('PT-008-FOTO', ['A-14']).
+regra_a_validar('CH-003', ['A-03']).
+regra_a_validar('CH-003-NAO-PERMITIDA', ['A-03']).
+regra_a_validar('CH-004', ['A-04']).
+regra_a_validar('CH-005', ['A-05', 'A-06', 'A-22']).
+regra_a_validar('CH-010', ['A-21']).
+regra_a_validar('TN-004', ['A-11']).
+regra_a_validar('TN-007', ['A-12']).
+regra_a_validar('TN-008-SEM-APP', ['A-05']).
+regra_a_validar('TN-011-SEM-CARTAO', ['A-10']).
+regra_a_validar('EP-003', ['A-21', 'A-30']).
+regra_a_validar('EX-004', ['A-18']).
+regra_a_validar('EX-008', ['A-26']).
+
+% ==============================================================================
 % Rule Metadata (regra_info/3)
 % ==============================================================================
 regra_info('HS-001', hs, "Recusar quando o produto não tem SKU reconhecido no sistema POS.").
 regra_info('HS-002', hs, "Recusar marcas excluídas (Dockers, LS Signature, Beyond Yoga ou grossista não vendido).").
 regra_info('HS-003', hs, "Recusar produtos personalizados, alterados ou embainhados.").
 regra_info('HS-004', hs, "Encaminhar para processo próprio da franquia canadiana sem usar SKU genérico.").
-regra_info('HS-005', hs, "Recusar exceções de meio de reembolso para devoluções online com Afterpay.").
+regra_info('HS-005', hs, "Recusar a exceção ao meio de reembolso de compra online Afterpay e reembolsar através da Afterpay.").
 regra_info('HS-006', hs, "Encaminhar transação quando colaborador não possui credenciais autorizadas.").
 
 regra_info('PC-001', pc, "Permitir elegibilidade para artigo não usado com etiquetas originais intactas.").
@@ -178,8 +222,7 @@ regra_info('PC-004', pc, "Rever com gestão artigo usado sem defeito; aprovar ap
 regra_info('PC-005', pc, "Recusar artigo lavado sem defeito de fabrico.").
 regra_info('PC-006', pc, "Permitir reembolso ou substituição com baixa por dano para defeito de fabrico.").
 regra_info('PC-007', pc, "Permitir bodywear em qualquer estado ao abrigo da política de satisfação.").
-regra_info('PC-008', pc, "Recusar e isolar em saco de risco biológico artigos sujos ou contaminados.").
-regra_info('PC-008-RECUSA', pc, "Recusar devolução de artigo contaminado sem garantia especial nem suspeita de fraude.").
+regra_info('PC-008', pc, "Isolar em saco de risco biológico artigos sujos, contaminados ou inseguros; não revender.").
 
 regra_info('PT-001', pt, "Classificar como devolução verificada quando comprovativo válido confirma a compra.").
 regra_info('PT-002', pt, "Classificar como devolução às cegas na ausência de comprovativo verificável.").
@@ -194,8 +237,8 @@ regra_info('PT-008-FOTO', pt, "Recusar ajuste de preço com fotografia de recibo
 
 regra_info('CH-001', ch, "Aplicar regras de comprovativo e avaliação da loja recetora para Mainline e Outlet.").
 regra_info('CH-002', ch, "Encaminhar compra online verificada através da BackPocket com reembolso original.").
-regra_info('CH-003', ch, "Tratar compra online sem encomenda encontrada como devolução às cegas com cartão de oferta.").
-regra_info('CH-004', ch, "Rever com gestão sénior quando portal de devoluções online está indisponível.").
+regra_info('CH-003', ch, "Encomenda online não encontrada: às cegas com cartão de oferta se a política o permitir; senão recusar.").
+regra_info('CH-004', ch, "Portal online indisponível: devolução às cegas permitida no meio de pagamento original.").
 regra_info('CH-005', ch, "Emitir cartão de oferta para devolução online expedida há mais de 30 dias.").
 regra_info('CH-006', ch, "Concluir troca online e estornar saldo remanescente ao meio de pagamento original.").
 regra_info('CH-007', ch, "Encaminhar produto da franquia do Canadá para processo próprio com SKU de franquia.").
@@ -230,7 +273,7 @@ regra_info('EX-002', ex, "Explicar política e oferecer melhor alternativa regul
 regra_info('EX-003', ex, "Escalar para responsável sénior perante cliente agitado; agitação não cria direito.").
 regra_info('EX-004', ex, "Autorizar exceção de apaziguamento apenas sem hard stops, baixo risco e sistema apto.").
 regra_info('EX-005', ex, "Adotar resolução menos abrangente para exceção aprovada em artigo vendável.").
-regra_info('EX-006', ex, "Recusar exceção que viole Afterpay, PayPal, Venmo, SKU ou personalização.").
+regra_info('EX-006', ex, "Recusar a exceção que exija meio proibido, SKU incorreto, produto excluído ou contornar Afterpay, PayPal, Venmo ou o processo online.").
 regra_info('EX-007', ex, "Documentar formalmente motivo, aprovador, valor e destino de exceção autorizada.").
 regra_info('EX-008', ex, "Pausar transação, envolver gestão e reportar à Segurança perante indícios de fraude.").
 
@@ -289,28 +332,25 @@ regra 'HS-004' se [sku_reconhecido(false) e canal_compra(franquia_canada)]
                       cria_facto(regra_disparada('HS-004')),
                       cria_facto(motivo("[HS-004] Não usar SKU diferente ou genérico para produto da franquia do Canadá: encaminhar para o processo próprio da franquia."))].
 
-% HS-005: Proibição estrita de exceções de meio de reembolso com Afterpay
+% HS-005: Proibição estrita de exceções de meio de reembolso com Afterpay. Recusa a exceção, não a
+% devolução: o reembolso segue pela Afterpay para o método original (como o Drools, excecaoRecusada).
 regra 'HS-005' se [meio_pagamento(afterpay) e afterpay_pede_excecao(true)]
-               entao [cria_facto(decisao(recusar)),
+               entao [cria_facto(excecao_recusada(true)),
                       cria_facto(processo_obrigatorio(afterpay_app)),
                       cria_facto(regra_disparada('HS-005')),
-                      cria_facto(motivo("[HS-005] Exceções de meio para devolução online Afterpay são proibidas: reembolsar exclusivamente através da Afterpay no método original."))].
+                      cria_facto(motivo("[HS-005] Exceções de meio para devolução online Afterpay são proibidas: recusar a exceção e reembolsar exclusivamente através da Afterpay no método original."))].
 
 % ==============================================================================
 % 2. FAMÍLIA PC: PRODUCT CONDITION (ESTADO FÍSICO DO PRODUTO)
 % ==============================================================================
 
-% PC-008: Risco biológico / insalubridade (Precedência 4 - isolamento de risco biológico)
+% PC-008: Risco biológico / insalubridade (Precedência 4 - isolamento de risco biológico).
+% Só define o manuseamento e o destino: a elegibilidade continua a ser decidida pelo estado de uso
+% da peça (o orquestrador envia também esse estado), como no Drools.
 regra 'PC-008' se [estado_produto(sujo_contaminado_inseguro)]
                entao [cria_facto(destino_produto(isolamento_risco_biologico)),
                       cria_facto(regra_disparada('PC-008')),
                       cria_facto(motivo("[PC-008] Artigo sujo, contaminado ou inseguro: isolar imediatamente em saco de risco biológico e cessar manuseamento normal."))].
-
-% PC-008-RECUSA: Recusa de artigo contaminado sem garantia especial nem fraude
-regra 'PC-008-RECUSA' se [estado_produto(sujo_contaminado_inseguro) e nao categoria_produto(bodywear) e nao risco_fraude(alto) e nao decisao(rever)]
-               entao [cria_facto(decisao(recusar)),
-                      cria_facto(tipo_transacao(nenhuma)),
-                      cria_facto(motivo("[PC-008] Artigo contaminado sem garantia especial: recusar devolução."))].
 
 % PC-007: Bodywear aceite em qualquer estado (Precedência 5 - antes de PC-001 a PC-005)
 regra 'PC-007' se [categoria_produto(bodywear) e nao decisao(recusar)]
@@ -332,27 +372,76 @@ regra 'PC-001' se [estado_produto(nao_usado_com_etiquetas) e nao categoria_produ
                       cria_facto(regra_disparada('PC-001')),
                       cria_facto(motivo("[PC-001] Artigo não usado em estado original com etiquetas afixadas: produto com condição física elegível."))].
 
-% PC-002: Não usado com etiquetas soltas apresentadas
-regra 'PC-002' se [estado_produto(nao_usado_etiquetas_soltas) e nao categoria_produto(bodywear) e nao decisao(recusar)]
+% PC-002 e PC-003 dependem da possibilidade de revenda (IN-010, revendivel/1): por avaliar → rever;
+% revendível → produto elegível (aprovado pela gestão); não revendível → recusar. PC-004 depende da
+% decisão da gestão (excecao_aprovada/1): pendente → rever; aprovada → só troca pelo mesmo artigo;
+% recusada → recusar. Como no Drools, cada regra tem três variantes; todas registam o mesmo código.
+% Com defeito de fabrico confirmado nenhuma se aplica: prevalece PC-006 (RPAC, Figura 3).
+
+% PC-002: Não usado com etiquetas soltas — revenda por avaliar
+regra 'PC-002' se [estado_produto(nao_usado_etiquetas_soltas) e nao defeito_fabrico(true) e nao categoria_produto(bodywear) e nao revendivel(true) e nao revendivel(false) e nao decisao(recusar)]
                entao [cria_facto(decisao(rever)),
                       cria_facto(aprovacao(gestor_xstore)),
                       cria_facto(regra_disparada('PC-002')),
-                      cria_facto(motivo("[PC-002] Não usado com etiquetas soltas: rever com a gestão. Aprovar apenas se a peça puder ser verificada, reetiquetada e revendida."))].
+                      cria_facto(motivo("[PC-002] Não usado com etiquetas soltas: rever com a gestão. Aprovar apenas se a peça puder ser verificada, reetiquetada e revendida (falta avaliar a revenda, IN-010)."))].
 
-% PC-003: Não usado sem etiquetas
-regra 'PC-003' se [estado_produto(nao_usado_sem_etiquetas) e nao categoria_produto(bodywear) e nao decisao(recusar)]
+% PC-002: Não usado com etiquetas soltas — revendível
+regra 'PC-002-REVENDIVEL' se [estado_produto(nao_usado_etiquetas_soltas) e nao defeito_fabrico(true) e nao categoria_produto(bodywear) e revendivel(true) e nao decisao(recusar)]
+               entao [cria_facto(elegibilidade_produto(aprovada)),
+                      cria_facto(aprovacao(gestor_xstore)),
+                      cria_facto(regra_disparada('PC-002')),
+                      cria_facto(motivo("[PC-002] Etiquetas soltas, artigo verificável, reetiquetável e revendível: aprovado pela gestão."))].
+
+% PC-002: Não usado com etiquetas soltas — não revendível
+regra 'PC-002-NAO-REVENDIVEL' se [estado_produto(nao_usado_etiquetas_soltas) e nao defeito_fabrico(true) e nao categoria_produto(bodywear) e revendivel(false) e nao decisao(recusar)]
+               entao [cria_facto(decisao(recusar)),
+                      cria_facto(tipo_transacao(nenhuma)),
+                      cria_facto(regra_disparada('PC-002')),
+                      cria_facto(motivo("[PC-002] Etiquetas soltas e o artigo não pode ser verificado, reetiquetado e revendido: recusar."))].
+
+% PC-003: Não usado sem etiquetas — revenda por avaliar
+regra 'PC-003' se [estado_produto(nao_usado_sem_etiquetas) e nao defeito_fabrico(true) e nao categoria_produto(bodywear) e nao revendivel(true) e nao revendivel(false) e nao decisao(recusar)]
                entao [cria_facto(decisao(rever)),
                       cria_facto(aprovacao(gestor_xstore)),
                       cria_facto(regra_disparada('PC-003')),
-                      cria_facto(motivo("[PC-003] Não usado sem etiquetas: rever com a gestão. Aprovar apenas se puder ser preparado para revenda; caso contrário recusar."))].
+                      cria_facto(motivo("[PC-003] Não usado sem etiquetas: rever com a gestão. Aprovar apenas se puder ser preparado para revenda; caso contrário recusar (falta avaliar a revenda, IN-010)."))].
 
-% PC-004: Claramente usado sem defeito
-regra 'PC-004' se [estado_produto(claramente_usado) e nao defeito_fabrico(true) e nao categoria_produto(bodywear) e nao decisao(recusar)]
+% PC-003: Não usado sem etiquetas — revendível
+regra 'PC-003-REVENDIVEL' se [estado_produto(nao_usado_sem_etiquetas) e nao defeito_fabrico(true) e nao categoria_produto(bodywear) e revendivel(true) e nao decisao(recusar)]
+               entao [cria_facto(elegibilidade_produto(aprovada)),
+                      cria_facto(aprovacao(gestor_xstore)),
+                      cria_facto(regra_disparada('PC-003')),
+                      cria_facto(motivo("[PC-003] Sem etiquetas, artigo verificável e preparável para revenda: aprovado pela gestão."))].
+
+% PC-003: Não usado sem etiquetas — não revendível
+regra 'PC-003-NAO-REVENDIVEL' se [estado_produto(nao_usado_sem_etiquetas) e nao defeito_fabrico(true) e nao categoria_produto(bodywear) e revendivel(false) e nao decisao(recusar)]
+               entao [cria_facto(decisao(recusar)),
+                      cria_facto(tipo_transacao(nenhuma)),
+                      cria_facto(regra_disparada('PC-003')),
+                      cria_facto(motivo("[PC-003] Sem etiquetas e o artigo não pode ser verificado nem preparado para revenda: recusar."))].
+
+% PC-004: Claramente usado sem defeito — decisão da gestão pendente
+regra 'PC-004' se [estado_produto(claramente_usado) e nao defeito_fabrico(true) e nao categoria_produto(bodywear) e nao excecao_aprovada(true) e nao excecao_aprovada(false) e nao decisao(recusar)]
                entao [cria_facto(decisao(rever)),
                       cria_facto(tipo_transacao(troca_mesmo_artigo)),
                       cria_facto(aprovacao(gestor_xstore)),
                       cria_facto(regra_disparada('PC-004')),
                       cria_facto(motivo("[PC-004] Artigo claramente usado sem defeito: recusar reembolso. Gestão pode aprovar apenas troca pelo mesmo artigo, sem numerário nem crédito irrestrito."))].
+
+% PC-004: Claramente usado sem defeito — a gestão aprovou a troca pelo mesmo artigo
+regra 'PC-004-APROVADO' se [estado_produto(claramente_usado) e nao defeito_fabrico(true) e nao categoria_produto(bodywear) e excecao_aprovada(true) e nao decisao(recusar)]
+               entao [cria_facto(elegibilidade_produto(aprovada)),
+                      cria_facto(tipo_transacao(troca_mesmo_artigo)),
+                      cria_facto(aprovacao(gestor_xstore)),
+                      cria_facto(regra_disparada('PC-004')),
+                      cria_facto(motivo("[PC-004] Artigo usado: a gestão aprovou apenas uma troca pelo mesmo artigo, sem numerário nem crédito de loja."))].
+
+% PC-004: Claramente usado sem defeito — a gestão recusou
+regra 'PC-004-RECUSADO' se [estado_produto(claramente_usado) e nao defeito_fabrico(true) e nao categoria_produto(bodywear) e excecao_aprovada(false) e nao decisao(recusar)]
+               entao [cria_facto(decisao(recusar)),
+                      cria_facto(tipo_transacao(nenhuma)),
+                      cria_facto(regra_disparada('PC-004')),
+                      cria_facto(motivo("[PC-004] Artigo usado e a gestão não aprovou a troca pelo mesmo artigo: recusar o reembolso."))].
 
 % PC-005: Lavado sem defeito de fabrico
 regra 'PC-005' se [estado_produto(lavado) e nao defeito_fabrico(true) e nao categoria_produto(bodywear) e nao decisao(recusar)]
@@ -389,13 +478,21 @@ regra 'PT-003' se [tipo_verificacao(verificada) e elegibilidade_produto(aprovada
                       cria_facto(regra_disparada('PT-003')),
                       cria_facto(motivo("[PT-003] Devolução verificada elegível até 30 dias: permitir reembolso total no meio original ou troca elegível."))].
 
-% PT-004: Devolução verificada após 30 dias (Precedência 6)
-regra 'PT-004' se [tipo_verificacao(verificada) e elegibilidade_produto(aprovada) e avalia(dias_desde_compra(>, 30)) e nao tipo_pedido(ajuste_preco) e nao decisao(recusar) e nao decisao(encaminhar)]
+% PT-004: Devolução verificada após 30 dias (Precedência 6) — rever; a gestão pode aprovar crédito de loja
+regra 'PT-004' se [tipo_verificacao(verificada) e elegibilidade_produto(aprovada) e avalia(dias_desde_compra(>, 30)) e nao revendivel(false) e nao tipo_pedido(ajuste_preco) e nao decisao(recusar) e nao decisao(encaminhar)]
                entao [cria_facto(decisao(rever)),
                       cria_facto(aprovacao(gestor_xstore)),
                       cria_facto(meio_reembolso(credito_loja)),
                       cria_facto(regra_disparada('PT-004')),
                       cria_facto(motivo("[PT-004] Devolução verificada com mais de 30 dias: rever com a gestão. Crédito de loja pode ser aprovado se vendável e baixo risco."))].
+
+% PT-004: "Otherwise DENY" — depois de 30 dias e o artigo não é vendável (IN-010 = não), também quando o
+% artigo ainda estava em revisão por outra regra (como o Drools)
+regra 'PT-004-NAO-REVENDIVEL' se [tipo_verificacao(verificada) e avalia(dias_desde_compra(>, 30)) e revendivel(false) e nao tipo_pedido(ajuste_preco) e nao avalia(canal_compra(in, [levi_com, levi_ca])) e nao decisao(recusar)]
+               entao [cria_facto(decisao(recusar)),
+                      cria_facto(tipo_transacao(nenhuma)),
+                      cria_facto(regra_disparada('PT-004')),
+                      cria_facto(motivo("[PT-004] Devolução verificada com mais de 30 dias e o artigo não é vendável: recusar."))].
 
 % PT-005: Devolução às cegas com artigo elegível (Precedência 6)
 regra 'PT-005' se [tipo_verificacao(as_cegas) e elegibilidade_produto(aprovada) e nao tipo_pedido(ajuste_preco) e nao decisao(recusar) e nao decisao(encaminhar)]
@@ -412,13 +509,28 @@ regra 'PT-006' se [tipo_verificacao(as_cegas) e cliente_fornece_dados(false)]
                       cria_facto(regra_disparada('PT-006')),
                       cria_facto(motivo("[PT-006] Cliente sem recibo recusa fornecer dados ou há barreira linguística: selecionar 'Saltar' e prosseguir a devolução às cegas."))].
 
-% PT-007: Ajuste de preço de compra em loja até 14 dias com recibo original
-regra 'PT-007' se [tipo_pedido(ajuste_preco) e avalia(canal_compra(in, [mainline, outlet, loja_fisica])) e comprovativo(recibo_impresso) e avalia(dias_desde_compra(=<, 14)) e nao recibo_original(false)]
+% PT-007: Ajuste de preço de compra em loja até 14 dias com recibo original (impresso ou digital,
+% IN-004), uma única vez por compra
+regra 'PT-007' se [tipo_pedido(ajuste_preco) e avalia(canal_compra(in, [mainline, outlet, loja_fisica])) e tipo_verificacao(verificada) e recibo_original(true) e avalia(dias_desde_compra(=<, 14)) e nao ajuste_preco_anterior(true)]
                entao [cria_facto(decisao(permitir)),
                       cria_facto(tipo_transacao(ajuste_preco)),
                       cria_facto(valor_devolucao(diferenca_pos)),
                       cria_facto(regra_disparada('PT-007')),
                       cria_facto(motivo("[PT-007] Ajuste de preço de compra em loja até 14 dias com recibo original: permitir ajuste único pela diferença calculada pelo POS."))].
+
+% PT-007: O ajuste de 14 dias é único — já foi aplicado a esta compra
+regra 'PT-007-AJUSTE-ANTERIOR' se [tipo_pedido(ajuste_preco) e ajuste_preco_anterior(true) e nao decisao(recusar)]
+               entao [cria_facto(decisao(recusar)),
+                      cria_facto(tipo_transacao(nenhuma)),
+                      cria_facto(regra_disparada('PT-007')),
+                      cria_facto(motivo("[PT-007] Já foi aplicado um ajuste de preço a esta compra: o ajuste de 14 dias é único; recusar."))].
+
+% PT-007: Só cobre compras em loja; o ajuste de compras online ou BackPocket não está previsto
+regra 'PT-007-FORA-LOJA' se [tipo_pedido(ajuste_preco) e nao avalia(canal_compra(in, [mainline, outlet, loja_fisica])) e recibo_original(true) e avalia(dias_desde_compra(=<, 14)) e nao ajuste_preco_anterior(true) e nao decisao(recusar)]
+               entao [cria_facto(decisao(rever)),
+                      cria_facto(aprovacao(responsavel_senior)),
+                      cria_facto(regra_disparada('PT-007')),
+                      cria_facto(motivo("[PT-007] Ajuste de preço de uma compra fora da loja: a política só prevê o ajuste de 14 dias para compras em loja. Rever com a gestão."))].
 
 % PT-008: Ajuste de preço após 14 dias ou sem recibo original
 regra 'PT-008' se [tipo_pedido(ajuste_preco) e avalia(dias_desde_compra(>, 14))]
@@ -460,14 +572,36 @@ regra 'CH-002' se [avalia(canal_compra(in, [levi_com, levi_ca])) e encomenda_enc
                       cria_facto(regra_disparada('CH-002')),
                       cria_facto(motivo("[CH-002] Encomenda online encontrada com portal ativo: encaminhar através da BackPocket com reembolso no meio original."))].
 
-% CH-003: Encomenda online não encontrada ou sem recibo
-regra 'CH-003' se [avalia(canal_compra(in, [levi_com, levi_ca])) e encomenda_encontrada(false) e elegibilidade_produto(aprovada)]
+% CH-002: O documento não condiciona o encaminhamento à elegibilidade — um artigo em revisão (PC-002,
+% PC-003, PC-004) também segue para a BackPocket, onde a revisão acontece (como o Drools)
+regra 'CH-002-EM-REVISAO' se [avalia(canal_compra(in, [levi_com, levi_ca])) e encomenda_encontrada(true) e portal_online_disponivel(true) e decisao(rever) e nao tipo_pedido(ajuste_preco) e nao decisao(recusar)]
+               entao [cria_facto(decisao(encaminhar)),
+                      cria_facto(processo_obrigatorio(backpocket)),
+                      cria_facto(tipo_verificacao(verificada)),
+                      cria_facto(regra_disparada('CH-002')),
+                      cria_facto(motivo("[CH-002] Encomenda online encontrada com portal ativo: encaminhar através da BackPocket, onde o artigo em revisão é avaliado."))].
+
+% CH-003: Encomenda online não encontrada — às cegas só quando a política o permite (RPAC, Figura 5)
+regra 'CH-003' se [avalia(canal_compra(in, [levi_com, levi_ca])) e encomenda_encontrada(false) e politica_permite_as_cegas_online(true) e nao tipo_pedido(ajuste_preco) e elegibilidade_produto(aprovada)]
                entao [cria_facto(tipo_verificacao(as_cegas)),
                       cria_facto(meio_reembolso(cartao_oferta)),
                       cria_facto(regra_disparada('CH-003')),
-                      cria_facto(motivo("[CH-003] Encomenda online não encontrada: processar às cegas apenas quando política permitir, com cartão de oferta."))].
+                      cria_facto(motivo("[CH-003] Encomenda online não encontrada: devolução às cegas permitida pela política, com cartão de oferta."))].
 
-% CH-004: Encomenda online com portal de devoluções indisponível
+% CH-003: Encomenda online não encontrada e a política não permite a devolução às cegas
+regra 'CH-003-NAO-PERMITIDA' se [avalia(canal_compra(in, [levi_com, levi_ca])) e encomenda_encontrada(false) e nao politica_permite_as_cegas_online(true) e nao tipo_pedido(ajuste_preco)]
+               entao [cria_facto(decisao(recusar)),
+                      cria_facto(tipo_transacao(nenhuma)),
+                      cria_facto(regra_disparada('CH-003')),
+                      cria_facto(motivo("[CH-003] Encomenda online não encontrada e a política não permite a devolução às cegas neste caso: recusar."))].
+
+% CH-004: Portal online indisponível — a devolução às cegas permitida vai para o meio original
+regra 'CH-004-AS-CEGAS' se [avalia(canal_compra(in, [levi_com, levi_ca])) e encomenda_encontrada(false) e politica_permite_as_cegas_online(true) e portal_online_disponivel(false) e elegibilidade_produto(aprovada)]
+               entao [cria_facto(meio_reembolso(meio_original)),
+                      cria_facto(regra_disparada('CH-004')),
+                      cria_facto(motivo("[CH-004] Portal de devoluções online indisponível: a devolução às cegas permitida é processada no meio de pagamento original, em vez do cartão de oferta."))].
+
+% CH-004: Encomenda online encontrada com o portal indisponível (caso que a política não cobre, A-04)
 regra 'CH-004' se [avalia(canal_compra(in, [levi_com, levi_ca])) e encomenda_encontrada(true) e portal_online_disponivel(false) e elegibilidade_produto(aprovada)]
                entao [cria_facto(decisao(rever)),
                       cria_facto(aprovacao(responsavel_senior)),
@@ -566,11 +700,23 @@ regra 'TN-007' se [tipo_pedido(devolucao_oferta) e tipo_verificacao(verificada)]
                       cria_facto(motivo("[TN-007] Devolução de oferta com recibo: oferecer crédito de loja ao portador ou estorno tokenizado ao comprador original."))].
 
 % TN-008: Compra efetuada via PayPal ou Venmo
-regra 'TN-008' se [avalia(meio_pagamento(in, [paypal, venmo]))]
+regra 'TN-008' se [avalia(meio_pagamento(in, [paypal, venmo])) e nao acesso_aplicacao_pagamento(false)]
                entao [cria_facto(processo_obrigatorio(fluxo_app)),
                       cria_facto(meio_reembolso(fluxo_app)),
                       cria_facto(regra_disparada('TN-008')),
                       cria_facto(motivo("[TN-008] Compra via PayPal ou Venmo: cliente deve aceder à aplicação para estorno; proibido substituir meio fora desse fluxo."))].
+
+% TN-008: O cliente não consegue aceder à aplicação — o reembolso só pode seguir o fluxo da app e não
+% se substitui o meio, por isso o reembolso no meio original (compra com comprovativo até 30 dias, PT-003,
+% ou encomenda online encontrada) fica em revisão (como o Drools, A-05). Só usa factos de entrada, para
+% disparar antes de PT-003 e a revisão ser a decisão do motor.
+regra 'TN-008-SEM-APP' se [avalia(meio_pagamento(in, [paypal, venmo])) e acesso_aplicacao_pagamento(false) e nao comprovativo(nenhum) e nao avalia(dias_desde_compra(>, 30)) e nao decisao(recusar)]
+               entao [cria_facto(decisao(rever)),
+                      cria_facto(aprovacao(responsavel_senior)),
+                      cria_facto(processo_obrigatorio(fluxo_app)),
+                      cria_facto(meio_reembolso(fluxo_app)),
+                      cria_facto(regra_disparada('TN-008')),
+                      cria_facto(motivo("[TN-008] Compra via PayPal ou Venmo e o cliente não consegue aceder à aplicação: o reembolso só pode ser feito pelo fluxo da aplicação; não substituir por outro meio. Rever com a gestão."))].
 
 % TN-009: Compra física com Afterpay
 regra 'TN-009' se [meio_pagamento(afterpay) e avalia(canal_compra(in, [mainline, outlet, loja_fisica]))]
@@ -592,8 +738,10 @@ regra 'TN-011' se [mercado(canada) e meio_pagamento(interac) e cartao_interac_pr
                       cria_facto(regra_disparada('TN-011')),
                       cria_facto(motivo("[TN-011] Interac Canadá em loja física: o cliente deve apresentar o mesmo cartão físico Interac utilizado na compra."))].
 
-% TN-011: Interac no Canadá sem o mesmo cartão físico presente
-regra 'TN-011-SEM-CARTAO' se [mercado(canada) e meio_pagamento(interac) e avalia(cartao_interac_presente(in, [false, nao, ausente]))]
+% TN-011: Interac no Canadá sem o mesmo cartão físico presente. Só importa quando o reembolso vai
+% para o Interac: compra em loja com comprovativo até 30 dias (PT-003), não, por exemplo, crédito de
+% loja. Só usa factos de entrada, para disparar antes de PT-003 e a revisão ser a decisão do motor.
+regra 'TN-011-SEM-CARTAO' se [mercado(canada) e meio_pagamento(interac) e avalia(cartao_interac_presente(in, [false, nao, ausente])) e nao comprovativo(nenhum) e nao avalia(dias_desde_compra(>, 30)) e nao avalia(canal_compra(in, [levi_com, levi_ca])) e nao decisao(recusar)]
                entao [cria_facto(decisao(rever)),
                       cria_facto(aprovacao(responsavel_senior)),
                       cria_facto(meio_reembolso(sem_meio_definido)),
@@ -677,22 +825,32 @@ regra 'EX-003' se [cliente_agitado(true)]
                       cria_facto(motivo("[EX-003] Cliente irritado ou perturbação: escalar para responsável sénior. A agitação não altera a elegibilidade do produto."))].
 
 % EX-004: Condições estritas para exceção de apaziguamento por líder sénior
-regra 'EX-004' se [aprovacao(responsavel_senior) e risco_fraude(baixo) e concluivel_no_sistema(true) e nao personalizado_ou_alterado(true) e nao sku_reconhecido(false) e nao estado_produto(sujo_contaminado_inseguro)]
+% Não se aplica a uma exceção que contorna um controlo obrigatório: EX-006 recusa-a e anula EX-004 e
+% EX-005 (testado nos factos de entrada, para não depender da ordem de disparo)
+regra 'EX-004' se [aprovacao(responsavel_senior) e risco_fraude(baixo) e concluivel_no_sistema(true) e nao personalizado_ou_alterado(true) e nao sku_reconhecido(false) e nao estado_produto(sujo_contaminado_inseguro) e nao excecao_contorna_controlo(true) e nao afterpay_pede_excecao(true) e nao excecao_recusada(true)]
                entao [cria_facto(excecao_autorizavel(true)),
                       cria_facto(regra_disparada('EX-004')),
                       cria_facto(motivo("[EX-004] Exceção de apaziguamento autorizável: ausência de hard stops, artigo verificável, baixo risco e operação executável."))].
 
 % EX-005: Aplicação da resolução menos abrangente para artigo vendável
-regra 'EX-005' se [excecao_autorizavel(true) e revendivel(true)]
+% EX-006 anula EX-004 e EX-005: uma exceção recusada não é autorizável nem tem resolução
+regra 'EX-005' se [excecao_autorizavel(true) e revendivel(true) e nao excecao_recusada(true)]
                entao [cria_facto(preferencia_resolucao(menos_abrangente)),
                       cria_facto(regra_disparada('EX-005')),
                       cria_facto(motivo("[EX-005] Exceção para artigo vendável: aplicar resolução menos abrangente (troca mesmo artigo > crédito loja > meio original)."))].
 
-% EX-006: Recusa imperativa de exceção que viola controlos absolutos
-regra 'EX-006' se [tentativa_excecao(true) e meio_pagamento(afterpay)]
-               entao [cria_facto(decisao(recusar)),
+% EX-006: Recusa imperativa de exceção que viola controlos absolutos. Recusa a exceção, não o
+% pedido: segue-se o processo obrigatório (como o Drools, excecaoRecusada).
+regra 'EX-006' se [tentativa_excecao(true) e excecao_contorna_controlo(true)]
+               entao [cria_facto(excecao_recusada(true)),
                       cria_facto(regra_disparada('EX-006')),
-                      cria_facto(motivo("[EX-006] Recusar exceção: Afterpay, PayPal, Venmo, SKU inválido ou personalização constituem controlos absolutos não discricionários."))].
+                      cria_facto(motivo("[EX-006] A exceção pedida exige um meio de pagamento proibido, um SKU incorreto, um produto excluído ou contornar a Afterpay, o PayPal, o Venmo ou o processamento online: recusar a exceção e usar o processo obrigatório."))].
+
+% EX-006: A exceção pedida contorna a Afterpay de uma compra online (a mesma situação de HS-005)
+regra 'EX-006-AFTERPAY' se [tentativa_excecao(true) e afterpay_pede_excecao(true)]
+               entao [cria_facto(excecao_recusada(true)),
+                      cria_facto(regra_disparada('EX-006')),
+                      cria_facto(motivo("[EX-006] A exceção pedida contorna a Afterpay: recusar a exceção e reembolsar pelo processo obrigatório da Afterpay."))].
 
 % EX-007: Documentação mandatória de exceção aprovada
 regra 'EX-007' se [excecao_aprovada(true)]
@@ -786,6 +944,13 @@ regra 'BW-003' se [categoria_produto(bodywear) e pecas_em_falta(true) e nao esta
                       cria_facto(processo_obrigatorio(baixa_dano)),
                       cria_facto(regra_disparada('BW-003')),
                       cria_facto(motivo("[BW-003] Bodywear com unidades em falta do conjunto ou usado: baixa por dano de todo o conjunto."))].
+
+% BW-003: Bodywear usado (sem risco biológico, que é BW-004)
+regra 'BW-003-USADO' se [categoria_produto(bodywear) e estado_produto(claramente_usado) e nao estado_produto(sujo_contaminado_inseguro) e nao decisao(recusar)]
+               entao [cria_facto(destino_produto(baixa_dano)),
+                      cria_facto(processo_obrigatorio(baixa_dano)),
+                      cria_facto(regra_disparada('BW-003')),
+                      cria_facto(motivo("[BW-003] Bodywear usado: baixa por dano de todo o conjunto."))].
 
 % BW-004: Usado e sujo, contaminado ou inseguro
 regra 'BW-004' se [categoria_produto(bodywear) e estado_produto(sujo_contaminado_inseguro)]
