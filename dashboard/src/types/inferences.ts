@@ -14,6 +14,13 @@ export interface RegraItemDto {
   resultado?: string | null;
 }
 
+/** Resultado mais recente de um motor para um caso (listagem agrupada por pedido). */
+export interface MotorResultadoDto {
+  motor: MotorTipo;
+  elegibilidade: ElegibilidadeTipo;
+  id: string;
+}
+
 export interface InferenciaItem {
   id: string;
   pedidoId: string;
@@ -30,6 +37,10 @@ export interface InferenciaItem {
   duracaoMs: number;
   regrasDisparadas: RegraItemDto[];
   temOutroMotor?: boolean;
+  /** Resultado de cada motor para este caso (uma linha por caso na listagem). */
+  motores?: MotorResultadoDto[];
+  /** Com os dois motores: true se concordam, false se divergem; null com um só motor. */
+  consenso?: boolean | null;
 }
 
 export interface InferenciaDetalheResponse extends InferenciaItem {

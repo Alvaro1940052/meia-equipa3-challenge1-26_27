@@ -183,6 +183,15 @@ export default function DecisoesPage() {
           accentBorder: "border-l-rose-500",
           containerBg: "bg-rose-100 text-rose-700 border-rose-200",
         };
+      case "ENCAMINHAR":
+        return {
+          label: isEn ? "Forwarded" : "Encaminhada",
+          badgeClass: "bg-violet-50 text-violet-800 border border-violet-200/90",
+          icon: "alt_route",
+          iconColor: "text-violet-600",
+          accentBorder: "border-l-violet-500",
+          containerBg: "bg-violet-100 text-violet-700 border-violet-200",
+        };
       case "REVER":
       default:
         return {
@@ -417,6 +426,9 @@ export default function DecisoesPage() {
               const meta = getOutcomeBadge(item.elegibilidade);
               const isDrools = item.motor === "DROOLS";
               const primaryRule = item.regrasDisparadas[0];
+              // Caso avaliado pelos dois motores: uma só linha, com o resultado de cada um
+              const doisMotores = (item.motores?.length ?? 0) > 1;
+              const nomeMotor = (motor: string) => (motor === "DROOLS" ? "Drools" : "Prolog");
 
               return (
                 <div
@@ -435,14 +447,48 @@ export default function DecisoesPage() {
                         {item.produtoNome}
                       </h3>
 
-                      <span
-                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${meta.badgeClass} shrink-0`}
-                      >
-                        <span className="material-symbols-outlined text-[15px]">
-                          {meta.icon}
+                      {doisMotores && item.consenso === false ? (
+                        item.motores!.map((m) => {
+                          const metaMotor = getOutcomeBadge(m.elegibilidade);
+                          return (
+                            <span
+                              key={m.motor}
+                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${metaMotor.badgeClass} shrink-0`}
+                            >
+                              <span className="material-symbols-outlined text-[15px]">{metaMotor.icon}</span>
+                              <span>
+                                {nomeMotor(m.motor)}: {metaMotor.label}
+                              </span>
+                            </span>
+                          );
+                        })
+                      ) : (
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${meta.badgeClass} shrink-0`}
+                        >
+                          <span className="material-symbols-outlined text-[15px]">
+                            {meta.icon}
+                          </span>
+                          <span>{meta.label}</span>
                         </span>
-                        <span>{meta.label}</span>
-                      </span>
+                      )}
+
+                      {doisMotores && (
+                        <span
+                          title={item
+                            .motores!.map((m) => `${nomeMotor(m.motor)}: ${getOutcomeBadge(m.elegibilidade).label}`)
+                            .join(" · ")}
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold border shrink-0 ${item.consenso
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : "bg-amber-50 text-amber-800 border-amber-300"
+                            }`}
+                        >
+                          <span className="material-symbols-outlined text-[13px]">
+                            {item.consenso ? "verified" : "rule"}
+                          </span>
+                          {item.consenso ? (isEn ? "Consensus" : "Consenso") : (isEn ? "Divergence" : "Divergência")}
+                        </span>
+                      )}
                     </div>
 
                     <div className="text-right shrink-0">
@@ -489,18 +535,25 @@ export default function DecisoesPage() {
                         <span>{label(item.meioReembolso || "MEIO_ORIGINAL", locale)}</span>
                       </span>
 
-                      <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-mono tabular-nums font-medium border ${isDrools
-                            ? "bg-indigo-50/80 text-indigo-700 border-indigo-200/60"
-                            : "bg-emerald-50/80 text-emerald-700 border-emerald-200/60"
-                          }`}
-                      >
-                        <span className="material-symbols-outlined text-[13px]">
-                          {isDrools ? "account_tree" : "schema"}
+                      {doisMotores ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-mono tabular-nums font-medium border bg-slate-50 text-slate-700 border-slate-200">
+                          <span className="material-symbols-outlined text-[13px]">compare_arrows</span>
+                          <span>Drools + Prolog</span>
                         </span>
-                        <span>{isDrools ? "Drools" : "Prolog"}</span>
-                        <span className="text-slate-400 font-mono tabular-nums">· {item.duracaoMs} ms</span>
-                      </span>
+                      ) : (
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-mono tabular-nums font-medium border ${isDrools
+                              ? "bg-indigo-50/80 text-indigo-700 border-indigo-200/60"
+                              : "bg-emerald-50/80 text-emerald-700 border-emerald-200/60"
+                            }`}
+                        >
+                          <span className="material-symbols-outlined text-[13px]">
+                            {isDrools ? "account_tree" : "schema"}
+                          </span>
+                          <span>{isDrools ? "Drools" : "Prolog"}</span>
+                          <span className="text-slate-400 font-mono tabular-nums">· {item.duracaoMs} ms</span>
+                        </span>
+                      )}
 
                       <span className="inline-flex items-center gap-1 text-[11px] text-slate-400">
                         <span className="material-symbols-outlined text-[14px]">

@@ -24,6 +24,14 @@ class RegraItemDto(LevisBaseModel):
     resultado: Optional[str] = Field(default=None, description="Resultado ou efeito determinado")
 
 
+class MotorResultadoDto(LevisBaseModel):
+    """Most recent outcome of one engine for a case."""
+
+    motor: str = Field(..., description="Motor (DROOLS ou PROLOG)")
+    elegibilidade: str = Field(..., description="Elegibilidade decidida por este motor")
+    id: UUID = Field(..., description="Identificador da inferência mais recente deste motor")
+
+
 class InferenciaItem(LevisBaseModel):
     """Canonical model for a persisted inference in list or overview."""
 
@@ -44,6 +52,14 @@ class InferenciaItem(LevisBaseModel):
     temOutroMotor: bool = Field(
         default=False,
         description="Indica se existe outra inferência deste mesmo caso resolvida por motor distinto",
+    )
+    motores: List[MotorResultadoDto] = Field(
+        default_factory=list,
+        description="Resultado mais recente de cada motor para este caso (listagem agrupada por pedido)",
+    )
+    consenso: Optional[bool] = Field(
+        default=None,
+        description="Com os dois motores: verdadeiro se concordam na elegibilidade, falso se divergem; nulo com um só",
     )
 
 
