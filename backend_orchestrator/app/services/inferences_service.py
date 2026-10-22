@@ -9,7 +9,7 @@ import json
 import logging
 import math
 import time
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 from uuid import UUID, uuid4
 
 from fastapi import HTTPException, status
@@ -23,6 +23,7 @@ from app.schemas.inference_record import (
     ComparacaoMotoresResponse,
     InferenciaDetalheResponse,
     InferenciaItem,
+    MotorResultadoDto,
     RegraItemDto,
 )
 from app.schemas.levis import DecisaoResponse, PaginaResponse
@@ -34,11 +35,17 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _limpar_nome_produto(nome: Optional[str]) -> Optional[str]:
+    """Remove the enum class prefix from product names stored before the fix ("MarcaEnum.LEVIS …")."""
+    return nome.replace("MarcaEnum.", "") if nome else nome
+
+
 def _extract_product_info(pedido_data: Any) -> Tuple[str, Optional[str]]:
     """Extract (produto_nome, produto_ref) from input pedido payload."""
     data = pedido_data
     if hasattr(pedido_data, "model_dump"):
-        data = pedido_data.model_dump()
+        # JSON mode turns enums into their values (LEVIS, not MarcaEnum.LEVIS)
+        data = pedido_data.model_dump(mode="json")
     elif not isinstance(data, dict):
         return ("Artigo Levi's", None)
 
@@ -140,7 +147,7 @@ def _to_item(rec: HistoricoInferencia, tem_outro_motor: bool = False) -> Inferen
         pedidoId=rec.pedido_id,
         motor=rec.motor,
         motorVersao=rec.motor_versao,
-        produtoNome=rec.produto_nome,
+        produtoNome=_limpar_nome_produto(rec.produto_nome),
         produtoRef=rec.produto_ref,
         valorDevolucao=float(rec.valor_devolucao or 0.0),
         elegibilidade=rec.elegibilidade,
@@ -152,6 +159,23 @@ def _to_item(rec: HistoricoInferencia, tem_outro_motor: bool = False) -> Inferen
         regrasDisparadas=regras,
         temOutroMotor=tem_outro_motor,
     )
+
+
+def _resumo_motores(registos: List[Any]) -> Tuple[List[MotorResultadoDto], Optional[bool]]:
+    """Most recent outcome per engine (records ordered newest first) and whether the engines agree.
+
+    Returns the per-engine summary ordered by engine name and the consensus flag: None with a
+    single engine, True when both engines reached the same eligibility, False otherwise.
+    """
+    ultimo_por_motor: Dict[str, Any] = {}
+    for r in registos:
+        ultimo_por_motor.setdefault(r.motor, r)
+    motores = [
+        MotorResultadoDto(motor=motor, elegibilidade=r.elegibilidade, id=r.id)
+        for motor, r in sorted(ultimo_por_motor.items())
+    ]
+    consenso = None if len(motores) < 2 else len({m.elegibilidade for m in motores}) == 1
+    return motores, consenso
 
 
 class InferencesService:
@@ -304,86 +328,98 @@ class InferencesService:
         pagina: int = 0,
         tamanho: int = 20,
     ) -> PaginaResponse[InferenciaItem]:
-        """Query unified inference history with filtering and pagination."""
-        # Base count statement
-        stmt_count = select(func.count(HistoricoInferencia.id))
-        stmt_data = select(HistoricoInferencia).order_by(HistoricoInferencia.executado_em.desc())
+        """Query unified inference history with filtering and pagination, one row per case.
+
+        A case evaluated by both engines (e.g. after "Comparar com…") shares the same pedido_id and
+        is listed once: the row shows its original inference (the engine chosen by the user) that
+        matches the filters, plus the latest outcome of each engine (`motores`) and whether they
+        agree (`consenso`). Counting and pagination are done over distinct cases, ordered by the
+        original evaluation, so comparing an older case does not move it to the top.
+        """
+        conds: List[Any] = []
 
         # Filters
         if motor:
-            m_clean = motor.strip().upper()
-            stmt_count = stmt_count.where(HistoricoInferencia.motor == m_clean)
-            stmt_data = stmt_data.where(HistoricoInferencia.motor == m_clean)
+            conds.append(HistoricoInferencia.motor == motor.strip().upper())
 
         if pedido_id:
-            p_clean = pedido_id.strip()
-            stmt_count = stmt_count.where(HistoricoInferencia.pedido_id == p_clean)
-            stmt_data = stmt_data.where(HistoricoInferencia.pedido_id == p_clean)
+            conds.append(HistoricoInferencia.pedido_id == pedido_id.strip())
 
         if elegibilidade:
-            e_clean = elegibilidade.strip().upper()
-            stmt_count = stmt_count.where(HistoricoInferencia.elegibilidade == e_clean)
-            stmt_data = stmt_data.where(HistoricoInferencia.elegibilidade == e_clean)
+            conds.append(HistoricoInferencia.elegibilidade == elegibilidade.strip().upper())
 
         if tipo_transacao:
-            t_clean = tipo_transacao.strip().upper()
-            stmt_count = stmt_count.where(HistoricoInferencia.tipo_transacao == t_clean)
-            stmt_data = stmt_data.where(HistoricoInferencia.tipo_transacao == t_clean)
+            conds.append(HistoricoInferencia.tipo_transacao == tipo_transacao.strip().upper())
 
         if filtro_tipo:
             ft = filtro_tipo.strip().upper()
             if ft == "TROCAS":
-                cond = or_(
-                    HistoricoInferencia.tipo_transacao == "TROCA",
-                    HistoricoInferencia.elegibilidade == "TROCA",
+                conds.append(
+                    or_(
+                        HistoricoInferencia.tipo_transacao == "TROCA",
+                        HistoricoInferencia.elegibilidade == "TROCA",
+                    )
                 )
-                stmt_count = stmt_count.where(cond)
-                stmt_data = stmt_data.where(cond)
             elif ft == "DEVOLUCOES":
-                cond = or_(
-                    HistoricoInferencia.tipo_transacao.in_(["REEMBOLSO", "CREDITO_LOJA", "NENHUMA"]),
-                    and_(HistoricoInferencia.tipo_transacao.is_(None), HistoricoInferencia.elegibilidade != "TROCA"),
+                conds.append(
+                    or_(
+                        HistoricoInferencia.tipo_transacao.in_(["REEMBOLSO", "CREDITO_LOJA", "NENHUMA"]),
+                        and_(HistoricoInferencia.tipo_transacao.is_(None), HistoricoInferencia.elegibilidade != "TROCA"),
+                    )
                 )
-                stmt_count = stmt_count.where(cond)
-                stmt_data = stmt_data.where(cond)
 
         if busca and busca.strip():
             q = f"%{busca.strip()}%"
-            cond_busca = or_(
-                HistoricoInferencia.pedido_id.ilike(q),
-                HistoricoInferencia.produto_nome.ilike(q),
-                HistoricoInferencia.produto_ref.ilike(q),
+            conds.append(
+                or_(
+                    HistoricoInferencia.pedido_id.ilike(q),
+                    HistoricoInferencia.produto_nome.ilike(q),
+                    HistoricoInferencia.produto_ref.ilike(q),
+                )
             )
-            stmt_count = stmt_count.where(cond_busca)
-            stmt_data = stmt_data.where(cond_busca)
 
+        stmt_count = select(func.count(func.distinct(HistoricoInferencia.pedido_id))).where(*conds)
         total_elementos = (await session.execute(stmt_count)).scalar() or 0
 
-        # Pagination
+        # Pagination over distinct cases, most recent original evaluation first
         offset = max(0, pagina) * max(1, tamanho)
-        stmt_data = stmt_data.offset(offset).limit(max(1, tamanho))
-        records = (await session.execute(stmt_data)).scalars().all()
-
-        # Compute temOutroMotor for items on this page
-        distinct_pedidos = list({r.pedido_id for r in records})
-        pedidos_motores: Dict[str, Set[str]] = {}
-        if distinct_pedidos:
-            stmt_other = (
-                select(HistoricoInferencia.pedido_id, HistoricoInferencia.motor)
-                .where(HistoricoInferencia.pedido_id.in_(distinct_pedidos))
-                .distinct()
-            )
-            pairs = (await session.execute(stmt_other)).all()
-            for pid, mot in pairs:
-                if pid not in pedidos_motores:
-                    pedidos_motores[pid] = set()
-                pedidos_motores[pid].add(mot)
+        primeira_execucao = func.min(HistoricoInferencia.executado_em).label("primeira_execucao")
+        stmt_pedidos = (
+            select(HistoricoInferencia.pedido_id, primeira_execucao)
+            .where(*conds)
+            .group_by(HistoricoInferencia.pedido_id)
+            .order_by(primeira_execucao.desc())
+            .offset(offset)
+            .limit(max(1, tamanho))
+        )
+        pedidos_pagina = [row.pedido_id for row in (await session.execute(stmt_pedidos)).all()]
 
         items: List[InferenciaItem] = []
-        for r in records:
-            engines_for_pedido = pedidos_motores.get(r.pedido_id, set())
-            tem_outro = len(engines_for_pedido - {r.motor}) > 0
-            items.append(_to_item(r, tem_outro_motor=tem_outro))
+        if pedidos_pagina:
+            # The row shows the original inference of the case (the chosen engine) matching the filters…
+            stmt_linhas = (
+                select(HistoricoInferencia)
+                .where(HistoricoInferencia.pedido_id.in_(pedidos_pagina), *conds)
+                .order_by(HistoricoInferencia.executado_em.asc())
+            )
+            linha_por_pedido: Dict[str, HistoricoInferencia] = {}
+            for r in (await session.execute(stmt_linhas)).scalars().all():
+                linha_por_pedido.setdefault(r.pedido_id, r)
+
+            # …and the latest outcome of every engine for that case, regardless of the filters
+            stmt_todos = (
+                select(HistoricoInferencia)
+                .where(HistoricoInferencia.pedido_id.in_(pedidos_pagina))
+                .order_by(HistoricoInferencia.executado_em.desc())
+            )
+            registos_por_pedido: Dict[str, List[HistoricoInferencia]] = {}
+            for r in (await session.execute(stmt_todos)).scalars().all():
+                registos_por_pedido.setdefault(r.pedido_id, []).append(r)
+
+            for pid in pedidos_pagina:
+                motores, consenso = _resumo_motores(registos_por_pedido.get(pid, []))
+                item = _to_item(linha_por_pedido[pid], tem_outro_motor=len(motores) > 1)
+                items.append(item.model_copy(update={"motores": motores, "consenso": consenso}))
 
         total_paginas = math.ceil(total_elementos / tamanho) if tamanho > 0 else 0
 

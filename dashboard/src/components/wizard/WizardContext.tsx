@@ -113,6 +113,14 @@ export const defaultWizardState: WizardState = {
   onlineOrderNumber: "WEB-84920-PT",
 };
 
+/**
+ * O estado da conta e do cartão só é relevante para pagamentos com cartão de crédito ou débito:
+ * é o que as regras TN-002 e TN-003 avaliam nos dois motores. Nos outros meios não se pergunta.
+ */
+export function exigeEstadoDaConta(meio: WizardState["originalPaymentMethod"]): boolean {
+  return meio === "CREDITO" || meio === "DEBITO";
+}
+
 export function getFirstIncompleteStep(state: WizardState): number {
   // Passo 1: Motor de inferência é obrigatório
   if (!state.engine) return 1;
@@ -148,19 +156,20 @@ export function getFirstIncompleteStep(state: WizardState): number {
     return 5;
   }
 
-  // Passo 6: Valor, meio de pagamento original e estado da conta
+  // Passo 6: Valor, meio de pagamento original e, só para cartão, estado da conta
   const isGift = state.requestType === "GIFT" || state.proofOfPurchase === "RECIBO_OFERTA";
   if (isGift) {
     if (state.totalPrice === null || state.totalPrice <= 0) {
       return 6;
     }
   } else {
+    const comCartao = exigeEstadoDaConta(state.originalPaymentMethod);
     if (
       state.totalPrice === null ||
       state.totalPrice <= 0 ||
       !state.originalPaymentMethod ||
-      !state.accountState ||
-      (state.accountState === "ENCERRADA" && state.originalRefundRefused === null) ||
+      (comCartao && !state.accountState) ||
+      (comCartao && state.accountState === "ENCERRADA" && state.originalRefundRefused === null) ||
       (state.originalPaymentMethod === "INTERAC" && state.physicalCardPresent === null) ||
       (state.originalPaymentMethod === "PAYPAL" && state.paymentAppAccessible === null)
     ) {

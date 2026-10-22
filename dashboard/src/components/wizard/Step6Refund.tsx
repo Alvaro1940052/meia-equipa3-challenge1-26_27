@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useWizard } from "./WizardContext";
+import { useWizard, exigeEstadoDaConta } from "./WizardContext";
 import { useLocale } from "@/contexts/LocaleContext";
 import SlickSlider from "@/components/ui/SlickSlider";
 
@@ -163,15 +163,40 @@ export default function Step6Refund() {
   );
   const [prevTotalPrice, setPrevTotalPrice] = useState<number | null>(state.totalPrice);
 
+  // Só sincroniza o campo quando o valor muda por fora (ex.: rascunho carregado); enquanto se
+  // escreve, o texto já corresponde ao valor e não pode ser reformatado (ex.: "3" → "3.00").
   if (state.totalPrice !== prevTotalPrice) {
     setPrevTotalPrice(state.totalPrice);
-    setPriceInput(state.totalPrice !== null ? state.totalPrice.toFixed(2) : "");
+    const textoCorresponde =
+      state.totalPrice === null ? priceInput === "" : parseFloat(priceInput) === state.totalPrice;
+    if (!textoCorresponde) {
+      setPriceInput(state.totalPrice !== null ? state.totalPrice.toFixed(2) : "");
+    }
   }
 
   // Filtrar meios: destacar ou permitir Interac se Canadá
   const availableMethods = paymentMethods.filter(
     (m) => !m.canadaOnly || isCanada
   );
+
+  // O estado da conta só se pergunta para cartão de crédito/débito (TN-002, TN-003); os outros
+  // meios têm as suas próprias condições (Interac, PayPal, Afterpay online).
+  const pedeEstadoDaConta = exigeEstadoDaConta(state.originalPaymentMethod);
+  const temCondicoesDoMeio =
+    state.originalPaymentMethod === "INTERAC" ||
+    state.originalPaymentMethod === "PAYPAL" ||
+    (state.originalPaymentMethod === "AFTERPAY" &&
+      state.purchaseChannel === "ONLINE_BACKPOCKET" &&
+      state.requestType === "TROCA");
+
+  // Ao mudar para um meio sem cartão, a resposta sobre a conta deixa de se aplicar
+  const selecionarMeio = (meio: PaymentOption["id"]) => {
+    setField("originalPaymentMethod", meio);
+    if (!exigeEstadoDaConta(meio)) {
+      if (state.accountState !== null) setField("accountState", null);
+      if (state.originalRefundRefused !== null) setField("originalRefundRefused", null);
+    }
+  };
 
   const getAccountStateBadge = () => {
     switch (state.accountState) {
@@ -414,11 +439,11 @@ export default function Step6Refund() {
                   role="radio"
                   aria-checked={isSelected}
                   tabIndex={0}
-                  onClick={() => setField("originalPaymentMethod", item.id)}
+                  onClick={() => selecionarMeio(item.id)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
-                      setField("originalPaymentMethod", item.id);
+                      selecionarMeio(item.id);
                     }
                   }}
                   className={`group rounded-xl p-4 sm:p-5 cursor-pointer flex items-center justify-between gap-4 transition-all duration-150 focus-visible:outline-2 bg-white ${isAfterpayBlocked && isSelected
@@ -462,17 +487,19 @@ export default function Step6Refund() {
         )}
       </div>
 
-      {/* 3. Estado da Conta e do Cartão (Apenas para devoluções regulares com cartão de crédito/débito) */}
-      {!isGift && (
+      {/* 3. Estado da Conta e do Cartão (só cartão de crédito/débito) e condições próprias do meio */}
+      {!isGift && (pedeEstadoDaConta || temCondicoesDoMeio) && (
         <div className="w-full flex flex-col gap-3">
           {/* Typographic Section Header */}
           <div className="flex items-center gap-2 px-1">
             <span className="font-mono tabular-nums text-xs font-bold text-slate-400 select-none">03</span>
             <span className="text-slate-300">/</span>
             <h3 className="font-sans text-sm sm:text-base font-bold text-slate-900 tracking-tight">
-              {isEn ? "Customer Account & Card Status" : "Estado da Conta e Cartão do Cliente"}
+              {pedeEstadoDaConta
+                ? isEn ? "Customer Account & Card Status" : "Estado da Conta e Cartão do Cliente"
+                : isEn ? "Payment Method Conditions" : "Condições do Meio de Pagamento"}
             </h3>
-            {state.accountState ? (
+            {!pedeEstadoDaConta ? null : state.accountState ? (
               <span
                 className={`font-sans inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold select-none ${state.accountState === "ENCERRADA"
                     ? "bg-amber-50 text-amber-700 border border-amber-200/80"
@@ -490,6 +517,8 @@ export default function Step6Refund() {
             )}
           </div>
 
+          {pedeEstadoDaConta && (
+          <>
           {/* Minimalist Cards Grid em 2 colunas */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             {/* Card: Conta Ativa / Normal */}
@@ -710,6 +739,8 @@ export default function Step6Refund() {
               </div>
             </div>
           )}
+          </>
+          )}
 
           {/* Sub-condição interativa: Cartão Interac presente quando meio for Interac */}
           {state.originalPaymentMethod === "INTERAC" && (
@@ -799,8 +830,8 @@ export default function Step6Refund() {
               <div className="shrink-0 w-full sm:w-auto">
                 <SlickSlider
                   options={[
-                    { label: isEn ? "No Access" : "Sem Acesso", value: false, tone: "danger", icon: "close" },
-                    { label: isEn ? "Confirmed" : "Acesso Confirmado", value: true, tone: "success", icon: "check" },
+                    { label: isEn ? "No" : "Não", value: false, tone: "danger", icon: "close" },
+                    { label: isEn ? "Yes" : "Sim", value: true, tone: "success", icon: "check" },
                   ]}
                   value={state.paymentAppAccessible}
                   onChange={(val) => setField("paymentAppAccessible", val)}

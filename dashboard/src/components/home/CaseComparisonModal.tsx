@@ -422,7 +422,7 @@ export default function CaseComparisonModal({
               {renderEngineColumn(
                 data.instanciaProlog,
                 "SWI-Prolog Engine",
-                "Cláusulas Horn / Resolução SLD (Backward Chaining)",
+                "Cláusulas Horn / Encadeamento Direto (Forward Chaining) com perguntas a pedido",
                 "prolog"
               )}
             </div>

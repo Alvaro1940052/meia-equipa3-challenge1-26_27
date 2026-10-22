@@ -4,6 +4,10 @@ package com.levis.devolucoes.regras;
 // Regras por artigo, sobre DecisaoArtigo (ADR 0002). Primeiro as paragens obrigatórias (HS), depois
 // o estado (PC). Precedências: PC-007 > PC-006 > PC-001..PC-005; HS-003 > PC-006.
 // O destino do produto (baixa por dano, saldos, etc.) é decidido em M9.
+// Uma paragem num artigo só termina esse artigo; quando o último artigo por parar é parado, a
+// própria paragem termina também o pedido (ADR 0004): não resta nada a decidir para a transação,
+// e as regras de M4 a M8 deixam de disparar. $porParar conta os artigos ainda não terminados,
+// incluindo o desta ativação.
 
 import com.levis.devolucoes.model.decisao.Decisao;
 import com.levis.devolucoes.model.decisao.DecisaoArtigo;
@@ -35,6 +39,7 @@ when
     $d  : Decisao( terminal == false )
     $a  : ArtigoDevolvido( produto != null, produto.skuReconhecidoPOS == false, produto.produtoFranquia == false )
     $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false )
+    accumulate( DecisaoArtigo( pedidoId == $d.pedidoId, terminal == false ); $porParar : count() )
 then
     modify( $da ) {
         setTipoTransacao( TipoTransacao.NENHUMA ),
@@ -42,6 +47,7 @@ then
                  "SKU " + $a.getProduto().getSku() + " não reconhecido no POS: recusar a devolução e a troca. "
                  + "Não usar um SKU diferente ou genérico (HS-004)." )
     }
+    if ( $porParar == 1 ) { modify( $d ) { terminarPorParagemDosArtigos() } }
 end
 
 rule "HS-004 SKU da franquia do Canadá não reconhecido"
@@ -56,6 +62,7 @@ when
     $d  : Decisao( terminal == false )
     $a  : ArtigoDevolvido( produto != null, produto.skuReconhecidoPOS == false, produto.produtoFranquia == true )
     $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false )
+    accumulate( DecisaoArtigo( pedidoId == $d.pedidoId, terminal == false ); $porParar : count() )
 then
     modify( $da ) {
         setTipoTransacao( TipoTransacao.NENHUMA ),
@@ -64,6 +71,7 @@ then
                  + "seguir o processo de devolução da franquia com o SKU da franquia (CH-007)." )
     }
     modify( $d ) { setProcesso( ProcessoObrigatorio.FRANQUIA_CANADA ) }
+    if ( $porParar == 1 ) { modify( $d ) { terminarPorParagemDosArtigos() } }
 end
 
 rule "CH-007 Produto da franquia do Canadá apresentado na loja"
@@ -78,6 +86,7 @@ when
     $d  : Decisao( terminal == false )
     $a  : ArtigoDevolvido( produto != null, produto.skuReconhecidoPOS == true, produto.produtoFranquia == true )
     $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false )
+    accumulate( DecisaoArtigo( pedidoId == $d.pedidoId, terminal == false ); $porParar : count() )
 then
     modify( $da ) {
         setTipoTransacao( TipoTransacao.NENHUMA ),
@@ -85,6 +94,7 @@ then
                  "Produto da franquia do Canadá: seguir o processo de devolução da franquia, com o SKU da franquia." )
     }
     modify( $d ) { setProcesso( ProcessoObrigatorio.FRANQUIA_CANADA ) }
+    if ( $porParar == 1 ) { modify( $d ) { terminarPorParagemDosArtigos() } }
 end
 
 rule "HS-002 Marca ou produto grossista não aceite na loja"
@@ -102,6 +112,7 @@ when
                            || produto.marca == Marca.BEYOND_YOGA || produto.marca == Marca.OUTRA
                            || ( produto.grossista == true && produto.vendidoNaLoja == false ) )
     $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false )
+    accumulate( DecisaoArtigo( pedidoId == $d.pedidoId, terminal == false ); $porParar : count() )
 then
     modify( $da ) {
         setTipoTransacao( TipoTransacao.NENHUMA ),
@@ -110,6 +121,7 @@ then
                  + ( $a.getProduto().isGrossista() ? ", grossista não vendido na loja" : "" )
                  + "): recusar a devolução e a troca." )
     }
+    if ( $porParar == 1 ) { modify( $d ) { terminarPorParagemDosArtigos() } }
 end
 
 rule "HS-003 Produto personalizado, alterado ou embainhado"
@@ -124,12 +136,14 @@ when
     $d  : Decisao( terminal == false )
     $a  : ArtigoDevolvido( estado != null, estado.modificado == true )
     $da : DecisaoArtigo( pedidoId == $d.pedidoId, artigoId == $a.id, terminal == false )
+    accumulate( DecisaoArtigo( pedidoId == $d.pedidoId, terminal == false ); $porParar : count() )
 then
     modify( $da ) {
         setTipoTransacao( TipoTransacao.NENHUMA ),
         aplicar( "HS-003", Modulo.M3, Elegibilidade.RECUSAR,
                  "Produto personalizado, alterado ou embainhado: não pode ser devolvido nem trocado, mesmo com defeito." )
     }
+    if ( $porParar == 1 ) { modify( $d ) { terminarPorParagemDosArtigos() } }
 end
 
 // ---------------------------------------------------------------------------------------------

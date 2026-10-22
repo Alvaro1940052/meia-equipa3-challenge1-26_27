@@ -164,7 +164,9 @@ class ComprovativoEPrazoTest {
       ResultadoAvaliacao resultado =
           avaliar(umPedido().artigo(a -> a.getEstado().setAlterado(true)));
 
-      assertThat(resultado.disparos()).contains("PT-001").doesNotContain("PT-003");
+      // A paragem do único artigo termina o pedido: M4 já não é avaliado (ADR 0004, ponto 13)
+      assertThat(resultado.decisao().isTerminal()).isTrue();
+      assertThat(resultado.disparos()).doesNotContain("PT-001", "PT-003");
     }
 
     @Test

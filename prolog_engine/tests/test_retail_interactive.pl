@@ -310,6 +310,34 @@ test(bodywear_interactive_branching_to_sales_floor) :-
     assertion(has_fact(destino_produto(area_vendas))).
 
 % ------------------------------------------------------------------------------
+% 11b. PC-002 asks about resale (IN-010) before leaving the item in review
+% ------------------------------------------------------------------------------
+
+pc_002_initial_facts([
+    colaborador_autorizado(true), canal_compra(mainline), sku_reconhecido(true),
+    categoria_produto(vestuario), estado_produto(nao_usado_etiquetas_soltas),
+    comprovativo(recibo_impresso), dias_desde_compra(10), tipo_pedido(devolucao)
+]).
+
+test(pc_002_asks_resale_and_approves_when_resellable) :-
+    retail_engine:load_knowledge_base(retail_rules),
+    retail_interactive:set_mock_answers([revendivel(_) - true]),
+    pc_002_initial_facts(Facts),
+    retail_engine:run_interactive(Facts, R),
+    assertion(memberchk(asked(revendivel(_), _), R.dialogue_log)),
+    assertion(has_fact(elegibilidade_produto(aprovada))),
+    assertion(\+ has_fact(decisao(rever))).
+
+test(pc_002_unknown_resale_stays_in_review) :-
+    retail_engine:load_knowledge_base(retail_rules),
+    retail_interactive:set_mock_answers([revendivel(_) - nao_sei]),
+    pc_002_initial_facts(Facts),
+    retail_engine:run_interactive(Facts, R),
+    assertion(R.decision == rever),
+    assertion(has_fact(regra_disparada('PC-002'))),
+    assertion(\+ has_fact(elegibilidade_produto(aprovada))).
+
+% ------------------------------------------------------------------------------
 % 12. Reset Clears All Dynamic Memory and Interrogation State
 % ------------------------------------------------------------------------------
 

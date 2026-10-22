@@ -159,6 +159,13 @@ export default function RecentCases() {
           icon: "cancel",
           iconColor: "text-rose-600",
         };
+      case "ENCAMINHAR":
+        return {
+          label: isEn ? "Forwarded" : "Encaminhado",
+          badgeClass: "bg-violet-50 text-violet-700 border-violet-200/60",
+          icon: "alt_route",
+          iconColor: "text-violet-600",
+        };
       case "REVER":
       default:
         return {
@@ -289,6 +296,14 @@ export default function RecentCases() {
             {cases.map((item) => {
               const meta = getOutcomeTag(item.elegibilidade);
               const isDrools = item.motor === "DROOLS";
+              // Caso avaliado pelos dois motores: uma só linha, com o resultado de cada um
+              const doisMotores = (item.motores?.length ?? 0) > 1;
+              const nomeMotor = (motor: string) => (motor === "DROOLS" ? "Drools" : "Prolog");
+              const divergem = doisMotores && item.consenso === false;
+              // O ícone à esquerda indica o resultado; se os motores divergem, indica a divergência
+              const dicaResultado = doisMotores
+                ? item.motores!.map((m) => `${nomeMotor(m.motor)}: ${getOutcomeTag(m.elegibilidade).label}`).join(" · ")
+                : meta.label;
 
               return (
                 <div
@@ -299,9 +314,11 @@ export default function RecentCases() {
                   {/* Left: Status Icon, Engine Badge, Product Name & Reference */}
                   <div className="flex items-center gap-3 min-w-0">
                     <span
-                      className={`material-symbols-outlined text-[20px] flex-shrink-0 ${meta.iconColor}`}
+                      title={dicaResultado}
+                      aria-label={dicaResultado}
+                      className={`material-symbols-outlined text-[20px] flex-shrink-0 ${divergem ? "text-amber-600" : meta.iconColor}`}
                     >
-                      {meta.icon}
+                      {divergem ? "rule" : meta.icon}
                     </span>
 
                     <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2.5 min-w-0">
@@ -312,6 +329,7 @@ export default function RecentCases() {
                             : "bg-emerald-50 text-emerald-700 border-emerald-200"
                           }`}
                       >
+                        {/* Motor escolhido no atendimento (a linha é a avaliação original do caso) */}
                         {isDrools ? "Drools" : "Prolog"}
                       </span>
 
@@ -327,13 +345,6 @@ export default function RecentCases() {
 
                   {/* Right: Outcome badge, Compare button, Amount, Timestamp & Actions */}
                   <div className="flex items-center gap-2 sm:gap-4 md:gap-5 flex-shrink-0">
-                    {/* Outcome Badge */}
-                    <span
-                      className={`px-2 py-0.5 rounded text-xs font-semibold border ${meta.badgeClass}`}
-                    >
-                      {meta.label}
-                    </span>
-
                     {/* Compare Engines Button if available */}
                     {item.temOutroMotor && (
                       <button

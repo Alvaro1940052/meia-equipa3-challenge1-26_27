@@ -64,7 +64,8 @@ class ElegibilidadeProdutoTest {
       assertThat(artigo.isTerminal()).isTrue();
       assertThat(artigo.getTipoTransacao()).isEqualTo(TipoTransacao.NENHUMA);
       assertThat(resultado.disparos()).contains("HS-001").doesNotContain("PC-001", "HS-004");
-      assertThat(resultado.decisao().isTerminal()).isFalse();
+      // Único artigo parado: o pedido também termina (ADR 0004, ponto 13)
+      assertThat(resultado.decisao().isTerminal()).isTrue();
     }
 
     @Test
@@ -168,6 +169,47 @@ class ElegibilidadeProdutoTest {
               });
 
       assertThat(resultado.disparos()).contains("HS-002").doesNotContain("HS-003");
+    }
+
+    @Test
+    @Regra("HS-003")
+    @DisplayName("Paragem do único artigo termina o pedido: M4 a M8 deixam de disparar")
+    void paragemDoUnicoArtigoTerminaOPedido() {
+      ResultadoAvaliacao resultado = avaliarArtigo(a -> a.getEstado().setAlterado(true));
+
+      assertThat(resultado.decisao().isTerminal()).isTrue();
+      assertThat(resultado.decisao().getElegibilidade()).isEqualTo(Elegibilidade.RECUSAR);
+      assertThat(resultado.disparos()).contains("HS-003", "OUT-001").doesNotContain("PT-001");
+    }
+
+    @Test
+    @Regra({"HS-001", "HS-003"})
+    @DisplayName("Paragens em todos os artigos terminam o pedido")
+    void paragensEmTodosOsArtigosTerminamOPedido() {
+      ResultadoAvaliacao resultado =
+          avaliar(
+              umPedido()
+                  .artigo(a -> a.getProduto().setSkuReconhecidoPOS(false))
+                  .maisUmArtigo("A-2", a -> a.getEstado().setAlterado(true)));
+
+      assertThat(resultado.artigo("A-1").isTerminal()).isTrue();
+      assertThat(resultado.artigo("A-2").isTerminal()).isTrue();
+      assertThat(resultado.decisao().isTerminal()).isTrue();
+      assertThat(resultado.disparos()).contains("HS-001", "HS-003").doesNotContain("PT-001");
+    }
+
+    @Test
+    @Regra("HS-003")
+    @DisplayName("Paragem num artigo não termina o pedido com outro artigo elegível")
+    void paragemNumArtigoNaoTerminaOPedidoComOutroElegivel() {
+      ResultadoAvaliacao resultado =
+          avaliar(
+              umPedido().artigo(a -> a.getEstado().setAlterado(true)).maisUmArtigo("A-2", a -> {}));
+
+      assertThat(resultado.artigo("A-1").isTerminal()).isTrue();
+      assertThat(resultado.artigo("A-2").getElegibilidade()).isEqualTo(Elegibilidade.PERMITIR);
+      assertThat(resultado.decisao().isTerminal()).isFalse();
+      assertThat(resultado.disparos()).contains("HS-003", "PC-001", "PT-001");
     }
   }
 

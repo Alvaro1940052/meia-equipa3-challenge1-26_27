@@ -60,6 +60,17 @@ class ExplicadoresTest {
     }
 
     @Test
+    @DisplayName("Cenário 4: a paragem HS-003 do único artigo termina o pedido")
+    void paragemDoUnicoArtigoTerminaOPedido() {
+      ExplicacaoComo explicacao = como.explicar(cenario(4));
+
+      assertThat(explicacao.passos())
+          .extracting(p -> p.codigoRegra())
+          .containsExactly("CT-003", "CH-001", "HS-003", "OUT-007", "OUT-001");
+      assertThat(explicacao.paragem()).isEqualTo("HS-003");
+    }
+
+    @Test
     void passosComArtigoMensagemEAmbiguidade() {
       ExplicacaoComo explicacao = como.explicar(cenario(10));
 
@@ -206,6 +217,15 @@ class ExplicadoresTest {
     }
 
     @Test
+    @DisplayName("Cenário 4: PT-001 nunca foi avaliada, HS-003 terminou o pedido em M3")
+    void moduloNaoAlcancadoPorParagemDoUnicoArtigo() {
+      ExplicacaoPorqueNao explicacao = porqueNao.explicar("PT-001", null, cenario(4));
+
+      assertThat(explicacao.causa()).isEqualTo(CausaNaoDisparo.MODULO_NAO_ALCANCADO);
+      assertThat(explicacao.regraResponsavel()).isEqualTo("HS-003");
+    }
+
+    @Test
     @DisplayName("Cenário 6: o fluxo foi suspenso por EX-008")
     void suspensaoPorFraude() {
       ExplicacaoPorqueNao explicacao = porqueNao.explicar("PT-002", null, cenario(6));
@@ -328,4 +348,3 @@ class ExplicadoresTest {
     }
   }
 }
-
