@@ -59,8 +59,8 @@
               }
             }
           },
-          "400" : {
-            "description" : "Bad Request",
+          "409" : {
+            "description" : "Conflict",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
@@ -79,8 +79,8 @@
               }
             }
           },
-          "409" : {
-            "description" : "Conflict",
+          "400" : {
+            "description" : "Bad Request",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
@@ -127,8 +127,8 @@
               }
             }
           },
-          "400" : {
-            "description" : "Bad Request",
+          "409" : {
+            "description" : "Conflict",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
@@ -147,8 +147,8 @@
               }
             }
           },
-          "409" : {
-            "description" : "Conflict",
+          "400" : {
+            "description" : "Bad Request",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
@@ -206,8 +206,8 @@
               }
             }
           },
-          "400" : {
-            "description" : "Bad Request",
+          "409" : {
+            "description" : "Conflict",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
@@ -226,8 +226,8 @@
               }
             }
           },
-          "409" : {
-            "description" : "Conflict",
+          "400" : {
+            "description" : "Bad Request",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
@@ -285,8 +285,8 @@
               }
             }
           },
-          "400" : {
-            "description" : "Bad Request",
+          "409" : {
+            "description" : "Conflict",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
@@ -305,8 +305,8 @@
               }
             }
           },
-          "409" : {
-            "description" : "Conflict",
+          "400" : {
+            "description" : "Bad Request",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
@@ -355,8 +355,8 @@
               }
             }
           },
-          "400" : {
-            "description" : "Bad Request",
+          "409" : {
+            "description" : "Conflict",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
@@ -375,8 +375,8 @@
               }
             }
           },
-          "409" : {
-            "description" : "Conflict",
+          "400" : {
+            "description" : "Bad Request",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
@@ -414,8 +414,8 @@
               }
             }
           },
-          "400" : {
-            "description" : "Bad Request",
+          "409" : {
+            "description" : "Conflict",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
@@ -434,8 +434,8 @@
               }
             }
           },
-          "409" : {
-            "description" : "Conflict",
+          "400" : {
+            "description" : "Bad Request",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
@@ -484,8 +484,8 @@
               }
             }
           },
-          "400" : {
-            "description" : "Bad Request",
+          "409" : {
+            "description" : "Conflict",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
@@ -504,8 +504,8 @@
               }
             }
           },
-          "409" : {
-            "description" : "Conflict",
+          "400" : {
+            "description" : "Bad Request",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
@@ -544,8 +544,8 @@
               }
             }
           },
-          "400" : {
-            "description" : "Bad Request",
+          "409" : {
+            "description" : "Conflict",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
@@ -564,8 +564,8 @@
               }
             }
           },
-          "409" : {
-            "description" : "Conflict",
+          "400" : {
+            "description" : "Bad Request",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
@@ -612,8 +612,8 @@
               }
             }
           },
-          "400" : {
-            "description" : "Bad Request",
+          "409" : {
+            "description" : "Conflict",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
@@ -632,8 +632,8 @@
               }
             }
           },
-          "409" : {
-            "description" : "Conflict",
+          "400" : {
+            "description" : "Bad Request",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
@@ -705,8 +705,8 @@
               }
             }
           },
-          "400" : {
-            "description" : "Bad Request",
+          "409" : {
+            "description" : "Conflict",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
@@ -725,8 +725,8 @@
               }
             }
           },
-          "409" : {
-            "description" : "Conflict",
+          "400" : {
+            "description" : "Bad Request",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
@@ -794,8 +794,8 @@
               }
             }
           },
-          "400" : {
-            "description" : "Bad Request",
+          "409" : {
+            "description" : "Conflict",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
@@ -814,8 +814,8 @@
               }
             }
           },
-          "409" : {
-            "description" : "Conflict",
+          "400" : {
+            "description" : "Bad Request",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
@@ -1733,6 +1733,14 @@
           },
           "resumo" : {
             "type" : "string"
+          },
+          "terminal" : {
+            "type" : "boolean",
+            "description" : "Uma paragem obrigatória terminou a inferência: não é preciso mais nada"
+          },
+          "paragem" : {
+            "type" : "string",
+            "description" : "Regra de paragem que terminou a inferência, ou nula"
           }
         }
       },
