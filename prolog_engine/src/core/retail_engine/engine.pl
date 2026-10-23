@@ -519,7 +519,7 @@ executar_explain_why(DadoInput, BaseFacts, ResponseDict) :-
     assert_initial_facts_list(ParsedFacts),
     run_engine(_),
 
-    % 1. Find all rules dependent on this premise's attribute(s)
+    % 1. Find all rules dependent on this premises attribute(s)
     findall(RuleID, (
         regra RuleID se LHS entao _,
         flatten_lhs(LHS, Flat),
