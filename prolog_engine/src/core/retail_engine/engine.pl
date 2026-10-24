@@ -73,6 +73,14 @@
 :- dynamic regra_transversal/1.
 :- dynamic regra_a_validar/2.
 
+% Advisory certainty factors. Reads working memory; does not assert decisao/1.
+:- use_module(uncertainty_cf, [
+    combine_cf/3,
+    accumulate_cf/2,
+    mycin_label/2,
+    manager_exception_advice/1
+]).
+
 % Import interactive dialogue manager
 :- use_module(interactive, [
     perguntar/3,

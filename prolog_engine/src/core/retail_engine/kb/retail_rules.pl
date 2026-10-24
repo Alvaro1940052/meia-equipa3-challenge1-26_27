@@ -20,6 +20,11 @@
  */
 
 :- use_module('../engine').
+:- use_module('../uncertainty_cf', [
+    combine_cf/3,
+    accumulate_cf/2,
+    manager_exception_advice/1
+]).
 
 :- dynamic facto/2.
 :- dynamic ultimo_facto/1.
