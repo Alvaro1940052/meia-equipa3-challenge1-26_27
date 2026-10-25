@@ -355,6 +355,27 @@ test(reset_engine_clears_all_interrogation_and_mock_state) :-
     retail_interactive:get_dialogue_log(Log),
     assertion(Log == []).
 
+% ------------------------------------------------------------------------------
+% 13. Numeric Answers Are Validated in the Terminal (re-ask on invalid input)
+% ------------------------------------------------------------------------------
+
+test(terminal_rejects_non_numeric_days_and_asks_again) :-
+    retail_engine:load_knowledge_base(retail_rules),
+    setup_call_cleanup(
+        open_string("abc\n-3\n12\n", In),
+        with_output_to(string(Out),
+            with_input_from(In,
+                retail_interactive:perguntar_terminal_loop(dias_desde_compra(_), "Dias?", Resposta))),
+        close(In)
+    ),
+    assertion(Resposta == dias_desde_compra(12)),
+    aggregate_all(count, sub_string(Out, _, _, _, "indique um número"), Erros),
+    assertion(Erros == 2).
+
+with_input_from(In, Goal) :-
+    current_input(Old),
+    setup_call_cleanup(set_input(In), Goal, set_input(Old)).
+
 :- end_tests(retail_interactive_suite).
 
 run_retail_interactive_tests :-

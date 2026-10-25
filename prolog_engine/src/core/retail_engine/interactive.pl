@@ -218,12 +218,27 @@ perguntar_terminal_loop(Template, QuestionText, Resposta) :-
         ->  format('~N[REGISTO] Resposta \'não sei\' anotada.~n', []),
             Resposta = nao_sei,
             assertz(dialogue_log(unknown(Template)))
+        ;   pergunta_numerica(Template),
+            \+ numero_valido(NormalizedInput)
+        ->  format('~N[ERRO] Resposta inválida: indique um número inteiro igual ou superior a 0 (ou \'não sei\' / \'porquê?\').~n', []),
+            perguntar_terminal_loop(Template, QuestionText, Resposta)
         ;   normalizar_resposta(Template, NormalizedInput, Resposta)
         ->  assertz(dialogue_log(answered(Template, Resposta)))
         ;   format('~N[ERRO] Resposta inválida. Por favor responda novamente ou digite \'não sei\' ou \'porquê?\'.~n', []),
             perguntar_terminal_loop(Template, QuestionText, Resposta)
         )
     ).
+
+%   Atributos cuja resposta tem de ser um número de dias; um texto aqui faria as
+%   regras de prazo falhar em silêncio.
+pergunta_numerica(dias_desde_compra(_)).
+pergunta_numerica(dias_desde_envio(_)).
+
+numero_valido(Input) :-
+    atom(Input),
+    atom_number(Input, Numero),
+    integer(Numero),
+    Numero >= 0.
 
 normalize_string_input(Str, Atom) :-
     string(Str),
@@ -277,31 +292,50 @@ montar_termo_facto(Template, Valor, TermoFacto) :-
 %   Constructs an explanatory message showing why the active rule is requesting
 %   the specified attribute, citing the rule ID, family, objective, and description.
 explicar_porque_pergunta(RegraID, TextoExplicacao) :-
-    (   retail_engine:regra_info(RegraID, Familia, Descricao),
-        retail_engine:regra_ativa(RegraID, Objetivo)
+    (   descricao_regra(RegraID, Codigo, Familia, Descricao)
     ->  nome_familia(Familia, NomeFamilia),
-        format(string(TextoExplicacao),
-            "--- [PORQUÊ DA PERGUNTA: REGRA ~w] ---~nFamília: ~w (~w)~nObjetivo em teste: ~w~nFundamento normativo: ~w",
-            [RegraID, Familia, NomeFamilia, Objetivo, Descricao])
-    ;   retail_engine:regra_info(RegraID, Familia, Descricao)
-    ->  nome_familia(Familia, NomeFamilia),
-        format(string(TextoExplicacao),
-            "--- [PORQUÊ DA PERGUNTA: REGRA ~w] ---~nFamília: ~w (~w)~nFundamento normativo: ~w",
-            [RegraID, Familia, NomeFamilia, Descricao])
+        rotulo_regra(RegraID, Codigo, Rotulo),
+        (   retail_engine:regra_ativa(RegraID, Objetivo)
+        ->  format(string(TextoExplicacao),
+                "--- [PORQUÊ DA PERGUNTA: REGRA ~w] ---~nFamília: ~w (~w)~nObjetivo em teste: ~w~nFundamento normativo: ~w",
+                [Rotulo, Familia, NomeFamilia, Objetivo, Descricao])
+        ;   format(string(TextoExplicacao),
+                "--- [PORQUÊ DA PERGUNTA: REGRA ~w] ---~nFamília: ~w (~w)~nFundamento normativo: ~w",
+                [Rotulo, Familia, NomeFamilia, Descricao])
+        )
     ;   format(string(TextoExplicacao),
             "--- [PORQUÊ DA PERGUNTA] ---~nEsta informação é necessária para avaliar as regras de elegibilidade da devolução.", [])
     ).
 
-nome_familia(hs, "Hard Stops (Paragens Obrigatórias)").
-nome_familia(pc, "Product Condition (Estado do Produto)").
-nome_familia(pt, "Proof & Timeframe (Comprovativo e Prazos)").
-nome_familia(ch, "Channel & Store Type (Canal e Tipo de Loja)").
-nome_familia(tn, "Refund Tender (Meio de Reembolso)").
-nome_familia(ep, "Exchange & Promotion (Trocas e Promoções)").
-nome_familia(ex, "Manager Review & Escalation (Revisão da Gestão)").
-nome_familia(ct, "Authorization & Controls (Auditoria e Controlos)").
-nome_familia(bw, "Bodywear Disposition (Destino de Roupa Íntima)").
+%   As variantes (ex.: 'PC-002-REVENDIVEL') não têm regra_info própria: registam o mesmo
+%   código visível ('PC-002'), por isso a explicação usa a descrição desse código.
+descricao_regra(RegraID, RegraID, Familia, Descricao) :-
+    retail_engine:regra_info(RegraID, Familia, Descricao),
+    !.
+descricao_regra(RegraID, Codigo, Familia, Descricao) :-
+    atom(RegraID),
+    atomic_list_concat([Prefixo, Numero, _|_], '-', RegraID),
+    atomic_list_concat([Prefixo, Numero], '-', Codigo),
+    retail_engine:regra_info(Codigo, Familia, Descricao).
+
+rotulo_regra(RegraID, RegraID, RegraID) :- !.
+rotulo_regra(RegraID, Codigo, Rotulo) :-
+    format(atom(Rotulo), '~w (variante ~w)', [Codigo, RegraID]).
+
+nome_familia(Familia, Nome) :-
+    nome_familia_conhecida(Familia, Nome),
+    !.
 nome_familia(_, "Regras Gerais de Devolução").
+
+nome_familia_conhecida(hs, "Hard Stops (Paragens Obrigatórias)").
+nome_familia_conhecida(pc, "Product Condition (Estado do Produto)").
+nome_familia_conhecida(pt, "Proof & Timeframe (Comprovativo e Prazos)").
+nome_familia_conhecida(ch, "Channel & Store Type (Canal e Tipo de Loja)").
+nome_familia_conhecida(tn, "Refund Tender (Meio de Reembolso)").
+nome_familia_conhecida(ep, "Exchange & Promotion (Trocas e Promoções)").
+nome_familia_conhecida(ex, "Manager Review & Escalation (Revisão da Gestão)").
+nome_familia_conhecida(ct, "Authorization & Controls (Auditoria e Controlos)").
+nome_familia_conhecida(bw, "Bodywear Disposition (Destino de Roupa Íntima)").
 
 % ==============================================================================
 % Question Formatting for Observable Attributes

@@ -748,6 +748,8 @@ def pedido_to_prolog_facts(pedido: Dict[str, Any]) -> List[str]:
     cli = pedido.get("cliente") or {}
     if cli.get("forneceDados") is not None:
         facts.append(f'cliente_fornece_dados({str(cli["forneceDados"]).lower()})')
+    if cli.get("barreiraLinguistica"):
+        facts.append("barreira_linguistica(true)")
     sit = str(pedido.get("situacaoCliente") or "").upper()
     if (cli.get("contestaResultado") or sit in ["CONTESTA", "CHAMAR_GERENCIA"]) and "cliente_contesta(true)" not in facts:
         facts.append("cliente_contesta(true)")
@@ -956,6 +958,8 @@ class RetailPrologService:
             return "Tailored, hemmed, or customized garment" if is_en else "Artigo personalizado, estampado ou alterado"
         if "cliente_fornece_dados" in s:
             return "Customer identification provided at counter" if is_en else "Identificação do cliente fornecida no balcão"
+        if "barreira_linguistica" in s:
+            return "Language barrier at counter" if is_en else "Barreira linguística no balcão"
         if "cliente_contesta" in s:
             return "Customer dispute or objection at counter" if is_en else "Contestação ou desacordo manifestado pelo cliente"
         if "cliente_agitado" in s:
@@ -999,6 +1003,8 @@ class RetailPrologService:
         passos: List[PassoExplicacaoDto] = []
         modulos: List[str] = []
         rule_catalog = PROLOG_RULE_DETAILS_EN if is_en else PROLOG_RULE_DETAILS
+        # Fired rules still to be validated with the expert (regra_a_validar/2), as Drools marks them
+        a_validar = {str(c) for c in (raw.get("regras_a_validar") or [])}
 
         for idx, just in enumerate(justifications, start=1):
             rule_id = "REGRA"
@@ -1022,7 +1028,7 @@ class RetailPrologService:
                     codigoRegra=rule_id,
                     nomeRegra=f"{rule_id} {rule_title}",
                     mensagem=msg,
-                    aValidar=False,
+                    aValidar=rule_id in a_validar,
                 )
             )
 
@@ -1616,6 +1622,7 @@ class RetailPrologService:
 
         # 7. Rules trace with domain prioritization
         justifications: List[str] = raw.get("justification", [])
+        a_validar = {str(c) for c in (raw.get("regras_a_validar") or [])}
         regras_raw: List[RegistoRegraResponse] = []
         for idx, just in enumerate(justifications, start=1):
             rule_id = "REGRA"
@@ -1633,7 +1640,7 @@ class RetailPrologService:
                     modulo=_module_for_rule(rule_id),
                     resultado=elegibilidade,
                     mensagem=msg,
-                    aValidar=False,
+                    aValidar=rule_id in a_validar,
                 )
             )
 
