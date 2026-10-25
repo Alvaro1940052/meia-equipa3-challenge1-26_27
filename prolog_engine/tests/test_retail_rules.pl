@@ -56,8 +56,9 @@ test(all_71_rules_loaded) :-
     aggregate_all(count, retail_engine:regra(_), Count),
     % 74 + 15 variantes (PC-002, PC-003: revendível / não revendível; PC-004: aprovado / recusado;
     % PT-004: não revendível; PT-007: ajuste anterior / fora da loja; CH-002: em revisão;
-    % CH-003: não permitida; CH-004: às cegas; TN-008: sem app; EX-006: Afterpay; BW-003: usado)
-    assertion(Count == 89).
+    % CH-003: não permitida; CH-004: às cegas; TN-008: sem app; EX-006: Afterpay; BW-003: usado;
+    % PT-006: barreira linguística)
+    assertion(Count == 90).
 
 test(nine_families_exact_counts) :-
     retail_engine:load_knowledge_base(retail_rules),
@@ -452,6 +453,35 @@ test(pt_005_blind_return_exchange_or_store_credit) :-
     assertion(has_fact(valor_devolucao(preco_atual))),
     assertion(has_fact(meio_reembolso(credito_loja))),
     assertion(has_fact(regra_disparada('PT-005'))).
+
+test(pt_006_language_barrier_selects_skip_like_drools) :-
+    assert_scenario_facts([
+        colaborador_autorizado(true),
+        canal_compra(mainline),
+        sku_reconhecido(true),
+        estado_produto(nao_usado_com_etiquetas),
+        comprovativo(nenhum),
+        cliente_fornece_dados(true),
+        barreira_linguistica(true)
+    ]),
+    retail_engine:run_engine(_),
+    assertion(has_fact(processo_acao(selecionar_saltar))),
+    assertion(has_fact(regra_disparada('PT-006'))),
+    assertion(has_fact(decisao(permitir))).
+
+test(pt_006_refused_data_and_language_barrier_fire_once) :-
+    assert_scenario_facts([
+        colaborador_autorizado(true),
+        canal_compra(mainline),
+        sku_reconhecido(true),
+        estado_produto(nao_usado_com_etiquetas),
+        comprovativo(nenhum),
+        cliente_fornece_dados(false),
+        barreira_linguistica(true)
+    ]),
+    retail_engine:run_engine(_),
+    aggregate_all(count, (has_fact(motivo(M)), sub_string(M, 0, _, _, "[PT-006]")), Motivos),
+    assertion(Motivos == 1).
 
 test(pt_007_pt_008_price_adjustment_scenarios) :-
     % PT-007: Allowed up to 14 days

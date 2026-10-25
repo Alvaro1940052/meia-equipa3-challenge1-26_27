@@ -155,6 +155,19 @@ test(why_ask_specific_rules_and_families) :-
     assertion((contains_substr(HSWhy, "Hard Stops") -> true ; contains_substr(HSWhy, "Paragens Obrigatórias"))),
     assertion(contains_substr(HSWhy, "SKU")).
 
+test(why_ask_variant_uses_visible_code_description) :-
+    retail_engine:load_knowledge_base(retail_rules),
+    retail_engine:why_ask('PC-002-REVENDIVEL', Why),
+    assertion(contains_substr(Why, "PC-002 (variante PC-002-REVENDIVEL)")),
+    assertion(contains_substr(Why, "Estado do Produto")),
+    assertion(\+ contains_substr(Why, "necessária para avaliar as regras de elegibilidade")).
+
+test(nome_familia_is_deterministic) :-
+    findall(N, retail_interactive:nome_familia(pc, N), Nomes),
+    assertion(Nomes == ["Product Condition (Estado do Produto)"]),
+    findall(N, retail_interactive:nome_familia(xx, N), Gerais),
+    assertion(Gerais == ["Regras Gerais de Devolução"]).
+
 test(why_ask_active_rule_during_candidate_evaluation) :-
     retail_engine:load_knowledge_base(retail_rules),
     % Assert active rule dynamically to test live Why Ask resolution
