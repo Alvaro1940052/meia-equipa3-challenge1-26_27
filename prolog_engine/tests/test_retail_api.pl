@@ -150,10 +150,17 @@ test(evaluate_nested_json_payload) :-
     assertion(Reply.status == "success"),
     assertion(Reply.decision == "approved").
 
-test(evaluate_malformed_json_returns_400, [fail]) :-
+test(evaluate_malformed_json_returns_400) :-
     test_retail_port(Port),
     format(atom(Url), 'http://127.0.0.1:~w/retail/evaluate', [Port]),
-    http_post(Url, string('application/json', "{ invalid: json "), _Reply, []).
+    catch(
+        (
+            http_post(Url, string('application/json', "{ invalid: json "), _Reply, []),
+            fail
+        ),
+        error(existence_error(url, _), _),
+        true
+    ).
 
 % ------------------------------------------------------------------------------
 % 2. POST /retail/interactive Tests

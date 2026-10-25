@@ -15,11 +15,17 @@
  *
  * References:
  *   - RPAC-Team3.md (Knowledge Acquisition Report, Group 3)
- *   - Returns & Exchanges Knowledge Base.md (Official Levi Strauss & Co. Policy)
+ *   - Returns & Exchanges Knowledge Base.md (expert knowledge base written by the domain
+ *     expert, D. Hopper, from the official Levi Strauss & Co. returns and exchanges policy)
  *   - MI_Perguntas_ACM.md (Expert System Metaknowledge & Dialogic Reasoning)
  */
 
 :- use_module('../engine').
+:- use_module('../uncertainty_cf', [
+    combine_cf/3,
+    accumulate_cf/2,
+    manager_exception_advice/1
+]).
 
 :- dynamic facto/2.
 :- dynamic ultimo_facto/1.
@@ -102,11 +108,12 @@ facto_dispara_regras(estado_produto(_), ['PC-008', 'BW-004', 'BW-001', 'BW-002',
 facto_dispara_regras(revendivel(_), ['PC-002-REVENDIVEL', 'PC-002-NAO-REVENDIVEL', 'PC-003-REVENDIVEL', 'PC-003-NAO-REVENDIVEL', 'PT-004-NAO-REVENDIVEL']).
 facto_dispara_regras(defeito_fabrico(_), ['PC-006']).
 facto_dispara_regras(comprovativo(_), ['PT-001', 'PT-002', 'PT-008', 'PT-008-FOTO', 'PT-008-SEM-RECIBO']).
-facto_dispara_regras(tipo_verificacao(_), ['PT-003', 'PT-004', 'PT-004-NAO-REVENDIVEL', 'PT-005', 'PT-006', 'PT-007', 'CH-009', 'CH-010', 'TN-001', 'TN-007', 'EP-001', 'EP-003', 'EP-004', 'CT-001', 'CT-002', 'CT-004']).
+facto_dispara_regras(tipo_verificacao(_), ['PT-003', 'PT-004', 'PT-004-NAO-REVENDIVEL', 'PT-005', 'PT-006', 'PT-006-BARREIRA', 'PT-007', 'CH-009', 'CH-010', 'TN-001', 'TN-007', 'EP-001', 'EP-003', 'EP-004', 'CT-001', 'CT-002', 'CT-004']).
 facto_dispara_regras(elegibilidade_produto(_), ['PT-003', 'PT-004', 'PT-005', 'CH-002', 'CH-003', 'CH-004', 'CH-004-AS-CEGAS', 'CH-005', 'CH-006', 'CH-009', 'CH-010', 'EP-001', 'EP-002', 'EP-003', 'EP-004', 'EP-005', 'EP-006', 'EP-007']).
 facto_dispara_regras(dias_desde_compra(_), ['PT-003', 'PT-004', 'PT-004-NAO-REVENDIVEL', 'PT-007', 'PT-007-FORA-LOJA', 'PT-008']).
 facto_dispara_regras(dias_desde_envio(_), ['CH-005']).
-facto_dispara_regras(cliente_fornece_dados(_), ['PT-006']).
+facto_dispara_regras(cliente_fornece_dados(_), ['PT-006', 'PT-006-BARREIRA']).
+facto_dispara_regras(barreira_linguistica(_), ['PT-006-BARREIRA']).
 facto_dispara_regras(tipo_pedido(_), ['PT-007-AJUSTE-ANTERIOR', 'PT-007', 'PT-007-FORA-LOJA', 'PT-008', 'PT-008-SEM-RECIBO', 'PT-008-FOTO', 'CH-006', 'TN-001', 'TN-006', 'TN-007', 'EP-001', 'EP-002']).
 facto_dispara_regras(ajuste_preco_anterior(_), ['PT-007-AJUSTE-ANTERIOR']).
 facto_dispara_regras(canal_compra(_), ['CH-008', 'CH-007', 'HS-004', 'CH-001', 'CH-002', 'CH-003', 'CH-003-NAO-PERMITIDA', 'CH-004', 'CH-004-AS-CEGAS', 'CH-005', 'CH-006', 'TN-009', 'TN-010', 'TN-012', 'PT-007']).
@@ -508,6 +515,12 @@ regra 'PT-006' se [tipo_verificacao(as_cegas) e cliente_fornece_dados(false)]
                entao [cria_facto(processo_acao(selecionar_saltar)),
                       cria_facto(regra_disparada('PT-006')),
                       cria_facto(motivo("[PT-006] Cliente sem recibo recusa fornecer dados ou há barreira linguística: selecionar 'Saltar' e prosseguir a devolução às cegas."))].
+
+% PT-006: a mesma regra pela barreira linguística (no Drools: forneceDados == false || barreiraLinguistica == true)
+regra 'PT-006-BARREIRA' se [tipo_verificacao(as_cegas) e nao regra_disparada('PT-006') e barreira_linguistica(true)]
+               entao [cria_facto(processo_acao(selecionar_saltar)),
+                      cria_facto(regra_disparada('PT-006')),
+                      cria_facto(motivo("[PT-006] Cliente sem recibo com barreira linguística: selecionar 'Saltar' e prosseguir a devolução às cegas, sem pressionar o cliente a dar dados pessoais."))].
 
 % PT-007: Ajuste de preço de compra em loja até 14 dias com recibo original (impresso ou digital,
 % IN-004), uma única vez por compra

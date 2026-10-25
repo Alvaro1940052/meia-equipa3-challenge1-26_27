@@ -111,6 +111,9 @@ class OrchestratorService:
             justification = [str(justification)] if justification else []
 
         message = raw.get("message")
+        uncertainty_cf = raw.get("uncertainty_cf")
+        if not isinstance(uncertainty_cf, dict):
+            uncertainty_cf = None
 
         return EvaluationResponse(
             status=status,
@@ -119,6 +122,7 @@ class OrchestratorService:
             engine=EngineSourceEnum.PROLOG,
             timestamp=datetime.now(timezone.utc),
             message=message,
+            uncertainty_cf=uncertainty_cf,
         )
 
     async def check_health(self) -> Dict[str, str]:

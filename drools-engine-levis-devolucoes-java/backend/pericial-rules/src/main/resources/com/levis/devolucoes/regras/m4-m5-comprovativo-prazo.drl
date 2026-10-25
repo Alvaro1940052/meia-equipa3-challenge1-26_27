@@ -142,12 +142,12 @@ then
     }
 end
 
-rule "PT-004 Devolução verificada após 30 dias: crédito de loja aprovado"
+rule "PT-004 Devolução verificada após 30 dias: artigo vendável, a gestão decide o crédito de loja"
     @id("PT-004")
     @modulo("M5")
-    @descricao("Após 30 dias, artigo vendável, verificável e de baixo risco: crédito de loja aprovado pela gestão. Baixo risco = sem indício significativo ou confirmado [a validar: A-17, A-19].")
+    @descricao("Após 30 dias, artigo vendável, verificável e de baixo risco: rever; a gestão pode aprovar crédito de loja (\"REVIEW. Store credit may be approved\"). O sistema não aprova sozinho. Baixo risco = sem indício significativo ou confirmado [a validar: A-17, A-19].")
     @condicoes("devolucaoVerificada,mais30DiasDesdeCompra,naoEAjustePreco,artigoElegivel,artigoRevendivel,baixoRisco")
-    @conclusoes("OUT-001=PERMITIR,OUT-002=CREDITO_LOJA,OUT-003,OUT-004=CREDITO_LOJA,OUT-005=RESPONSAVEL_SENIOR")
+    @conclusoes("OUT-001=REVER,OUT-005=RESPONSAVEL_SENIOR")
     agenda-group "M5"
     salience 100
 when
@@ -162,13 +162,11 @@ when
     not IndicadorFraude( pedidoId == $p.id, nivelRisco == NivelRisco.SIGNIFICATIVO || nivelRisco == NivelRisco.CONFIRMADO )
 then
     modify( $d ) {
-        setTipoTransacao( TipoTransacao.CREDITO_LOJA ),
-        setMeioReembolso( MeioReembolso.CREDITO_LOJA ),
-        setBaseValor( BaseValor.VALOR_PAGO ),
         setAprovacao( NivelAprovacao.RESPONSAVEL_SENIOR ),
-        aplicar( "PT-004", Modulo.M5, Elegibilidade.PERMITIR,
-                 "Devolução verificada há " + $p.getDiasDesdeCompra() + " dias (mais de 30): artigo vendável, verificável "
-                 + "e de baixo risco; a gestão aprova crédito de loja." )
+        aplicar( "PT-004", Modulo.M5, Elegibilidade.REVER,
+                 "Devolução verificada há " + $p.getDiasDesdeCompra() + " dias (mais de 30): sem direito automático a "
+                 + "reembolso. O artigo é vendável, verificável e de baixo risco, por isso a gestão pode aprovar crédito "
+                 + "de loja." )
     }
 end
 

@@ -695,6 +695,27 @@ class ResultadoArtigoResponse(LevisBaseModel):
     terminal: bool = Field(default=False, description="Avaliação para este artigo foi terminal.")
 
 
+class CfTraceStep(LevisBaseModel):
+    """One MYCIN combination step from the Prolog certainty-factor advisor."""
+
+    evidence: str = Field(..., description="Evidence identifier.")
+    cf: float = Field(..., description="Certainty factor contributed by this evidence.")
+    runningCf: float = Field(..., description="Running CF after combining this evidence.")
+    combination: str = Field(default="initial", description="MYCIN case: initial, positive, negative, or conflict.")
+    description: str = Field(default="", description="Human-readable evidence statement.")
+
+
+class UncertaintyCfResponse(LevisBaseModel):
+    """Advisory MYCIN score. It does not replace OUT-001 elegibilidade."""
+
+    finalCf: float = Field(..., description="Combined certainty factor in [-1, 1].")
+    linguisticLabel: str = Field(..., description="MYCIN linguistic recommendation.")
+    cfFactorsFired: List[CfTraceStep] = Field(default_factory=list, description="Evidence factors that fired.")
+    cfTrace: List[CfTraceStep] = Field(default_factory=list, description="Step-by-step MYCIN propagation.")
+    context: Optional[str] = Field(default=None, description="manager_review or auxiliary.")
+    source: Optional[str] = Field(default=None, description="Heuristic family, normally EX-001.")
+
+
 class ContribuicaoDto(LevisBaseModel):
     """Passo de um cálculo de incerteza: uma evidência ou regra fuzzy e o seu efeito no grau."""
 
@@ -746,6 +767,10 @@ class DecisaoResponse(LevisBaseModel):
     regras: List[RegistoRegraResponse] = Field(default_factory=list, description="Rasto cronológico de regras DRL.")
     regrasAValidar: List[str] = Field(
         default_factory=list, description="Regras ativadas que exigem validação posterior."
+    )
+    uncertaintyCf: Optional[UncertaintyCfResponse] = Field(
+        default=None,
+        description="Advisory MYCIN certainty factor from the Prolog EX-001 advisor. Absent for Drools.",
     )
     incerteza: List[GrauCrencaDto] = Field(
         default_factory=list, description="Graus de crença da camada de incerteza (docs/08)."

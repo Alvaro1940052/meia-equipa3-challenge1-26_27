@@ -19,7 +19,7 @@ Este pacote de entrega é **100% autónomo**, focado exclusivamente na programa�
 
 ## 2. Requisitos de Execução
 
-* **SWI-Prolog:** Versão 9.0 ou superior (testado e validado em SWI-Prolog 9.2.x e 9.3.x).
+* **SWI-Prolog:** Versão 9.0 ou superior (testado e validado em SWI-Prolog 10.0.2 e 10.1.x).
   ```bash
   swipl --version
   ```
@@ -36,6 +36,8 @@ Para iniciar imediatamente a consola pericial interativa no terminal:
 cd prolog_engine
 swipl -s run_console.pl
 ```
+
+Instruções detalhadas para Windows (PowerShell, Git Bash, PATH) e um guião de demonstração estão em [`COMO_CORRER_CONSOLA.md`](COMO_CORRER_CONSOLA.md).
 
 Ao carregar, o sistema exibe automaticamente a mensagem de boas-vindas e o menu com os comandos disponíveis:
 
@@ -58,7 +60,7 @@ COMANDOS DISPONÍVEIS NA CONSOLA:
   ?- output_why.           -> Mostra as justificações executivas da decisão final.
   ?- factos.               -> Lista todos os factos presentes na memória de trabalho.
   ?- limpar.               -> Limpa a memória da sessão atual para novo teste.
-  ?- testar.               -> Executa a suite completa de 91 testes automatizados PLUnit.
+  ?- testar.               -> Executa a suite completa de 150 testes automatizados PLUnit.
   ?- ajuda.                -> Exibe este resumo de comandos.
 ```
 
@@ -94,12 +96,12 @@ Permite ao docente avaliar instantaneamente qualquer um dos **10 cenários norma
 | Nº | Título do Cenário | Família Principal | Decisão Concluída |
 |:--:|:---|:---|:---:|
 | **1** | As etiquetas soltas, troca ao 29.º dia | `PC-002`, `EX-001` | `rever` (Revisão da Gestão) |
-| **2** | O cliente irritado com Afterpay | `CH-002`, `TN-010`, `EX-006` | `recusar` (Processo BackPocket / HS-005) |
+| **2** | O cliente irritado com Afterpay | `CH-002`, `TN-010`, `HS-005`, `EX-006` | `encaminhar` (Processo BackPocket; exceção recusada) |
 | **3** | A devolução de oferta na Outlet sem recibo | `PT-002`, `PT-005`, `CH-009` | `permitir` (Crédito de Loja) |
 | **4** | As calças com bainha e defeito de fabrico | `HS-003` | `recusar` (Hard Stop - Alterado) |
 | **5** | A disputa sobre produto grossista (*Wholesale*) | `CH-008`, `EX-002` | `recusar` (Canal de Compra Não Aceite) |
 | **6** | Devolução sem recibo com risco biológico e fraude | `PC-008`, `EX-008` | `rever` (Escalamento Distrital) |
-| **7** | A substituição do cartão de débito Interac no Canadá | `PT-001`, `EX-002` | `rever` (Autorização de Gerência) |
+| **7** | A substituição do cartão de débito Interac no Canadá | `TN-011`, `EX-002` | `rever` (Autorização de Gerência) |
 | **8** | Ajuste de preço com fotografia de recibo | `PT-008` | `recusar` (Foto Não Aceite) |
 | **9** | Conjunto de bodywear com risco de segurança e garantia | `PC-008`, `BW-004` | `permitir` (Estorno + Destruição) |
 | **10** | Troca online tardia com PayPal durante falha do portal | `CH-004`, `TN-008`, `EX-001` | `rever` (Aprovação de Responsável Sénior) |
@@ -123,7 +125,7 @@ O motor implementa as 5 vias de explicabilidade pericial da literatura de Sistem
 
 ## 6. Execução Automatizada da Suíte de Testes PLUnit
 
-O projeto inclui **91 testes automatizados com 100% de aprovação**, cobrindo todas as dimensões do motor dedutivo.
+O projeto inclui **150 testes automatizados com 100% de aprovação**, cobrindo todas as dimensões do motor dedutivo.
 
 ### Comando em Linha de Comandos (Modo Batch com Exit Code):
 ```bash
@@ -136,13 +138,15 @@ swipl -s run_tests.pl
 ?- testar.
 ```
 
-### Composição da Suíte de Testes (91 Testes):
-* `tests/test_retail_rules.pl` (31 testes): Validação exaustiva das 71 regras da Levi's e da hierarquia de 7 precedências estritas.
-* `tests/test_retail_interactive.pl` (12 testes): Validação do fluxo dialógico ACM, aquisição com `obtem_facto/2`, tratamento de `nao_sei`, resposta ao `porquê?` e prevenção de ciclos.
-* `tests/test_retail_explainability.pl` (18 testes): Validação formal das 5 vias de explicabilidade (`como/1`, `why_ask/1..2`, `output_why/1`, `whynot/1`, `what_if/3`).
-* `tests/test_retail_expert_scenarios.pl` (10 testes): Validação dos 10 cenários normativos oficiais estabelecidos com o perito de retalho.
-* `tests/test_retail_api.pl` (12 testes): Testes de integração HTTP do servidor REST nativo em porta TCP dedicada (`8992`).
+### Composição da Suíte de Testes (150 Testes):
+* `tests/test_retail_rules.pl` (61 testes): Validação das 71 regras da Levi's e das suas variantes, da hierarquia de 7 precedências, da decisão final e das regras a validar.
+* `tests/test_retail_interactive.pl` (15 testes): Validação do fluxo dialógico ACM, aquisição com `obtem_facto/2`, tratamento de `nao_sei`, resposta ao `porquê?` e prevenção de ciclos.
+* `tests/test_retail_explainability.pl` (24 testes): Validação formal das 5 vias de explicabilidade (`como/1`, `why_ask/1..2`, `output_why/1`, `whynot/1`, `what_if/3`).
+* `tests/test_retail_api.pl` (15 testes): Testes de integração HTTP do servidor REST nativo em porta TCP dedicada (`8992`).
+* `tests/test_retail_expert_scenarios.pl` (10 testes): Validação dos 10 cenários de referência estabelecidos com o perito de retalho.
+* `tests/test_retail_hard_stops.pl` (9 testes): Paragens obrigatórias (RPAC 4.6): precedência, fim da inferência e regras transversais.
 * `tests/test_inference_engine.pl` (8 testes): Preservação académica da prova de conceito e paridade com o motor `sp_exp2.pl`.
+* `tests/test_uncertainty_cf.pl` (8 testes): Conselheiro de fatores de certeza (MYCIN) para as revisões da gestão (EX-001).
 
 ---
 
@@ -188,8 +192,9 @@ curl -s http://127.0.0.1:8080/retail/facts
 ```text
 prolog_engine/
 ├── run_console.pl                       # Launcher de consola interativa SWI-Prolog (iniciar, cenario, avaliar_interativo)
-├── run_tests.pl                         # Executor batch da suite de 91 testes PLUnit
+├── run_tests.pl                         # Executor batch da suite de 150 testes PLUnit
 ├── README_ENTREGA.md                    # Este manual de avaliação orientado a PPROGIA
+├── COMO_CORRER_CONSOLA.md               # Guia rápido para abrir a consola e fazer a demonstração
 ├── Dockerfile                           # Descritor Docker autónomo baseado em swipl:latest
 │
 ├── src/
@@ -204,6 +209,7 @@ prolog_engine/
 │       ├── retail_engine/               # Motor de inferência pericial de retalho
 │       │   ├── engine.pl                # Forward-chaining, 5 vias de explicabilidade e precedências
 │       │   ├── interactive.pl           # Mecânica dialógica ACM, perguntas em pt-PT e gestão de não sei
+│       │   ├── uncertainty_cf.pl        # Conselheiro de fatores de certeza (MYCIN), só de leitura
 │       │   └── kb/
 │       │       └── retail_rules.pl      # Base de conhecimento: 71 regras da Levi's e 9 famílias
 │       │
@@ -212,13 +218,15 @@ prolog_engine/
 │       │   └── kb/vehicles.pl           # Base de conhecimento académica de veículos
 │       └── rules.pl                     # DSL e operadores lógicos
 │
-└── tests/                               # Suíte com 91 testes automatizados PLUnit
-    ├── test_retail_rules.pl             # 31 testes das 71 regras e 7 precedências
-    ├── test_retail_interactive.pl       # 12 testes do diálogo dialógico ACM
-    ├── test_retail_explainability.pl    # 18 testes das 5 vias de explicabilidade
-    ├── test_retail_expert_scenarios.pl  # 10 testes dos cenários oficiais da Levi's
-    ├── test_retail_api.pl               # 12 testes de integração REST HTTP
-    └── test_inference_engine.pl         # 8 testes de preservação académica
+└── tests/                               # Suíte com 150 testes automatizados PLUnit
+    ├── test_retail_rules.pl             # 61 testes das 71 regras, variantes e 7 precedências
+    ├── test_retail_interactive.pl       # 15 testes do diálogo dialógico ACM
+    ├── test_retail_explainability.pl    # 24 testes das 5 vias de explicabilidade
+    ├── test_retail_api.pl               # 15 testes de integração REST HTTP
+    ├── test_retail_expert_scenarios.pl  # 10 testes dos cenários de referência
+    ├── test_retail_hard_stops.pl        # 9 testes das paragens obrigatórias
+    ├── test_inference_engine.pl         # 8 testes de preservação académica
+    └── test_uncertainty_cf.pl           # 8 testes do conselheiro MYCIN
 ```
 
 ---
@@ -228,7 +236,7 @@ prolog_engine/
 ```bash
 cd prolog_engine
 
-# 1. Executar os 91 testes automatizados PLUnit (100% de sucesso)
+# 1. Executar os 150 testes automatizados PLUnit (100% de sucesso)
 swipl -s run_tests.pl
 
 # 2. Validar arranque da consola sem avisos nem erros de compilação

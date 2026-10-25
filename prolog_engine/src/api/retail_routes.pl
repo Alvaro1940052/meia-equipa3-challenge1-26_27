@@ -47,6 +47,9 @@
     regra_ativa/2,
     facto/2
 ]).
+:- use_module('../core/retail_engine/uncertainty_cf', [
+    manager_exception_advice/1
+]).
 :- use_module('../core/retail_engine/interactive', [
     set_mock_answers/1,
     add_mock_answer/2,
@@ -101,6 +104,7 @@ handle_retail_evaluate(Request) :-
                 dict_to_retail_facts(PayloadDict, FactsList),
                 evaluate_facts(FactsList, ResultDict),
                 map_canonical_decision(ResultDict.decision, CanonicalDecision),
+                uncertainty_advice(UncertaintyCF),
                 reply_json_dict(_{
                     status: "success",
                     decision: CanonicalDecision,
@@ -111,7 +115,8 @@ handle_retail_evaluate(Request) :-
                     initial_facts_count: ResultDict.initial_facts_count,
                     derived_facts_count: ResultDict.derived_facts_count,
                     total_facts: ResultDict.total_facts,
-                    derived_facts: ResultDict.derived_facts
+                    derived_facts: ResultDict.derived_facts,
+                    uncertainty_cf: UncertaintyCF
                 })
             ),
             EvalError,
@@ -449,6 +454,23 @@ handle_retail_reset(Request) :-
 % ==============================================================================
 % Helpers: Decision Mapping
 % ==============================================================================
+
+%!  uncertainty_advice(-Advice) is det.
+%
+%   Read-only MYCIN advisor. A failure here must not change the decision
+%   already computed, so the handler still returns the deterministic verdict
+%   with a neutral certainty object.
+uncertainty_advice(Advice) :-
+    catch(manager_exception_advice(Advice), _, fail),
+    !.
+uncertainty_advice(_{
+    final_cf: 0.0,
+    linguistic_label: "Unknown / Borderline Manager Call (Inconclusivo / Critério Estrito)",
+    cf_factors_fired: [],
+    cf_trace: [],
+    context: "auxiliary",
+    source: "EX-001"
+}).
 
 %!  map_canonical_decision(+PrologDecision, -CanonicalDecision) is det.
 %

@@ -24,7 +24,7 @@
    `aprovacao = DISTRICT_AREA` e regista a regra. O pedido fica com `suspenso = true`.
 3. **Severidade:** `aplicar()` nunca baixa a severidade já registada
    (RECUSAR > ENCAMINHAR > REVER > PERMITIR). Para baixar REVER para PERMITIR (revisão resolvida, ex.: PC-002 com
-   IN-010 = sim, ou PT-004 com crédito de loja aprovado) usa-se `resolverRevisao(regra, msg)`, que só atua se a
+   IN-010 = sim) usa-se `resolverRevisao(regra, msg)`, que só atua se a
    elegibilidade atual for REVER e regista a regra.
 4. **Rasto:** todas as chamadas acrescentam um `RegistoRegra` (código, módulo, resultado, mensagem, instante),
    mesmo quando a severidade não muda. O instante vem de um `Clock` injetável (testes determinísticos).

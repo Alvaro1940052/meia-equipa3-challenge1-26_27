@@ -42,6 +42,23 @@ export interface ResultadoArtigoResponse {
   terminal?: boolean;
 }
 
+export interface CfTraceStep {
+  evidence: string;
+  cf: number;
+  runningCf: number;
+  combination: string;
+  description: string;
+}
+
+export interface UncertaintyCf {
+  finalCf: number;
+  linguisticLabel: string;
+  cfFactorsFired: CfTraceStep[];
+  cfTrace: CfTraceStep[];
+  context?: string | null;
+  source?: string | null;
+}
+
 /** Camada de incerteza do motor Drools (docs/08): hipóteses, métodos e classificações. */
 export type Hipotese = "FRAUDE" | "DEFEITO_FABRICO" | "REVENDIBILIDADE" | "RECOMENDACAO_CREDITO";
 
@@ -114,6 +131,7 @@ export interface DecisaoResponse {
   artigos: ResultadoArtigoResponse[];
   regras: RegistoRegraResponse[];
   regrasAValidar: string[];
+  uncertaintyCf?: UncertaintyCf | null;
   /** Graus de crença da camada de incerteza (só o motor Drools os calcula). */
   incerteza?: GrauCrencaDto[];
 }

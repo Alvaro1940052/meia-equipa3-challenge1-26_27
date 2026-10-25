@@ -1,3 +1,4 @@
+import CertaintyFactorCard from "@/components/returns/CertaintyFactorCard";
 import ResultSummary from "@/components/shared/ResultSummary";
 import { getEligibility, label, money } from "@/config/returnsLabels";
 import { useLocale } from "@/contexts/LocaleContext";
@@ -45,6 +46,7 @@ export default function DecisionSummary({
   ].filter(Boolean) as string[];
 
   return (
+    <>
     <ResultSummary
       eyebrow={locale === "en" ? "Decision Summary" : "Resumo da Decisão"}
       tone={eligibility?.tone ?? "info"}
@@ -169,6 +171,8 @@ export default function DecisionSummary({
         </div>
       )}
     </ResultSummary>
+    {decision.uncertaintyCf && <CertaintyFactorCard advice={decision.uncertaintyCf} />}
+    </>
   );
 }
 

@@ -21,6 +21,7 @@
 :- [tests/test_retail_expert_scenarios].
 :- [tests/test_retail_hard_stops].
 :- [tests/test_inference_engine].
+:- [tests/test_uncertainty_cf].
 
 %!  run_all is det.
 %
@@ -32,7 +33,7 @@ run_all :-
     format('===============================================================~n~n', []),
     (   run_tests
     ->  format('~N===============================================================~n', []),
-        format('  >>> [SUCESSO] 100%% dos testes PLUnit aprovados com sucesso! <<<~n', []),
+        format('  >>> [SUCESSO] 100% dos testes PLUnit aprovados com sucesso! <<<~n', []),
         format('===============================================================~n~n', []),
         halt(0)
     ;   format('~N===============================================================~n', []),

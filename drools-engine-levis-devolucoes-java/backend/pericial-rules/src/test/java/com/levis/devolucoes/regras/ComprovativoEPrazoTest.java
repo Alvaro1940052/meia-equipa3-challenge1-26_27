@@ -181,17 +181,19 @@ class ComprovativoEPrazoTest {
 
     @Test
     @Regra("PT-004")
-    void apos30DiasRevendivelEDeBaixoRiscoTemCreditoDeLoja() {
-      Decisao decisao =
+    void apos30DiasRevendivelEDeBaixoRiscoFicaEmRevisaoDaGestao() {
+      ResultadoAvaliacao resultado =
           avaliar(
-                  umPedido().diasDesdeCompra(45).artigo(a -> a.setRevendivel(true)),
-                  new IndicadorFraude("P-1", "Hesitação", NivelRisco.BAIXO))
-              .decisao();
+              umPedido().diasDesdeCompra(45).artigo(a -> a.setRevendivel(true)),
+              new IndicadorFraude("P-1", "Hesitação", NivelRisco.BAIXO));
+      Decisao decisao = resultado.decisao();
 
-      assertThat(decisao.getElegibilidade()).isEqualTo(Elegibilidade.PERMITIR);
-      assertThat(decisao.getTipoTransacao()).isEqualTo(TipoTransacao.CREDITO_LOJA);
-      assertThat(decisao.getMeioReembolso()).isEqualTo(MeioReembolso.CREDITO_LOJA);
+      // "REVIEW. Store credit may be approved": a gestão decide, o sistema não aprova sozinho
+      assertThat(decisao.getElegibilidade()).isEqualTo(Elegibilidade.REVER);
       assertThat(decisao.getAprovacao()).isEqualTo(NivelAprovacao.RESPONSAVEL_SENIOR);
+      assertThat(decisao.getTipoTransacao()).isNull();
+      assertThat(resultado.registo("PT-004").getMensagem())
+          .contains("pode aprovar crédito de loja");
     }
 
     @Test

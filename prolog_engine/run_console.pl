@@ -39,7 +39,7 @@ ajuda :-
     format('  ?- output_why.           -> Mostra as justificações executivas da decisão final.~n', []),
     format('  ?- factos.               -> Lista todos os factos presentes na memória de trabalho.~n', []),
     format('  ?- limpar.               -> Limpa a memória da sessão atual para novo teste.~n', []),
-    format('  ?- testar.               -> Executa a suite completa de 91 testes automatizados PLUnit.~n', []),
+    format('  ?- testar.               -> Executa a suite completa de 150 testes automatizados PLUnit.~n', []),
     format('  ?- ajuda.                -> Exibe este resumo de comandos.~n~n', []),
     format('DURANTE A TRIAGEM INTERATIVA (avaliar_interativo):~n', []),
     format('  • Pode responder com as opções sugeridas (ex.: sim, nao, s, n).~n', []),
@@ -175,8 +175,8 @@ dados_cenario(1,
 
 dados_cenario(2,
     "O cliente irritado com Afterpay",
-    "Artigo de vestuário comprado online via Afterpay. Cliente contesta agressivamente em loja e exige exceção de estorno em numerário ou cartão. Encaminhado obrigatoriamente para o fluxo BackPocket.",
-    recusar,
+    "Artigo de vestuário comprado online via Afterpay. Cliente contesta agressivamente em loja e exige exceção de estorno em numerário ou cartão. A exceção é recusada (HS-005, EX-006) e a devolução é encaminhada obrigatoriamente para o fluxo BackPocket (CH-002).",
+    encaminhar,
     [
         colaborador_autorizado(true), sessao_pos_propria(true),
         canal_compra(levi_com), encomenda_encontrada(true), portal_online_disponivel(true),
@@ -323,19 +323,24 @@ limpar :-
 
 testar :-
     format('~N================================================================================~n', []),
-    format('  A EXECUTAR SUÍTE DE TESTES AUTOMATIZADOS PLUNIT (91 TESTES)                  ~n', []),
+    format('  A EXECUTAR SUÍTE DE TESTES AUTOMATIZADOS PLUNIT (150 TESTES)                 ~n', []),
     format('================================================================================~n~n', []),
+    % As mesmas suites que run_tests.pl
     ensure_loaded([
         tests/test_retail_rules,
         tests/test_retail_interactive,
         tests/test_retail_explainability,
         tests/test_retail_api,
         tests/test_retail_expert_scenarios,
-        tests/test_inference_engine
+        tests/test_retail_hard_stops,
+        tests/test_inference_engine,
+        tests/test_uncertainty_cf
     ]),
-    plunit:run_tests,
     format('~N================================================================================~n', []),
-    format('  >>> [CONCLUÍDO] Todos os testes executados com sucesso! <<<~n', []),
+    (   plunit:run_tests
+    ->  format('  >>> [CONCLUÍDO] Todos os testes passaram. <<<~n', [])
+    ;   format('  >>> [FALHA] Há testes que falharam: ver o relatório acima. <<<~n', [])
+    ),
     format('================================================================================~n~n', []).
 
-:- initialization(iniciar, main).
+:- initialization(iniciar).
