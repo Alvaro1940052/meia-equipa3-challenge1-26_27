@@ -338,4 +338,4 @@ testar :-
     format('  >>> [CONCLUÍDO] Todos os testes executados com sucesso! <<<~n', []),
     format('================================================================================~n~n', []).
 
-:- initialization(iniciar, main).
+:- initialization(iniciar).
