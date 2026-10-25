@@ -499,13 +499,17 @@ class IncertezaTest {
 
     @Test
     @Regra("IU-40")
-    void naoRecomendaQuandoAPt004AprovaOCredito() {
+    void recomendaTambemComOArtigoJaRevendivel() {
+      // A PT-004 nunca aprova o crédito sozinha: deixa sempre em REVER e a gestão decide,
+      // por isso a IU-40 recomenda também quando a revenda já foi confirmada
       ResultadoAvaliacao r =
           MotorTeste.avaliar(
               umPedido().diasDesdeCompra(35).artigo(a -> a.setRevendivel(true)).construir());
 
-      assertThat(r.disparou("PT-004")).isTrue();
-      assertThat(r.disparou("IU-40")).isFalse();
+      assertThat(r.decisao().disparouCom("PT-004", Elegibilidade.REVER)).isTrue();
+      assertThat(r.disparou("IU-40")).isTrue();
+      assertThat(grau(r, Hipotese.RECOMENDACAO_CREDITO, null)).isNotNull();
+      assertThat(r.decisao().getElegibilidade()).isEqualTo(Elegibilidade.REVER);
     }
   }
 }
