@@ -21,6 +21,7 @@
 :- [tests/test_retail_expert_scenarios].
 :- [tests/test_retail_hard_stops].
 :- [tests/test_inference_engine].
+:- [tests/test_uncertainty_cf].
 
 %!  run_all is det.
 %

@@ -18,6 +18,7 @@
 :- use_module(core/rules, [evaluate_scenario/3]).
 :- use_module(core/inference/engine, []).      % Academic reference inference engine (sp_exp2)
 :- use_module(core/retail_engine/engine, []).  % Isolated retail expert engine (Levi's returns)
+:- use_module(core/retail_engine/uncertainty_cf, []).  % MYCIN certainty-factor advisor (read-only)
 
 %!  get_port(-Port) is det.
 %

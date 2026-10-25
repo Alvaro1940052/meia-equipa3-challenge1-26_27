@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from enum import Enum
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -58,6 +58,13 @@ class EvaluationResponse(BaseModel):
         default=None,
         description="Optional diagnostic or error message providing additional operational context.",
         examples=[None],
+    )
+    uncertainty_cf: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description=(
+            "Advisory MYCIN certainty factor for manager review. "
+            "Does not replace the deterministic decision."
+        ),
     )
 
     model_config = ConfigDict(

@@ -37,6 +37,7 @@ from app.schemas.levis import (
     SimulacaoResponse,
     TipoTransacaoEnum,
     TipoVerificacaoEnum,
+    UncertaintyCfResponse,
 )
 from app.services.levis_service import LevisService
 
@@ -781,6 +782,17 @@ def pedido_to_prolog_facts(pedido: Dict[str, Any]) -> List[str]:
 
 
 _map_pedido_to_prolog_facts = pedido_to_prolog_facts
+
+
+def _parse_uncertainty_cf(payload: Any) -> Optional[UncertaintyCfResponse]:
+    """Map the Prolog advisor object onto the verdict. Invalid payloads stay absent."""
+    if not isinstance(payload, dict):
+        return None
+    try:
+        return UncertaintyCfResponse.model_validate(payload)
+    except Exception:
+        logger.warning("[RetailPrologService] Ignoring malformed uncertainty_cf payload")
+        return None
 
 
 class RetailPrologService:
@@ -1737,4 +1749,5 @@ class RetailPrologService:
             regras=regras,
             # Fired rules whose interpretation is still to be validated (regra_a_validar/2 in the KB)
             regrasAValidar=[str(c) for c in (raw.get("regras_a_validar") or [])],
+            uncertaintyCf=_parse_uncertainty_cf(raw.get("uncertainty_cf")),
         )

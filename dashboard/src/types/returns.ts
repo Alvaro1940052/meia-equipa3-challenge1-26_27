@@ -42,6 +42,23 @@ export interface ResultadoArtigoResponse {
   terminal?: boolean;
 }
 
+export interface CfTraceStep {
+  evidence: string;
+  cf: number;
+  runningCf: number;
+  combination: string;
+  description: string;
+}
+
+export interface UncertaintyCf {
+  finalCf: number;
+  linguisticLabel: string;
+  cfFactorsFired: CfTraceStep[];
+  cfTrace: CfTraceStep[];
+  context?: string | null;
+  source?: string | null;
+}
+
 export interface DecisaoResponse {
   avaliacaoId?: string | null;
   pedidoId?: string | null;
@@ -61,6 +78,7 @@ export interface DecisaoResponse {
   artigos: ResultadoArtigoResponse[];
   regras: RegistoRegraResponse[];
   regrasAValidar: string[];
+  uncertaintyCf?: UncertaintyCf | null;
 }
 
 export interface CondicaoDto {

@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import ResultCard from "@/components/ui/ResultCard";
 import ExplainTabs from "@/components/returns/ExplainTabs";
+import CertaintyFactorCard from "@/components/returns/CertaintyFactorCard";
 import {
   ELIGIBILITY,
   getEligibility,
@@ -488,6 +489,10 @@ export default function VerdictScreen({
           }
         />
       </div>
+
+      {engine === "prolog" && result.uncertaintyCf && (
+        <CertaintyFactorCard advice={result.uncertaintyCf} />
+      )}
 
       <CaseComparisonModal
         pedidoId={pedidoId}
