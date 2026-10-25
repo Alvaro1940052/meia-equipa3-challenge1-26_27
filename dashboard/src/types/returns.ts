@@ -42,6 +42,59 @@ export interface ResultadoArtigoResponse {
   terminal?: boolean;
 }
 
+/** Camada de incerteza do motor Drools (docs/08): hipóteses, métodos e classificações. */
+export type Hipotese = "FRAUDE" | "DEFEITO_FABRICO" | "REVENDIBILIDADE" | "RECOMENDACAO_CREDITO";
+
+export type MetodoIncerteza = "FATOR_CERTEZA" | "BAYES" | "FUZZY";
+
+export type ClassificacaoIncerteza =
+  | "RISCO_ALTO"
+  | "RISCO_MEDIO"
+  | "RISCO_BAIXO"
+  | "PROPOR_PC006"
+  | "REVER_DEFEITO"
+  | "DESGASTE"
+  | "REVENDIVEL"
+  | "REVENDIBILIDADE_INDETERMINADA"
+  | "NAO_REVENDIVEL"
+  | "CREDITO_RECOMENDADO"
+  | "CREDITO_A_CRITERIO"
+  | "CREDITO_NAO_RECOMENDADO";
+
+/** Resposta do colaborador às perguntas da inspeção e do comportamento do cliente. */
+export type Resposta = "SIM" | "NAO" | "NAO_SEI";
+
+export interface ContribuicaoDto {
+  codigo?: string | null;
+  descricao?: string | null;
+  peso: number;
+  valorAntes: number;
+  valorDepois: number;
+  aplicada: boolean;
+  motivoNaoAplicada?: string | null;
+}
+
+export interface GrauCrencaDto {
+  hipotese?: Hipotese | null;
+  metodo?: MetodoIncerteza | null;
+  artigoId?: string | null;
+  valor: number;
+  classificacao?: ClassificacaoIncerteza | null;
+  contribuicoes: ContribuicaoDto[];
+  demonstrativo: boolean;
+  versaoParametros?: string | null;
+}
+
+export interface ParametrosIncertezaResponse {
+  versao?: string | null;
+  demonstrativo: boolean;
+  fatoresCerteza: Record<string, number>;
+  razoesVerosimilhanca: Record<string, number>;
+  priorDefeito: number;
+  limiares: Record<string, number>;
+  ficheirosFcl: Record<string, string>;
+}
+
 export interface DecisaoResponse {
   avaliacaoId?: string | null;
   pedidoId?: string | null;
@@ -61,6 +114,8 @@ export interface DecisaoResponse {
   artigos: ResultadoArtigoResponse[];
   regras: RegistoRegraResponse[];
   regrasAValidar: string[];
+  /** Graus de crença da camada de incerteza (só o motor Drools os calcula). */
+  incerteza?: GrauCrencaDto[];
 }
 
 export interface CondicaoDto {
@@ -86,6 +141,18 @@ export interface ExplicacaoComoResponse {
   passos: PassoExplicacaoDto[];
   modulosPercorridos: string[];
   paragem?: string | null;
+  resumo?: string | null;
+}
+
+/** "Como?" de uma conclusão (OUT-xxx) ou de um grau de crença (INCERTEZA.<HIPOTESE>). */
+export interface ExplicacaoConclusaoResponse {
+  conclusao?: string | null;
+  artigoId?: string | null;
+  valores: Record<string, string>;
+  regra?: string | null;
+  mensagem?: string | null;
+  condicoes: CondicaoDto[];
+  caminho: string[];
   resumo?: string | null;
 }
 
